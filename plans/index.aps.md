@@ -5,7 +5,7 @@
 | Status  | Active     |
 | Owner   | @aneki     |
 | Created | 2025-12-31 |
-| Updated | 2026-02-19 |
+| Updated | 2026-04-26 |
 
 ## Problem
 
@@ -39,19 +39,31 @@ APS needs continued development to:
 | [docs](./modules/docs.aps.md)             | Workflow guide, improved onboarding   | Complete |
 | [validation](./modules/validation.aps.md) | CLI tool to validate APS documents    | Complete |
 
-### Current (v0.3 — Distribution)
+### Shipped (v0.3 — Distribution)
 
 | Module                              | Purpose                                         | Status   |
 | ----------------------------------- | ----------------------------------------------- | -------- |
 | [install](./modules/install.aps.md) | Interactive install, `.aps/` layout, multi-tool | Complete |
 | [agents](./modules/agents.aps.md)   | APS Planner + Librarian agents, multi-harness   | Complete |
 
+### In Progress (v0.4 — Orchestration & UX)
+
+| Module                                      | Purpose                                                 | Status      |
+| ------------------------------------------- | ------------------------------------------------------- | ----------- |
+| [orchestrate](./modules/orchestrate.aps.md) | CLI orchestration, dependency resolution, state machine | In Progress |
+| [tui](./modules/tui.aps.md)                 | Ratatui TUI customization wizard for project setup      | In Progress |
+
+### Conductor / Crosscutting (Trialing)
+
+| Module                                                | Purpose                                                        | Status           |
+| ----------------------------------------------------- | -------------------------------------------------------------- | ---------------- |
+| [conductor](./modules/conductor.aps.md)               | New module type for cross-module concerns (trial)              | Draft (Trialing) |
+| [release-planning](./modules/release-planning.aps.md) | Release plan template + scaffold + linter (trial in anvil-001) | Draft            |
+
 ### Near Term
 
 | Module                                        | Purpose                                                          | Status |
 | --------------------------------------------- | ---------------------------------------------------------------- | ------ |
-| [orchestrate](./modules/orchestrate.aps.md)   | CLI orchestration, dependency resolution, state machine          | Ready  |
-| [tui](./modules/tui.aps.md)                   | Ratatui TUI customization wizard for project setup               | Ready  |
 | [spec](./modules/spec.aps.md)                 | Canonical vocabulary + schema (status reconciliation)            | Draft  |
 | [compound](./modules/compound.aps.md)         | Review/Learn phase tooling (solution library, completed archive) | Ready  |
 | [tasks](./modules/tasks.aps.md)               | Claude Code Tasks integration                                    | Draft  |
@@ -104,8 +116,10 @@ These are explicitly out of scope:
 - **D-018:** Shared core vs per-tool rewrite — _decided: shared core prompt, tool-specific frontmatter/packaging_
 - **D-019:** Agent format per tool — _decided: 4/5 tools have native agent mechanisms (Claude Code `.claude/agents/`, Copilot `.github/agents/`, OpenCode `.opencode/agents/`, Codex `.codex/config.toml` + TOML overlays); Gemini is skill-only. Port to each tool's native format, not just skills._
 - **D-022:** External planning repo reversed — _decided: plans move back to main repo_
-- **D-023:** Commands fully dropped — _decided: skills only, no `.claude/commands/` shipped_
+- **D-023:** Commands fully dropped — _decided: yes, skills only, no `.claude/commands/` shipped_
 - **D-024:** aps-rules.md split — _decided: `aps-rules.md` (APS-managed) + `project-context.md` (user-owned)_
 - **D-025:** designs/ and issues.md into plans/ — _decided: single planning content root_
 - **D-026:** Promote `spec` module from Long Term to Near Term — _decided: yes, status vocabulary divergence with anvil-001 needs formal resolution; see [spec.aps.md](./modules/spec.aps.md) D-026 for the open Draft↔Proposed / Complete↔Done question_
 - **D-027:** Promote `compound` from Draft to Ready — _decided: yes, anvil-001 surveyed prior art (completed/ archive, releases/ narrative, completed-index roll-up) makes the work concrete; see [compound.aps.md](./modules/compound.aps.md)_
+- **D-028:** Add release planning as an APS addon — _decided: yes, extract pattern from anvil-001 trial (`plans/releases/v0.3.0-beta.md`); see `release-planning.aps.md`_
+- **D-029:** Introduce conductor / crosscutting module type — _trialing. Release planning is the first use case; revisit after trial_

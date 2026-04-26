@@ -1,0 +1,20 @@
+[package]
+name = "aps-cli"
+version = "0.4.0-dev"
+edition = "2024"
+license = "Apache-2.0"
+description = "Anvil Plan Spec — native Rust CLI and TUI wizard"
+repository = "https://github.com/Arkahna/anvil-plan-spec"
+readme = "../README.md"
+publish = false
+
+[[bin]]
+name = "aps"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+eddacraft-tui = { git = "https://github.com/EddaCraft/eddacraft-tui", rev = "2de997dc2d3bde54adc174834c2089efb0a2002a" }
+
+[lints.rust]
+unsafe_code = "forbid"
