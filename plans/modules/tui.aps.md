@@ -1,8 +1,8 @@
 # TUI Onboarding Module
 
-| ID  | Owner  | Status |
-| --- | ------ | ------ |
-| TUI | @aneki | Ready  |
+| ID  | Owner  | Status      |
+| --- | ------ | ----------- |
+| TUI | @aneki | In Progress |
 
 ## Purpose
 
@@ -121,7 +121,7 @@ shared theme, keyboard conventions). APS consumes this as a crate dependency.
 
 ## Work Items
 
-### TUI-001: Project setup and eddacraft-tui integration
+### TUI-001: Project setup and eddacraft-tui integration — Complete 2026-04-26
 
 - **Intent:** Establish the Rust project structure and confirm `eddacraft-tui`
   crate integration works
@@ -132,6 +132,14 @@ shared theme, keyboard conventions). APS consumes this as a crate dependency.
   prints version; `eddacraft-tui` widgets render in a test harness
 - **Confidence:** high
 - **Dependencies:** D-026, D-027
+- **Action plan:** [execution/TUI-001.actions.md](../execution/TUI-001.actions.md)
+- **Results:** `cli/` Cargo crate scaffolded (edition 2024, clap 4 derive,
+  eddacraft-tui as git dep from `github.com/EddaCraft/eddacraft-tui`).
+  `aps --version` prints `aps 0.4.0-dev`; `cargo tree` confirms the
+  eddacraft-tui crate links cleanly. Subcommand stubs for `init`, `lint`,
+  `next` exit with code 2 + a "not yet implemented" hint to surface the
+  intended CLI shape from day one. Live widget render harness deferred to
+  TUI-002, which is the natural place to introduce actual TUI sections.
 
 ### TUI-002: Implement core wizard sections (Profile, Project Shape, AI Tooling)
 

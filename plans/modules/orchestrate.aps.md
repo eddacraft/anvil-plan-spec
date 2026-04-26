@@ -1,8 +1,8 @@
 # Orchestrate Module
 
-| ID   | Owner  | Status |
-| ---- | ------ | ------ |
-| ORCH | @aneki | Ready  |
+| ID   | Owner  | Status      |
+| ---- | ------ | ----------- |
+| ORCH | @aneki | In Progress |
 
 > **Note:** This is an exploratory "or" spec — an alternative to the TASKS
 > module for providing programmatic plan navigation. TASKS focuses on Claude
@@ -201,7 +201,7 @@ A rich agent definition (like BMAD's BMad Master) that:
 
 ## Work Items
 
-### ORCH-001: Implement `aps next` command
+### ORCH-001: Implement `aps next` command — Complete 2026-04-26
 
 - **Intent:** Enable programmatic dependency resolution from APS markdown
 - **Expected Outcome:** `aps next [module]` parses work items from `.aps.md`
@@ -212,6 +212,13 @@ A rich agent definition (like BMAD's BMad Master) that:
 - **Confidence:** high
 - **Dependencies:** VAL (parser)
 - **Status:** Complete
+- **Action plan:** [execution/ORCH-001.actions.md](../execution/ORCH-001.actions.md)
+- **Results:** Implemented as `lib/orch.sh` (extract + collect + resolve_next
+  helpers) plus `cmd_next` in `bin/aps`. Status detection handles both
+  header-suffix (`— Complete <date>`) and explicit `- **Status:**` markers.
+  Cross-module dependency resolution verified end-to-end via fixture and
+  against this repo's plans/. JSON output for tooling. 5 new tests added
+  (run.sh tests 16–20); full suite green.
 
 ### ORCH-002: Implement `aps start` and `aps complete`
 
