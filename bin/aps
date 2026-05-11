@@ -9,6 +9,9 @@
 #   aps lint [file|dir]   Validate APS documents (default: plans/)
 #   aps lint --json       Output as JSON
 #   aps next [module]     Show the next ready work item
+#   aps start <ID>        Mark a Ready work item as In Progress
+#   aps complete <ID>     Mark an In Progress work item as Complete
+#   aps graph [module]    Show work item dependency graph
 #   aps --help            Show this help
 #
 
@@ -47,6 +50,9 @@ Usage:
   aps lint [file|dir]   Validate APS documents
   aps lint --json       Output results as JSON
   aps next [module]     Show the next ready work item
+  aps start <ID>        Mark a Ready work item as In Progress
+  aps complete <ID>     Mark an In Progress work item as Complete
+  aps graph [module]    Show work item dependency graph
   aps --help            Show this help
 
 Options:
@@ -67,6 +73,10 @@ Examples:
   aps lint . --json           # Lint current dir, JSON output
   aps next                    # Show next ready item in plans/
   aps next auth               # Show next ready item in auth module
+  aps start AUTH-003          # Mark AUTH-003 as In Progress
+  aps complete AUTH-003       # Mark AUTH-003 Complete
+  aps complete AUTH-003 --learning "retry on 5xx"
+  aps graph auth              # Show auth dependency graph
 EOF
 }
 
@@ -93,6 +103,18 @@ main() {
     next)
       shift
       cmd_next "$@"
+      ;;
+    start)
+      shift
+      cmd_start "$@"
+      ;;
+    complete)
+      shift
+      cmd_complete "$@"
+      ;;
+    graph)
+      shift
+      cmd_graph "$@"
       ;;
     --help|-h|help|"")
       show_help

@@ -54,6 +54,8 @@ Validate dependency-aware item selection.
 - **Intent:** Select the first ready item with complete dependencies
 - **Expected Outcome:** `aps next` returns this item
 - **Validation:** `bash test/orchestrate.sh`
+- **Files:**
+  - src/auth/refresh.sh
 - **Dependencies:**
   - AUTH-001
   - AUTH-002
@@ -72,3 +74,13 @@ Validate dependency-aware item selection.
 - **Expected Outcome:** This item is not selected by `aps next`
 - **Validation:** `bash test/orchestrate.sh`
 - **Status:** Waiting
+
+### AUTH-006: Final item before decisions
+
+- **Intent:** Ensure final work item extraction stops at the next module section
+- **Expected Outcome:** Context packages do not include following sections
+- **Validation:** `bash test/orchestrate.sh`
+
+## Decisions
+
+- **D-001:** Fixture decision after work items - *decided: yes*

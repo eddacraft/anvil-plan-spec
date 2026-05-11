@@ -50,6 +50,7 @@ V2_CLI_FILES=(
   "lib/Output.psm1"
   "lib/lint.sh"
   "lib/Lint.psm1"
+  "lib/orchestrate.sh"
   "lib/scaffold.sh"
   "lib/Scaffold.psm1"
   "lib/rules/common.sh"
@@ -113,6 +114,7 @@ CLI_FILES=(
   "lib/Output.psm1"
   "lib/lint.sh"
   "lib/Lint.psm1"
+  "lib/orchestrate.sh"
   "lib/scaffold.sh"
   "lib/Scaffold.psm1"
   "lib/rules/common.sh"
@@ -404,6 +406,8 @@ v2_install_cli() {
   for f in "${V2_CLI_FILES[@]}"; do
     download "$f" "$aps_dir/$f"
   done
+  touch "$aps_dir/.gitignore"
+  grep -qxF 'context/' "$aps_dir/.gitignore" || printf 'context/\n' >> "$aps_dir/.gitignore"
   chmod +x "$aps_dir/bin/aps"
 }
 
@@ -1296,7 +1300,7 @@ cmd_migrate() {
   fi
   # Remove only known APS files from lib/, then remove dir if empty
   if [[ -d "$target/lib" ]] && [[ -f "$target/lib/output.sh" ]]; then
-    local aps_lib_files=(output.sh Output.psm1 lint.sh Lint.psm1 scaffold.sh Scaffold.psm1)
+    local aps_lib_files=(output.sh Output.psm1 lint.sh Lint.psm1 orchestrate.sh scaffold.sh Scaffold.psm1)
     local aps_rule_files=(common.sh Common.psm1 module.sh Module.psm1 index.sh Index.psm1
                           workitem.sh WorkItem.psm1 issues.sh Issues.psm1 design.sh Design.psm1)
     for f in "${aps_lib_files[@]}"; do rm -f "$target/lib/$f"; done
