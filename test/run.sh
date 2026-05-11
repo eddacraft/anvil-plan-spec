@@ -92,5 +92,18 @@ echo "$output" | grep -q '"summary"' && pass || fail "JSON output invalid"
 echo -n "Test: plans/ directory passes lint... "
 $APS lint "$PROJECT_ROOT/plans/" > /dev/null 2>&1 && pass || fail "our own plans failed lint"
 
+# Test 16: Orchestration suite (next, start, complete)
+echo -n "Test: orchestrate (next/start/complete)... "
+bash "$SCRIPT_DIR/orchestrate.sh" > /dev/null 2>&1 && pass || fail "orchestrate tests failed"
+
+# Test 17: Init installs CLI support files and ignores generated context
+echo -n "Test: init installs orchestration support... "
+INIT_DIR=$(mktemp -d)
+trap 'rm -rf "$INIT_DIR"' EXIT
+APS_LOCAL="$PROJECT_ROOT" $APS init "$INIT_DIR" --profile solo --scope small --tools generic > /dev/null 2>&1 || fail "init failed"
+[[ -f "$INIT_DIR/.aps/lib/orchestrate.sh" ]] || fail "orchestrate lib not installed"
+grep -qF 'context/' "$INIT_DIR/.aps/.gitignore" || fail "context ignore missing"
+pass
+
 echo ""
 echo -e "${GREEN}All tests passed!${NC}"

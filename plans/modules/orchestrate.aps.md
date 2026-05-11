@@ -206,7 +206,7 @@ A rich agent definition (like BMAD's BMad Master) that:
   statuses and cross-module dependencies
 - **Confidence:** high
 - **Dependencies:** VAL (parser)
-- **Status:** In Progress
+- **Status:** Complete
 
 ### ORCH-002: Implement `aps start` and `aps complete`
 
@@ -220,6 +220,7 @@ A rich agent definition (like BMAD's BMad Master) that:
   learning appended when provided
 - **Confidence:** high
 - **Dependencies:** ORCH-001
+- **Status:** Complete
 
 ### ORCH-003: Implement context packaging
 
@@ -231,6 +232,7 @@ A rich agent definition (like BMAD's BMad Master) that:
   produces fresh output
 - **Confidence:** medium
 - **Dependencies:** ORCH-002
+- **Status:** Complete
 
 ### ORCH-004: Implement `aps graph`
 
@@ -241,6 +243,7 @@ A rich agent definition (like BMAD's BMad Master) that:
   and cross-module deps
 - **Confidence:** medium
 - **Dependencies:** ORCH-001
+- **Status:** Complete
 
 ### ORCH-005: Create Conductor agent
 

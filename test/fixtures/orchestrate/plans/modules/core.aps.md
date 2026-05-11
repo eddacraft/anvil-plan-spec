@@ -2,7 +2,7 @@
 
 | ID | Owner | Status |
 |----|-------|--------|
-| CORE | @test | Ready |
+| CORE | @test | Complete |
 
 ## Purpose
 
@@ -39,4 +39,5 @@ Provide completed cross-module dependencies.
 - **Intent:** Provide a completed dependency from another module
 - **Expected Outcome:** Auth work can depend on this item
 - **Validation:** `true`
+- **Learning:** "Parser output is stable across modules"
 - **Status:** (Complete) 2026-05-04
