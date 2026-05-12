@@ -55,14 +55,19 @@ get_work_items() {
 # Usage: get_module_id "file"
 get_module_id() {
   local file="$1"
-  # Find the table row after the header and extract first cell
-  awk '/^\| *ID *\|/,/^\|[^|]+\|/ {
-    if (!/^\| *ID *\|/ && /^\|/) {
-      gsub(/^\| *| *\|.*/, "");
-      print;
+  # Find the header row, skip the separator row (|---|---|), then
+  # extract the first cell of the first data row.
+  awk -F '|' '
+    /^\| *ID *\|/ { found = 1; next }
+    found && /^\|[- :|]+$/ { next }                  # skip separator row (|---|---|)
+    found && /^\|/ {
+      # $2 is the first cell (leading | produces empty $1)
+      id = $2
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", id)
+      print id
       exit
     }
-  }' "$file"
+  ' "$file"
 }
 
 # Extract status from metadata table

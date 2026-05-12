@@ -98,13 +98,27 @@ Users want to reduce eye strain when working at night.
 - **Depends on:** 001
 ```
 
-## Validation
+## Driving a Plan
+
+Once you have a plan, the `aps` CLI drives it through the work-item lifecycle.
+Markdown stays the source of truth — the CLI just reads and rewrites it.
 
 ```bash
-./bin/aps lint plans/
+aps lint plans/                       # Validate every spec
+aps next                              # Find the next ready work item
+aps start AUTH-003                    # Mark it In Progress, get a context package
+# ...implement, test...
+aps complete AUTH-003 --learning "Retry on 5xx"
+aps graph auth                        # See dependencies at a glance
 ```
 
-See [docs/usage.md](docs/usage.md) for all commands, error codes, CI integration, and JSON output.
+`aps start` validates that all dependencies are `Complete` and writes a
+focused context package to `.aps/context/<ID>.md` (module scope, decisions,
+upstream learnings). `aps complete` requires the item to be `In Progress` and
+stamps a UTC completion date.
+
+See [docs/usage.md](docs/usage.md) for the full command reference, state
+machine, error codes, JSON output, and CI integration.
 
 ## Works Everywhere
 
@@ -141,58 +155,18 @@ No plugins. No integrations. No configuration. It's just files.
 
 ## Platform Support
 
-| Platform | CLI | Hooks | Install Script |
-|----------|-----|-------|----------------|
-| **Linux** | Bash 4.0+ | Bash 4.0+ | `curl \| bash` |
-| **macOS** | Bash 4.0+ (Homebrew) | Bash 4.0+ (Homebrew) | `curl \| bash` |
-| **Windows** | PowerShell 5.1+ | PowerShell 5.1+ | `iwr .../install.ps1 \| iex` |
+| Platform | Authoring (lint/init) | Orchestration (next/start/complete/graph) |
+|----------|-----------------------|--------------------------------------------|
+| **Linux**   | Bash 4.0+ | Bash 4.0+ |
+| **macOS**   | Bash 4.0+ via `brew install bash` | Bash 4.0+ via `brew install bash` |
+| **Windows** | PowerShell 5.1+ (native `aps.ps1`) | Bash 4.0+ via WSL or Git Bash |
 
-### Prerequisites
+The bash CLI uses `#!/usr/bin/env bash`, so Homebrew's bash is picked up
+automatically once it's on your `PATH`. macOS ships Bash 3.2 (2007), which is
+too old — APS needs associative arrays.
 
-- **Linux/macOS:** Bash 4.0+, curl, git
-- **Windows:** PowerShell 5.1+ (ships with Windows 10+) or PowerShell 7+
-- **All platforms:** git (optional, needed for hooks)
-
-### macOS
-
-macOS ships with Bash 3.2 (2007). APS requires Bash 4.0+ for associative
-arrays. Install a modern version via Homebrew:
-
-```bash
-# Check your version
-bash --version
-
-# Install Bash 4+ via Homebrew
-brew install bash
-
-# The APS CLI uses #!/usr/bin/env bash, so Homebrew's bash is picked up
-# automatically if /usr/local/bin (Intel) or /opt/homebrew/bin (Apple Silicon)
-# is in your PATH (Homebrew sets this up by default).
-```
-
-### Windows
-
-APS includes a native PowerShell port of the CLI. No WSL or Git Bash needed
-for linting:
-
-```powershell
-# Lint all plans
-.\bin\aps.ps1 lint plans\
-
-# Lint a specific file
-.\bin\aps.ps1 lint plans\modules\auth.aps.md
-
-# JSON output
-.\bin\aps.ps1 lint plans\ --json
-
-# Help
-.\bin\aps.ps1 --help
-```
-
-Alternatively, use WSL or Git Bash to run the standard Bash CLI.
-
-> **Note:** APS includes both Bash and PowerShell versions of all scripts.
-> The installer downloads both, so your project works on any platform.
+A native PowerShell port of the orchestration commands is on the roadmap.
+Until then, Windows users on WSL or Git Bash get the full experience.
 
 ## AI Guidance
 
@@ -250,18 +224,23 @@ See [docs/workflow.md](docs/workflow.md) for the full workflow guide.
 
 ```text
 your-project/
-├── designs/                      # Technical designs (optional)
-│   └── 2025-01-05-auth.design.md
 ├── plans/
-│   ├── aps-rules.md              # AI agent guidance (portable)
-│   ├── index.aps.md              # Main plan
-│   ├── modules/                  # Leaf modules
+│   ├── aps-rules.md              # AI agent guidance (portable, ships with APS)
+│   ├── project-context.md        # Project-specific context (you own this)
+│   ├── index.aps.md              # Main plan (roadmap + module index)
+│   ├── issues.md                 # Dev-time discoveries (ISS-NNN / Q-NNN)
+│   ├── modules/                  # Module specs — one .aps.md per bounded area
 │   │   ├── auth.aps.md
 │   │   └── payments.aps.md
-│   ├── execution/                # Action plan files
+│   ├── execution/                # Action plans for complex work items
 │   │   └── AUTH-001.actions.md
+│   ├── designs/                  # Technical designs (optional)
+│   │   └── 2026-01-05-auth.design.md
 │   └── decisions/                # ADRs (optional)
 │       └── 001-use-jwt.md
+└── .aps/
+    └── context/                  # Ephemeral context packages from `aps start`
+        └── AUTH-001.md           # Gitignored — regenerated on each start
 ```
 
 ## Versioning

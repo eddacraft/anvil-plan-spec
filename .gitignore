@@ -142,6 +142,10 @@ vite.config.ts.timestamp-*
 
 # Local APS install artifacts (source lives under scaffold/)
 aps-planning/
+.aps/context/
 .claude/commands/
 .claude/settings.local.json
 .claude/.aps-session-baseline
+
+# Local git worktrees
+.worktrees/

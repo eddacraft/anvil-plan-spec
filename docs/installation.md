@@ -71,12 +71,17 @@ specs, or action steps.
 
 **Updated files:**
 
-- `bin/aps` + `lib/` (CLI)
-- `aps-rules.md` (agent guidance)
-- `modules/.module.template.md`, `.simple.template.md`, `.index-monorepo.template.md`
-- `execution/.steps.template.md`
+- `bin/aps` + `lib/` (CLI: lint, init, update, migrate, next, start, complete, graph)
+- `plans/aps-rules.md` (agent guidance — APS-managed)
+- `plans/modules/.module.template.md`, `.simple.template.md`, `.index-monorepo.template.md`
+- `plans/execution/.actions.template.md`
 - `aps-planning/` (skill + scripts)
-- `.claude/commands/` (plan, plan-status)
+- Agent definitions for any AI tools you selected during `aps init`
+  (`.claude/agents/`, `.github/agents/`, `.opencode/agents/`, etc.)
+
+**Preserved:** your `plans/index.aps.md`, module specs, `plans/project-context.md`,
+`plans/issues.md`, action plans, and anything under `plans/decisions/` or
+`plans/designs/`.
 
 ## Windows (PowerShell)
 
@@ -96,10 +101,10 @@ Or follow the [Manual Setup](#manual-setup) steps below.
 
 If you prefer to set things up by hand:
 
-1. Copy `bin/aps` and `lib/` into your project
-2. Copy the templates from `scaffold/plans/` into `plans/`
+1. Copy `bin/aps` and `lib/` into your project (or `aps-install --global`)
+2. Copy the contents of `scaffold/plans/` into your project's `plans/`
 3. Copy `scaffold/aps-planning/` for the Claude Code skill
-4. Copy `scaffold/commands/` into `.claude/commands/`
+4. Copy agent definitions from `scaffold/agents/<tool>/` for any AI tools you use
 5. Edit `plans/index.aps.md` to define your plan's scope and modules
 6. Create modules by copying templates (remove the leading dot from filenames)
 7. Add Work Items when a module is ready for implementation
@@ -108,20 +113,25 @@ If you prefer to set things up by hand:
 
 The install script creates the following structure in your project:
 
-```
+```text
 bin/
-└── aps                              # CLI (lint, init, update)
+└── aps                              # CLI (lint, init, update, migrate,
+                                     #      next, start, complete, graph)
+
+lib/                                 # CLI internals (parsers, rules, output)
 
 plans/
-├── aps-rules.md                     # Agent guidance
+├── aps-rules.md                     # Agent guidance (APS-managed)
+├── project-context.md               # Project-specific context (you own this)
 ├── index.aps.md                     # Your main plan
+├── issues.md                        # Dev-time discoveries (ISS-NNN / Q-NNN)
 ├── modules/
 │   ├── .module.template.md          # Module template
 │   ├── .simple.template.md          # Simple feature template
 │   └── .index-monorepo.template.md  # Index for monorepos
 ├── execution/
-│   └── .steps.template.md           # Action steps template
-└── decisions/
+│   └── .actions.template.md         # Action plan template
+└── decisions/                       # ADRs (optional, empty by default)
 
 aps-planning/
 ├── SKILL.md                         # Planning skill (core rules)
@@ -129,11 +139,15 @@ aps-planning/
 ├── examples.md                      # Real-world examples
 ├── hooks.md                         # Hook configuration guide
 └── scripts/                         # Hook install + session scripts
-
-.claude/commands/
-├── plan.md                          # /plan command
-└── plan-status.md                   # /plan-status command
 ```
+
+`aps init` may additionally install agent definitions for each AI tool you
+opt into (`.claude/agents/`, `.github/agents/`, `.opencode/agents/`,
+`.codex/config.toml` overlays, or Gemini skills) — the prompt during `init`
+controls this.
+
+`.aps/context/` is created on first `aps start` and holds ephemeral context
+packages — it's added to `.gitignore` automatically.
 
 ## Next Steps
 
@@ -141,7 +155,7 @@ After installation:
 
 1. Edit `plans/index.aps.md` to define your plan
 2. Copy templates to create modules (remove the leading dot)
-3. Use `/plan` in Claude Code to start planning
+3. Use `/plan` in Claude Code, or run `aps next` to start working
 
-For a full walkthrough, see the [Getting Started](getting-started.md)
-guide.
+For a full walkthrough, see the [Getting Started](getting-started.md) guide.
+For the command reference, see [usage.md](usage.md).

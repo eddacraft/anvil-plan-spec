@@ -241,7 +241,7 @@ if [[ "$UPDATE_MODE" == true ]]; then
   copy_or_download "scaffold/plans/modules/.module.template.md" "$PLANS_DIR/modules/.module.template.md"
   copy_or_download "scaffold/plans/modules/.simple.template.md" "$PLANS_DIR/modules/.simple.template.md"
   copy_or_download "scaffold/plans/modules/.index-monorepo.template.md" "$PLANS_DIR/modules/.index-monorepo.template.md"
-  copy_or_download "scaffold/plans/execution/.steps.template.md" "$PLANS_DIR/execution/.steps.template.md"
+  copy_or_download "scaffold/plans/execution/.actions.template.md" "$PLANS_DIR/execution/.actions.template.md"
   copy_or_download "scaffold/designs/.design.template.md" "$TARGET/designs/.design.template.md"
 
   info "plans/ + designs/ (templates, rules)"
@@ -275,7 +275,7 @@ else
   copy_or_download "scaffold/plans/modules/.module.template.md" "$PLANS_DIR/modules/.module.template.md"
   copy_or_download "scaffold/plans/modules/.simple.template.md" "$PLANS_DIR/modules/.simple.template.md"
   copy_or_download "scaffold/plans/modules/.index-monorepo.template.md" "$PLANS_DIR/modules/.index-monorepo.template.md"
-  copy_or_download "scaffold/plans/execution/.steps.template.md" "$PLANS_DIR/execution/.steps.template.md"
+  copy_or_download "scaffold/plans/execution/.actions.template.md" "$PLANS_DIR/execution/.actions.template.md"
   copy_or_download "scaffold/designs/.design.template.md" "$TARGET/designs/.design.template.md"
 
   touch "$PLANS_DIR/decisions/.gitkeep"
@@ -297,7 +297,7 @@ else
   echo "  │   ├── .simple.template.md          <- Template for small features"
   echo "  │   └── .index-monorepo.template.md  <- Index for monorepos"
   echo "  ├── execution/"
-  echo "  │   └── .steps.template.md           <- Template for steps"
+  echo "  │   └── .actions.template.md         <- Template for action plans"
   echo "  └── decisions/"
   echo ""
   echo "  aps-planning/"

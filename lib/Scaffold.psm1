@@ -14,7 +14,7 @@ $script:PlanFiles = @(
     "scaffold/plans/modules/.module.template.md"
     "scaffold/plans/modules/.simple.template.md"
     "scaffold/plans/modules/.index-monorepo.template.md"
-    "scaffold/plans/execution/.steps.template.md"
+    "scaffold/plans/execution/.actions.template.md"
 )
 
 # Files to download for the planning skill
@@ -144,16 +144,22 @@ function Request-ApsYesNo {
 function Test-ApsHooksConfigured {
     <#
     .SYNOPSIS
-        Check if APS hooks are already configured in settings.local.json.
+        Check if APS hooks are already configured in settings.local.json or settings.json.
     #>
     param(
         [string]$Target = "."
     )
-    $settings = Join-Path (Join-Path $Target ".claude") "settings.local.json"
-    if (-not (Test-Path -LiteralPath $settings)) { return $false }
-    $content = Get-Content -LiteralPath $settings -Raw -ErrorAction SilentlyContinue
-    if (-not $content) { return $false }
-    return ($content -cmatch 'aps-planning/scripts' -or $content -cmatch '\[APS\]')
+    $claudeDir = Join-Path $Target ".claude"
+    foreach ($name in @("settings.local.json", "settings.json")) {
+        $settings = Join-Path $claudeDir $name
+        if (-not (Test-Path -LiteralPath $settings)) { continue }
+        $content = Get-Content -LiteralPath $settings -Raw -ErrorAction SilentlyContinue
+        if (-not $content) { continue }
+        if ($content -cmatch 'aps-planning/scripts' -or $content -cmatch '\.aps/scripts' -or $content -cmatch '\[APS\]') {
+            return $true
+        }
+    }
+    return $false
 }
 
 # --- Install functions ---
@@ -349,7 +355,7 @@ function Invoke-ApsInit {
     Write-Host "  |   +-- .simple.template.md          <- Template for small features"
     Write-Host "  |   +-- .index-monorepo.template.md  <- Index for monorepos"
     Write-Host "  +-- execution/"
-    Write-Host "  |   +-- .steps.template.md           <- Template for steps"
+    Write-Host "  |   +-- .actions.template.md         <- Template for action plans"
     Write-Host "  +-- decisions/"
     Write-Host ""
     Write-Host "  aps-planning/"

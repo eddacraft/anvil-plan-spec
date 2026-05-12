@@ -84,7 +84,7 @@ Provide data access layer for OpenCode configuration and session history. Handle
 
 ## Execution
 
-Steps: [./execution/CORE-001.steps.md](../execution/CORE-001.steps.md)
+Action Plan: [../execution/CORE-001.actions.md](../execution/CORE-001.actions.md)
 
 ## Decisions
 

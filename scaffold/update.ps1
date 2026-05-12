@@ -265,8 +265,8 @@ Write-Info "modules/.simple.template.md"
 Invoke-Download -Path "plans/modules/.index-monorepo.template.md" -Destination (Join-Path $PlansDir (Join-Path "modules" ".index-monorepo.template.md"))
 Write-Info "modules/.index-monorepo.template.md"
 
-Invoke-Download -Path "plans/execution/.steps.template.md" -Destination (Join-Path $PlansDir (Join-Path "execution" ".steps.template.md"))
-Write-Info "execution/.steps.template.md"
+Invoke-Download -Path "plans/execution/.actions.template.md" -Destination (Join-Path $PlansDir (Join-Path "execution" ".actions.template.md"))
+Write-Info "execution/.actions.template.md"
 
 # --- Update skill ---
 
@@ -323,7 +323,7 @@ Write-Host "    - aps-rules.md (agent guidance)"
 Write-Host "    - modules/.module.template.md"
 Write-Host "    - modules/.simple.template.md"
 Write-Host "    - modules/.index-monorepo.template.md"
-Write-Host "    - execution/.steps.template.md"
+Write-Host "    - execution/.actions.template.md"
 Write-Host "    - aps-planning/ (skill + scripts)"
 Write-Host "    - .claude/commands/ (plan, plan-status)"
 Write-Host ""

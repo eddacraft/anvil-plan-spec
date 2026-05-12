@@ -196,9 +196,9 @@ plans/
 ├── modules/               # Module specs (numbered by dependency order)
 │   ├── 01-core.aps.md
 │   └── 02-auth.aps.md
-├── execution/             # Step files
-│   ├── [TASK-ID].steps.md # Per-task (complex projects)
-│   └── [MODULE].steps.md  # Per-module (simple projects)
+├── execution/                 # Action plans
+│   ├── [WORK-ITEM-ID].actions.md  # Per-work-item (complex projects)
+│   └── [MODULE].actions.md        # Per-module (simple projects)
 └── decisions/             # ADRs (optional)
     └── [NNN]-[title].md
 ```

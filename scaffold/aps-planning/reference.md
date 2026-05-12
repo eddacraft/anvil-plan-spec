@@ -3,10 +3,11 @@
 Compact reference for the Anvil Plan Spec format. Read SKILL.md first.
 
 > **Canonical sources:** This is a context-window-friendly summary. Full details
-> live in [docs/getting-started.md](../docs/getting-started.md),
-> [templates/](../templates/), and
-> [scaffold/plans/aps-rules.md](../scaffold/plans/aps-rules.md). If this file
-> and the canonical sources diverge, the canonical sources win.
+> live in the upstream Anvil Plan Spec repo:
+> <https://github.com/EddaCraft/anvil-plan-spec> (`docs/getting-started.md`,
+> `templates/`, and `scaffold/plans/aps-rules.md`). The local
+> `plans/aps-rules.md` in your project is the operative agent guidance. If this
+> file and the canonical sources diverge, the canonical sources win.
 
 ## Hierarchy
 

@@ -82,7 +82,7 @@ Handle user registration and credential verification. This module owns password 
 
 ## Execution
 
-Steps: [./execution/AUTH-001.steps.md](../execution/AUTH-001.steps.md)
+Action Plan: [../execution/AUTH-001.actions.md](../execution/AUTH-001.actions.md)
 
 ## Decisions
 

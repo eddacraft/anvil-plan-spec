@@ -6,6 +6,34 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **Orchestration CLI** — `aps next` resolves the next ready work item across
+  modules, honouring work-item and module-level dependencies (ORCH-001).
+- **State-machine commands** — `aps start <ID>` and `aps complete <ID>` enforce
+  the Ready → In Progress → Complete lifecycle. `start` validates that every
+  dependency is Complete; `complete` requires the item to be In Progress and
+  stamps Status with the UTC date (ORCH-002).
+- **Context packaging** — `aps start` writes `.aps/context/<ID>.md` with the
+  work item, module scope, decisions, dependency learnings, and related files
+  (ORCH-003). Gitignored, regenerated on each `start`.
+- **Dependency graph** — `aps graph [module]` renders work items with their
+  upstream dependencies and per-item status (ORCH-004).
+- **Learning capture** — `aps complete --learning "..."` inserts a
+  `- **Learning:**` line after `- **Validation:**` (per ORCH D-002). Learnings
+  travel with the work item and surface as "Dependency Learnings" in downstream
+  context packages.
+- **v2 layout migration** — `aps migrate` converts existing projects to the
+  `.aps/` consolidated tooling root.
+
+### Changed
+
+- Scaffold renamed `steps.template.md` → `actions.template.md` end-to-end to
+  match the "Actions" terminology used in Work Items and prompts.
+- Skill install decoupled from `aps init` — install once globally, opt in per
+  project.
+- `/plan` skill auto-bootstraps `aps init` and performs a version check.
+
 ## [0.2.0] - 2026-02-20
 
 First release of Anvil Plan Spec (APS).

@@ -28,7 +28,22 @@ execution. Thorough preparation means fast, clean implementation.
 without learning repeats mistakes. The cycle exists to make each plan better
 than the last.
 
-## Phase Overview
+## Driving the loop with the CLI
+
+The `aps` CLI is built around this lifecycle. The day-to-day shape is:
+
+```bash
+aps next                              # Plan → discover next ready work item
+aps start AUTH-003                    # Execute → claim it, get a context package
+# ...implement, run validation...
+aps complete AUTH-003 --learning "..."  # Validate + Learn → capture insights
+aps next                              # Loop
+```
+
+You can ignore the CLI and hand-edit Status fields if you prefer — but the CLI
+enforces the state machine (Ready → In Progress → Complete), checks
+dependencies, and writes Status lines in a consistent format. See
+[usage.md](usage.md) for the full command reference.
 
 ## Scenarios
 
@@ -90,37 +105,28 @@ You've been asked to add user authentication to an existing app.
 
 You're halfway through AUTH-001 and realize you need database migrations.
 
-1. **Update the spec.** Add a new work item or note the dependency:
+1. **Add a new work item.** If the missing piece deserves its own outcome,
+   write the spec, then drive it through the lifecycle:
 
-   ```markdown
-   ### AUTH-001: Create registration endpoint
-   - **Status:** In Progress
-   - **Blocked:** Needs AUTH-000 (db migration) first
+   ```bash
+   # After editing auth.aps.md to add AUTH-000 as Ready
+   aps start AUTH-000
+   # implement, run validation...
+   aps complete AUTH-000 --learning "Migrations must run before schema-aware tests"
    ```
 
-   Or add a new work item:
+   `aps complete` stamps `- **Status:** Complete: 2026-05-12` (UTC date) and
+   inserts the `- **Learning:**` line after `- **Validation:**`. That learning
+   surfaces in dependency learnings when downstream items run `aps start`.
+
+2. **Handle blockers.** APS doesn't have a `Blocked` transition in the CLI —
+   blocking is a planning question, not a state-machine question. Capture the
+   blocker in `plans/issues.md` and either:
+   - Pause the item (leave it `In Progress`, add notes to the work item), or
+   - Roll back to `Ready` by hand-editing Status and removing what was started.
 
    ```markdown
-   ### AUTH-000: Add users table migration
-   - **Intent:** Create database schema for users
-   - **Expected Outcome:** users table exists with email, password_hash columns
-   - **Validation:** `psql -c '\d users'` shows table
-   - **Status:** ✓ Complete
-   ```
-
-2. **Handle blockers.** If you're blocked on something outside your control:
-
-   ```markdown
-   ### AUTH-002: Add OAuth login
-   - **Status:** Blocked
-   - **Blocked:** Waiting on Google API credentials from infra team
-   ```
-
-3. **Log discoveries.** When you find issues or questions during implementation,
-   add them to `plans/issues.md`:
-
-   ```markdown
-   ### ISS-001: API rate limit lower than documented
+   ### ISS-001: OAuth credentials pending from infra
 
    | Field | Value |
    |-------|-------|
@@ -129,18 +135,20 @@ You're halfway through AUTH-001 and realize you need database migrations.
    | Discovered | AUTH-002 |
    | Module | AUTH |
 
-   **Context:** During OAuth testing, discovered the API rate-limits at 100 req/min, not 1000 as documented.
-
-   **Impact:** Will need retry logic or request batching for production.
+   **Context:** Need Google API client ID/secret to finish AUTH-002.
+   **Impact:** AUTH-002 paused until credentials arrive.
    ```
 
-   This keeps issues visible without cluttering work items.
+3. **Log discoveries.** Any issue or open question that emerges goes into
+   `plans/issues.md` — keep them visible without cluttering work items.
 
-4. **Track progress.** Update work item status as you go:
-   - Remove status line = not started
-   - `In Progress` = actively working
-   - `Blocked` = waiting on something
-   - `✓ Complete` = done and validated
+4. **Status conventions.** The CLI uses four states for work items:
+   - `Draft` — not yet ready to start
+   - `Ready` — eligible for `aps start`
+   - `In Progress` — `aps start` set this
+   - `Complete: YYYY-MM-DD` — `aps complete` set this
+
+   Items with no Status field default to `Ready` when read by the CLI.
 
 ---
 
@@ -174,7 +182,9 @@ You've finished all work items in a module. Now what?
 1. **Validate all work items.** Run each work item's validation command. Make sure
    everything actually works.
 
-2. **Mark module complete:**
+2. **Mark module complete.** Module status is hand-edited — the CLI only manages
+   work item state. Bump the metadata table to `Complete` once every work item
+   in the module is Complete:
 
    ```markdown
    | ID | Owner | Status |

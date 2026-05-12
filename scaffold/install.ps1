@@ -293,8 +293,8 @@ Write-Info "modules/.simple.template.md"
 Invoke-Download -Path "plans/modules/.index-monorepo.template.md" -Destination (Join-Path $PlansDir (Join-Path "modules" ".index-monorepo.template.md"))
 Write-Info "modules/.index-monorepo.template.md"
 
-Invoke-Download -Path "plans/execution/.steps.template.md" -Destination (Join-Path $PlansDir (Join-Path "execution" ".steps.template.md"))
-Write-Info "execution/.steps.template.md"
+Invoke-Download -Path "plans/execution/.actions.template.md" -Destination (Join-Path $PlansDir (Join-Path "execution" ".actions.template.md"))
+Write-Info "execution/.actions.template.md"
 
 Invoke-Download -Path "designs/.design.template.md" -Destination (Join-Path $Target (Join-Path "designs" ".design.template.md"))
 Write-Info "designs/.design.template.md"
@@ -366,7 +366,7 @@ Write-Host "  |   +-- .module.template.md           # Module template"
 Write-Host "  |   +-- .simple.template.md           # Simple feature template"
 Write-Host "  |   +-- .index-monorepo.template.md   # Index for monorepos"
 Write-Host "  +-- execution/"
-Write-Host "  |   +-- .steps.template.md    # Action steps template"
+Write-Host "  |   +-- .actions.template.md  # Action plan template"
 Write-Host "  +-- decisions/"
 Write-Host ""
 Write-Host "  aps-planning/"
