@@ -252,10 +252,15 @@ A rich agent definition (like BMAD's BMad Master) that:
   that can drive APS workflows: assess plan state, pick next item, dispatch
   to implementer agent, validate checkpoint, capture learnings. Uses CLI
   commands when available, falls back to direct markdown reading.
-- **Validation:** Agent dispatched via Task tool navigates a plan correctly
-  across 2+ work items
+- **Validation:** Task-tool validation confirms Conductor instructions navigate
+  two dependent fixture work items; test suite verifies Conductor variants
+  install across supported harnesses
 - **Confidence:** medium
 - **Dependencies:** ORCH-001, AGENT-001
+- **Validation Evidence:** 2026-05-12 Task validation passed for AUTH-003 ->
+  AUTH-004 navigation using `--plans`, context package use, validation, and
+  learning capture
+- **Status:** Complete
 
 ### ORCH-006: Create MCP server
 

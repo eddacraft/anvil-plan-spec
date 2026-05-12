@@ -71,6 +71,7 @@ V2_CLI_FILES=(
 V2_AGENT_FILES=(
   "scaffold/agents/claude-code/aps-planner.md"
   "scaffold/agents/claude-code/aps-librarian.md"
+  "scaffold/agents/claude-code/aps-conductor.md"
 )
 
 # --- v1 file lists (backward compat for update) ---
@@ -343,6 +344,7 @@ write_config() {
           echo "    agents:"
           echo "      - aps-planner"
           echo "      - aps-librarian"
+          echo "      - aps-conductor"
           ;;
         copilot)
           echo "    skill: .claude/skills/aps-planning"
@@ -456,6 +458,7 @@ v2_install_copilot_agents() {
   mkdir -p "$agents_dir"
   download "scaffold/agents/copilot/aps-planner.md" "$agents_dir/aps-planner.md"
   download "scaffold/agents/copilot/aps-librarian.md" "$agents_dir/aps-librarian.md"
+  download "scaffold/agents/copilot/aps-conductor.md" "$agents_dir/aps-conductor.md"
 }
 
 # Install OpenCode agents to .opencode/agents/
@@ -466,6 +469,7 @@ v2_install_opencode_agents() {
   mkdir -p "$agents_dir"
   download "scaffold/agents/opencode/aps-planner.md" "$agents_dir/aps-planner.md"
   download "scaffold/agents/opencode/aps-librarian.md" "$agents_dir/aps-librarian.md"
+  download "scaffold/agents/opencode/aps-conductor.md" "$agents_dir/aps-conductor.md"
 }
 
 # Install Codex agents to .codex/agents/ + skill to .agents/skills/
@@ -477,6 +481,7 @@ v2_install_codex() {
   mkdir -p "$agents_dir"
   download "scaffold/agents/codex/aps-planner.toml" "$agents_dir/aps-planner.toml"
   download "scaffold/agents/codex/aps-librarian.toml" "$agents_dir/aps-librarian.toml"
+  download "scaffold/agents/codex/aps-conductor.toml" "$agents_dir/aps-conductor.toml"
   download "scaffold/agents/codex/codex-config-snippet.toml" "$agents_dir/codex-config-snippet.toml"
 
   # Skill at .agents/skills/ (shared with Gemini)
@@ -499,9 +504,10 @@ v2_install_agents_skill() {
 v2_install_gemini() {
   local target="$1"
 
-  mkdir -p "$target/.gemini/skills/aps-planner" "$target/.gemini/skills/aps-librarian"
+  mkdir -p "$target/.gemini/skills/aps-planner" "$target/.gemini/skills/aps-librarian" "$target/.gemini/skills/aps-conductor"
   download "scaffold/agents/gemini/aps-planner/SKILL.md" "$target/.gemini/skills/aps-planner/SKILL.md"
   download "scaffold/agents/gemini/aps-librarian/SKILL.md" "$target/.gemini/skills/aps-librarian/SKILL.md"
+  download "scaffold/agents/gemini/aps-conductor/SKILL.md" "$target/.gemini/skills/aps-conductor/SKILL.md"
 
   # Also place skill at .agents/skills/ (shared path)
   v2_install_agents_skill "$target"
@@ -551,32 +557,32 @@ v2_install_tools() {
         v2_install_skill "$target"
         v2_install_agents "$target"
         info ".claude/skills/aps-planning/ (skill)"
-        info ".claude/agents/ (planner, librarian)"
+        info ".claude/agents/ (planner, librarian, conductor)"
         ;;
       copilot)
         # Copilot reads .claude/skills/ too
         v2_install_skill "$target"
         v2_install_copilot_agents "$target"
         info ".claude/skills/aps-planning/ (skill — Copilot auto-discovers)"
-        info ".github/agents/ (planner, librarian)"
+        info ".github/agents/ (planner, librarian, conductor)"
         ;;
       opencode)
         # OpenCode reads .claude/skills/ too
         v2_install_skill "$target"
         v2_install_opencode_agents "$target"
         info ".claude/skills/aps-planning/ (skill — OpenCode auto-discovers)"
-        info ".opencode/agents/ (planner, librarian)"
+        info ".opencode/agents/ (planner, librarian, conductor)"
         ;;
       codex)
         v2_install_codex "$target"
-        info ".codex/agents/ (planner, librarian TOML configs)"
+        info ".codex/agents/ (planner, librarian, conductor TOML configs)"
         info ".agents/skills/aps-planning/ (skill)"
         post_install_msgs+=("Codex: merge .codex/agents/codex-config-snippet.toml into .codex/config.toml")
         post_install_msgs+=("  then run: codex skills install .agents/skills/aps-planning")
         ;;
       gemini)
         v2_install_gemini "$target"
-        info ".gemini/skills/ (planner, librarian)"
+        info ".gemini/skills/ (planner, librarian, conductor)"
         info ".agents/skills/aps-planning/ (skill)"
         post_install_msgs+=("Gemini: run: gemini skills link . --scope workspace")
         ;;

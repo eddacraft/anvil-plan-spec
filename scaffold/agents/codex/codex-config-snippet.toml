@@ -1,11 +1,13 @@
 # APS Agent Roles for Codex
 #
 # Merge these blocks into your .codex/config.toml to register the APS agents.
-# Then place aps-planner.toml and aps-librarian.toml in .codex/agents/.
+# Then place aps-planner.toml, aps-librarian.toml, and aps-conductor.toml in
+# .codex/agents/.
 #
 # Usage:
 #   /agent spawn aps-planner
 #   /agent spawn aps-librarian
+#   /agent spawn aps-conductor
 
 [agents.aps-planner]
 model = "o4-mini"  # OpenAI model — Codex runs on OpenAI infrastructure
@@ -14,3 +16,7 @@ config_file = ".codex/agents/aps-planner.toml"
 [agents.aps-librarian]
 model = "o4-mini"  # OpenAI model — Codex runs on OpenAI infrastructure
 config_file = ".codex/agents/aps-librarian.toml"
+
+[agents.aps-conductor]
+model = "o4-mini"  # OpenAI model — Codex runs on OpenAI infrastructure
+config_file = ".codex/agents/aps-conductor.toml"
