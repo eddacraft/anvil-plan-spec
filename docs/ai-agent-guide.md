@@ -95,9 +95,14 @@ When user asks to implement a feature or execute a work item:
    ```
 
 2. **Verify execution authority**
-   - Check work item status is "Ready"
-   - Check dependencies are complete
-   - If not Ready: Stop and ask user to approve
+   - Prefer `aps start <ID>` — it validates that the item is Ready, that all
+     dependencies are Complete, and that the owning module is Ready or In
+     Progress. On success it writes the new Status and generates a focused
+     context package at `.aps/context/<ID>.md`.
+   - If `aps start` rejects the item, do not bypass it by editing the markdown.
+     Surface the reason to the user.
+   - If APS isn't available, fall back to reading the file: status must be
+     "Ready" and every listed dependency must be `Complete`.
 
 3. **Understand the outcome**
    - Read: Intent (what and why)
@@ -132,8 +137,12 @@ When user asks to implement a feature or execute a work item:
    ```
 
 7. **Mark complete**
-   - Update work item status to "Done"
-   - Update action plan checkboxes (if used)
+   - Run `aps complete <ID>` — it requires the item to be In Progress and stamps
+     `Status: Complete: YYYY-MM-DD`.
+   - If you discovered something worth carrying forward, capture it inline:
+     `aps complete <ID> --learning "..."`. The learning attaches to the work
+     item and surfaces in dependency learnings for downstream items.
+   - Update action plan checkboxes (if used).
    - Report to user: "Work item [ID] complete. Validation passed."
 
 ## File Reading Priority
