@@ -105,5 +105,22 @@ APS_LOCAL="$PROJECT_ROOT" $APS init "$INIT_DIR" --profile solo --scope small --t
 grep -qF 'context/' "$INIT_DIR/.aps/.gitignore" || fail "context ignore missing"
 pass
 
+# Test 18: Generated agent artifacts and install include conductor
+echo -n "Test: conductor agents install... "
+[[ -f "$PROJECT_ROOT/scaffold/agents/claude-code/aps-conductor.md" ]] || fail "generated claude conductor missing"
+[[ -f "$PROJECT_ROOT/scaffold/agents/copilot/aps-conductor.md" ]] || fail "generated copilot conductor missing"
+[[ -f "$PROJECT_ROOT/scaffold/agents/codex/aps-conductor.toml" ]] || fail "generated codex conductor missing"
+[[ -f "$PROJECT_ROOT/scaffold/agents/opencode/aps-conductor.md" ]] || fail "generated opencode conductor missing"
+AGENT_DIR=$(mktemp -d)
+APS_LOCAL="$PROJECT_ROOT" $APS init "$AGENT_DIR" --profile agent --scope small --tools claude-code,copilot,codex,opencode,gemini > /dev/null 2>&1 || fail "agent init failed"
+[[ -f "$AGENT_DIR/.claude/agents/aps-conductor.md" ]] || fail "claude conductor missing"
+[[ -f "$AGENT_DIR/.github/agents/aps-conductor.md" ]] || fail "copilot conductor missing"
+[[ -f "$AGENT_DIR/.codex/agents/aps-conductor.toml" ]] || fail "codex conductor missing"
+[[ -f "$AGENT_DIR/.opencode/agents/aps-conductor.md" ]] || fail "opencode conductor missing"
+[[ -f "$AGENT_DIR/.gemini/skills/aps-conductor/SKILL.md" ]] || fail "gemini conductor missing"
+grep -qF 'aps-conductor' "$AGENT_DIR/.codex/agents/codex-config-snippet.toml" || fail "codex conductor config missing"
+rm -rf "$AGENT_DIR"
+pass
+
 echo ""
 echo -e "${GREEN}All tests passed!${NC}"
