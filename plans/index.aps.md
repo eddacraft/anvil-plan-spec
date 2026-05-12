@@ -52,10 +52,11 @@ APS needs continued development to:
 |--------|---------|--------|
 | [orchestrate](./modules/orchestrate.aps.md) | CLI orchestration, dependency resolution, state machine | Ready |
 | [tui](./modules/tui.aps.md) | Ratatui TUI customization wizard for project setup | Ready |
+| [spec](./modules/spec.aps.md) | Canonical vocabulary + schema (status reconciliation) | Draft |
+| [compound](./modules/compound.aps.md) | Review/Learn phase tooling (solution library, completed archive) | Ready |
 | [tasks](./modules/tasks.aps.md) | Claude Code Tasks integration | Draft |
 | [examples](./modules/examples.aps.md) | Additional worked examples | Draft |
 | [prompts](./modules/prompts.aps.md) | Tool-specific prompt variants | Draft |
-| [compound](./modules/compound.aps.md) | Review/Learn phase tooling | Draft |
 | [integrations](./modules/integrations.aps.md) | JSON export, GitHub sync | Draft |
 
 ### Long Term
@@ -63,7 +64,6 @@ APS needs continued development to:
 | Module | Purpose | Status |
 |--------|---------|--------|
 | ecosystem | GitHub Action, VS Code extension | Proposed |
-| spec | Formal versioning, JSON Schema | Proposed |
 
 ## Non-Goals
 
@@ -107,3 +107,5 @@ These are explicitly out of scope:
 - **D-023:** Commands fully dropped — *decided: skills only, no `.claude/commands/` shipped*
 - **D-024:** aps-rules.md split — *decided: `aps-rules.md` (APS-managed) + `project-context.md` (user-owned)*
 - **D-025:** designs/ and issues.md into plans/ — *decided: single planning content root*
+- **D-026:** Promote `spec` module from Long Term to Near Term — *decided: yes, status vocabulary divergence with anvil-001 needs formal resolution; see [spec.aps.md](./modules/spec.aps.md) D-026 for the open Draft↔Proposed / Complete↔Done question*
+- **D-027:** Promote `compound` from Draft to Ready — *decided: yes, anvil-001 surveyed prior art (completed/ archive, releases/ narrative, completed-index roll-up) makes the work concrete; see [compound.aps.md](./modules/compound.aps.md)*
