@@ -5,7 +5,7 @@
 #
 # Usage:
 #   curl -fsSL https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install | bash
-#   curl ... | bash -s -- /path/to/project
+#   curl ... | bash -s -- ./my-project
 #   curl ... | VERSION=0.2.0 bash
 #
 # For updating existing projects, use the update script instead.
@@ -268,8 +268,8 @@ info "modules/.simple.template.md"
 download "plans/modules/.index-monorepo.template.md" "$PLANS_DIR/modules/.index-monorepo.template.md"
 info "modules/.index-monorepo.template.md"
 
-download "plans/execution/.steps.template.md" "$PLANS_DIR/execution/.steps.template.md"
-info "execution/.steps.template.md"
+download "plans/execution/.actions.template.md" "$PLANS_DIR/execution/.actions.template.md"
+info "execution/.actions.template.md"
 
 touch "$PLANS_DIR/decisions/.gitkeep"
 
@@ -321,7 +321,7 @@ echo "  │   ├── .module.template.md           # Module template"
 echo "  │   ├── .simple.template.md           # Simple feature template"
 echo "  │   └── .index-monorepo.template.md   # Index for monorepos"
 echo "  ├── execution/"
-echo "  │   └── .steps.template.md    # Action steps template"
+echo "  │   └── .actions.template.md  # Action plan template"
 echo "  └── decisions/"
 echo ""
 echo "  aps-planning/"

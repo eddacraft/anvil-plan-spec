@@ -155,7 +155,7 @@ After installation:
 
 1. Edit `plans/index.aps.md` to define your plan
 2. Copy templates to create modules (remove the leading dot)
-3. Use `/plan` in Claude Code, or run `aps next` to start working
+3. Point your AI agent at `plans/aps-rules.md`, or run `aps next` to start working
 
 For a full walkthrough, see the [Getting Started](getting-started.md) guide.
 For the command reference, see [usage.md](usage.md).
