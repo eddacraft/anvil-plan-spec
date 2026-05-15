@@ -22,8 +22,8 @@
 
 - **Outcome:** [How you know it's done]
 - **Test:** `[command to verify]`
-- **Depends on:** 001 *(optional)*
+- **Depends on:** 001 _(optional)_
 
 ---
 
-*When this grows, split into [module.template.md](module.template.md) files.*
+_When this grows, split into [module.template.md](module.template.md) files._

@@ -1,8 +1,8 @@
 # TUI Onboarding Module
 
-| ID | Owner | Status |
-|----|-------|--------|
-| TUI | @aneki | Ready |
+| ID  | Owner  | Status |
+| --- | ------ | ------ |
+| TUI | @aneki | Ready  |
 
 ## Purpose
 
@@ -98,17 +98,17 @@ shared theme, keyboard conventions). APS consumes this as a crate dependency.
 
 ## Decisions
 
-- **D-026:** Where does `aps-cli` source live? — *decided: in this repo under
+- **D-026:** Where does `aps-cli` source live? — _decided: in this repo under
   `cli/`. Keeps everything together. Acknowledged trade-off: APS grows from
   pure templates/docs into a repo with deployable code — increased scope and
-  CI complexity.*
-- **D-027:** Shared TUI components — *decided: consume `eddacraft/eddacraft-tui`
-  as git dependency for now. Publish as crate later if needed.*
-- **D-028:** Should `aps lint` be ported to Rust? — *decided: yes. The Rust
+  CI complexity._
+- **D-027:** Shared TUI components — _decided: consume `eddacraft/eddacraft-tui`
+  as git dependency for now. Publish as crate later if needed._
+- **D-028:** Should `aps lint` be ported to Rust? — _decided: yes. The Rust
   markdown parser serves TUI, ORCH (`aps next`), and lint from a single
   codebase. Also provides a reference implementation portable to
   `eddacraft/anvil-001` (currently TS). Trade-off: reimplements working bash
-  code, but the shared parser justifies the cost.*
+  code, but the shared parser justifies the cost._
 
 ## Ready Checklist
 
@@ -145,8 +145,8 @@ shared theme, keyboard conventions). APS consumes this as a crate dependency.
   3. **AI tooling** (multi-select + per-tool config): select tools, then
      configure each — which agents to install, hook verbosity
      (full/minimal/none), model preferences where applicable.
-  Back-navigation via Esc. Keyboard conventions match Anvil. Selections stored
-  in wizard state.
+     Back-navigation via Esc. Keyboard conventions match Anvil. Selections stored
+     in wizard state.
 - **Validation:** User can navigate forward and back through all sections;
   monorepo options only appear when monorepo selected; per-tool config only
   shows for selected tools; q/Ctrl+C exits cleanly
@@ -193,12 +193,12 @@ shared theme, keyboard conventions). APS consumes this as a crate dependency.
 - **Intent:** Support CI, piped environments, and repeatable setups
 - **Expected Outcome:** Two non-interactive paths:
   1. **Flags:** `aps init --non-interactive --profile solo --shape monorepo
-     --tools claude-code,copilot --plans-dir docs/plans` — all wizard options
+--tools claude-code,copilot --plans-dir docs/plans` — all wizard options
      available as CLI flags.
   2. **Config file:** `aps init --from .aps/config.yml` — replay a previous
      configuration (enables team-wide standardization: commit config, teammates
      run `aps init --from`).
-  Auto-detects non-TTY and falls back to flag mode with smart defaults.
+     Auto-detects non-TTY and falls back to flag mode with smart defaults.
 - **Validation:** Both paths produce valid scaffold; config-driven init matches
   TUI-driven init for same selections; exit code 0/non-zero
 - **Confidence:** high
@@ -238,11 +238,11 @@ shared theme, keyboard conventions). APS consumes this as a crate dependency.
 
 ## Relationship to Other Modules
 
-| Module | Relationship |
-|--------|-------------|
-| **INSTALL** | TUI replaces INSTALL's shell-prompt frontend; scaffold logic stays |
-| **ORCH** | Shared markdown parser opportunity if lint is ported to Rust (D-028) |
-| **VAL** | Native lint port would subsume VAL's bash linter |
+| Module      | Relationship                                                         |
+| ----------- | -------------------------------------------------------------------- |
+| **INSTALL** | TUI replaces INSTALL's shell-prompt frontend; scaffold logic stays   |
+| **ORCH**    | Shared markdown parser opportunity if lint is ported to Rust (D-028) |
+| **VAL**     | Native lint port would subsume VAL's bash linter                     |
 
 ## Notes
 

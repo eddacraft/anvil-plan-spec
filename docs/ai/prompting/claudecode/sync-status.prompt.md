@@ -58,18 +58,22 @@ Claude updates:
 # In plans/modules/02-auth.aps.md
 
 ### AUTH-001: User registration flow
+
 - **Status:** Complete (2025-01-24)
-...
+  ...
 
 ### AUTH-002: Email verification
+
 - **Status:** Complete (2025-01-24)
-...
+  ...
 
 ### AUTH-003: Password reset
+
 - **Status:** Blocked: email provider API key not configured
-...
+  ...
 
 ### AUTH-004: Rate limiting for registration (Draft)
+
 - **Intent:** Prevent abuse of registration endpoint
 - **Expected Outcome:** Registration endpoint returns 429 after N requests/minute
 - **Validation:** `npm test -- rate-limit`

@@ -10,13 +10,13 @@
 #   /agent spawn aps-conductor
 
 [agents.aps-planner]
-model = "o4-mini"  # OpenAI model — Codex runs on OpenAI infrastructure
+model = "o4-mini" # OpenAI model — Codex runs on OpenAI infrastructure
 config_file = ".codex/agents/aps-planner.toml"
 
 [agents.aps-librarian]
-model = "o4-mini"  # OpenAI model — Codex runs on OpenAI infrastructure
+model = "o4-mini" # OpenAI model — Codex runs on OpenAI infrastructure
 config_file = ".codex/agents/aps-librarian.toml"
 
 [agents.aps-conductor]
-model = "o4-mini"  # OpenAI model — Codex runs on OpenAI infrastructure
+model = "o4-mini" # OpenAI model — Codex runs on OpenAI infrastructure
 config_file = ".codex/agents/aps-conductor.toml"

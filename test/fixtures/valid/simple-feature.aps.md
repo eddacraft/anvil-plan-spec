@@ -1,8 +1,8 @@
 # Dark Mode Feature
 
-| ID | Owner | Status |
-|----|-------|--------|
-| DARK | @test | Ready |
+| ID   | Owner | Status |
+| ---- | ----- | ------ |
+| DARK | @test | Ready  |
 
 ## Purpose
 

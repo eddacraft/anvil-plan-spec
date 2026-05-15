@@ -1,8 +1,8 @@
 # Orchestrate Module
 
-| ID | Owner | Status |
-|----|-------|--------|
-| ORCH | @aneki | Ready |
+| ID   | Owner  | Status |
+| ---- | ------ | ------ |
+| ORCH | @aneki | Ready  |
 
 > **Note:** This is an exploratory "or" spec — an alternative to the TASKS
 > module for providing programmatic plan navigation. TASKS focuses on Claude
@@ -122,19 +122,24 @@ When `aps start` is called, it assembles a context package:
 # Context: AUTH-003 — Implement token refresh
 
 ## Work Item
+
 [Pulled from auth.aps.md — intent, outcome, validation, files]
 
 ## Module Scope
+
 [Pulled from auth.aps.md — purpose, in-scope, interfaces]
 
 ## Decisions
+
 [Pulled from auth.aps.md — relevant decisions]
 
 ## Dependency Learnings
+
 - AUTH-001: "JWT library requires explicit algorithm whitelist"
 - AUTH-002: "Session store must handle concurrent access"
 
 ## Related Files
+
 [From work item Files field, expanded to actual paths]
 ```
 
@@ -213,7 +218,7 @@ A rich agent definition (like BMAD's BMad Master) that:
 - **Intent:** Enforce state transitions and capture learnings
 - **Expected Outcome:** `aps start <ID>` marks In Progress in markdown,
   suggests branch name (`work/<ID>`), assembles context package. `aps complete
-  <ID>` validates transition (must be In Progress), marks Complete, prompts
+<ID>` validates transition (must be In Progress), marks Complete, prompts
   for optional learning (`- **Learning:** "..."`). Both reject invalid
   transitions with clear error messages.
 - **Validation:** Status fields update in-place; invalid transitions rejected;
@@ -275,24 +280,24 @@ A rich agent definition (like BMAD's BMad Master) that:
 
 ## Decisions
 
-- **D-001:** Should ORCH absorb TASKS or coexist? — *decided: coexist. ORCH
+- **D-001:** Should ORCH absorb TASKS or coexist? — _decided: coexist. ORCH
   is the tool-agnostic CLI layer (dependency resolution, state machine,
   context packaging). TASKS is a Claude Code-specific integration that can
-  leverage ORCH's foundation. Revisit if TASKS never matures.*
-- **D-002:** Learning storage format — *decided: inline in work item metadata
+  leverage ORCH's foundation. Revisit if TASKS never matures._
+- **D-002:** Learning storage format — _decided: inline in work item metadata
   (`- **Learning:** "..."` after Validation field). Simpler, keeps everything
-  in one place, no sync issues. Learnings are per-work-item, not per-module.*
-- **D-003:** VCS integration scope — *decided: advisory only. `aps start`
+  in one place, no sync issues. Learnings are per-work-item, not per-module._
+- **D-003:** VCS integration scope — _decided: advisory only. `aps start`
   suggests a branch name (`work/AUTH-003`) but does not create it. APS manages
-  planning, not git workflow. Users have their own branching strategies.*
-- **D-004:** MCP server language — *decided: TypeScript using MCP SDK (Phase 3,
+  planning, not git workflow. Users have their own branching strategies._
+- **D-004:** MCP server language — _decided: TypeScript using MCP SDK (Phase 3,
   optional). The MCP protocol requires JSON-RPC over stdio which shell can't
   handle cleanly. CLI stays pure bash. MCP server is an optional wrapper for
-  agents that support MCP.*
-- **D-005:** Context package location — *decided: ephemeral at `.aps/context/`
+  agents that support MCP._
+- **D-005:** Context package location — _decided: ephemeral at `.aps/context/`
   (gitignored). Context packages are assembled fresh on `aps start` from
   versioned source data (work items, modules, decisions). No need to version
-  the assembled output — it would just be clutter.*
+  the assembled output — it would just be clutter._
 
 ## Execution Strategy
 
@@ -313,13 +318,13 @@ A rich agent definition (like BMAD's BMad Master) that:
 
 ## Relationship to Other Modules
 
-| Module | Relationship |
-|--------|-------------|
-| **TASKS** | Alternative/complement — TASKS is Claude Code-specific; ORCH is tool-agnostic. Could coexist or merge. |
-| **AGENT** | ORCH's Conductor agent extends the Planner agent concept |
-| **VAL** | ORCH reuses VAL's markdown parser |
-| **COMPOUND** | ORCH's learning capture feeds into COMPOUND's solution docs |
-| **INSTALL** | ORCH CLI commands and MCP server need installation support |
+| Module       | Relationship                                                                                           |
+| ------------ | ------------------------------------------------------------------------------------------------------ |
+| **TASKS**    | Alternative/complement — TASKS is Claude Code-specific; ORCH is tool-agnostic. Could coexist or merge. |
+| **AGENT**    | ORCH's Conductor agent extends the Planner agent concept                                               |
+| **VAL**      | ORCH reuses VAL's markdown parser                                                                      |
+| **COMPOUND** | ORCH's learning capture feeds into COMPOUND's solution docs                                            |
+| **INSTALL**  | ORCH CLI commands and MCP server need installation support                                             |
 
 ## Notes
 
@@ -332,7 +337,7 @@ A rich agent definition (like BMAD's BMad Master) that:
 - The CLI should be implementable as an extension of the existing `./bin/aps`
   script, reusing the VAL module's parser.
 - Phase 1 (CLI foundation) is achievable quickly — it's essentially `grep +
-  parse + sed` on structured markdown.
+parse + sed` on structured markdown.
 - Phases 2-3 are progressive enhancements that add value but aren't required
   for basic use.
 

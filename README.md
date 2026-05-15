@@ -1,6 +1,8 @@
 <!-- markdownlint-disable MD041 -->
+
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/version-0.2.0-green.svg)](https://github.com/EddaCraft/anvil-plan-spec/releases/tag/v0.2.0)
+
 <!-- markdownlint-enable MD041 -->
 
 # Anvil Plan Spec (APS)
@@ -42,7 +44,7 @@ APS is different:
 - **Human-readable** — Your PM, tech lead, and future self can all understand it.
 
 APS isn't a replacement for your AI tools — it's the planning layer that works
-*across* all of them. Write your spec once, use it everywhere.
+_across_ all of them. Write your spec once, use it everywhere.
 
 ## Hierarchy
 
@@ -58,20 +60,20 @@ graph TD
     D -.-|"checkpoints<br/>observable actions"| D
 ```
 
-| Layer | Purpose | Executable? |
-|-------|---------|-------------|
-| **Index** | High-level plan with modules and milestones | No |
-| **Module** | Bounded scope with interfaces and work items | If status is Ready |
-| **Work Item** | Single coherent change with validation | Yes — execution authority |
-| **Action Plan** | Ordered actions with checkpoints | Yes — granular execution |
+| Layer           | Purpose                                      | Executable?               |
+| --------------- | -------------------------------------------- | ------------------------- |
+| **Index**       | High-level plan with modules and milestones  | No                        |
+| **Module**      | Bounded scope with interfaces and work items | If status is Ready        |
+| **Work Item**   | Single coherent change with validation       | Yes — execution authority |
+| **Action Plan** | Ordered actions with checkpoints             | Yes — granular execution  |
 
 **Key concepts:**
 
 - **Index** — The root plan. Describes the whole initiative, lists modules.
-- **Module** — A bounded area where work happens. The smallest unit you *plan*.
+- **Module** — A bounded area where work happens. The smallest unit you _plan_.
   You don't subdivide modules into sub-plans — they contain work items directly.
 - **Work Item** — A single authorised change. The unit of execution authority.
-- **Action Plan** — How you *execute* a work item. Optional, generated when needed. Breaks
+- **Action Plan** — How you _execute_ a work item. Optional, generated when needed. Breaks
   a work item into checkpointed actions for granular progress tracking.
 
 ## Hello World
@@ -80,19 +82,23 @@ graph TD
 # Add Dark Mode
 
 ## Problem
+
 Users want to reduce eye strain when working at night.
 
 ## Success
+
 - [ ] Toggle persists across sessions
 - [ ] All components respect theme
 
 ## Work Items
 
 ### 001: Add theme context
+
 - **Outcome:** ThemeProvider wraps app, exposes toggle
 - **Test:** `npm test -- theme.test.tsx`
 
 ### 002: Add toggle to settings
+
 - **Outcome:** Settings page has working theme toggle
 - **Test:** Manual verification
 - **Depends on:** 001
@@ -124,29 +130,29 @@ machine, error codes, JSON output, and CI integration.
 
 APS is just markdown. Use it however you work:
 
-| Context | How to use APS |
-|---------|----------------|
-| **Claude / ChatGPT** | Paste the spec into your conversation |
-| **Cursor / Copilot** | Keep specs in your repo, reference in prompts |
-| **Claude Code / aider** | Point the agent at your spec files |
-| **Jira / Linear / Notion** | Link to specs in git, or embed the markdown |
-| **Code review** | Review spec changes in PRs before implementation |
-| **Team planning** | Specs are human-readable — discuss them in meetings |
+| Context                    | How to use APS                                      |
+| -------------------------- | --------------------------------------------------- |
+| **Claude / ChatGPT**       | Paste the spec into your conversation               |
+| **Cursor / Copilot**       | Keep specs in your repo, reference in prompts       |
+| **Claude Code / aider**    | Point the agent at your spec files                  |
+| **Jira / Linear / Notion** | Link to specs in git, or embed the markdown         |
+| **Code review**            | Review spec changes in PRs before implementation    |
+| **Team planning**          | Specs are human-readable — discuss them in meetings |
 
 No plugins. No integrations. No configuration. It's just files.
 
 ## Templates
 
-| Template | Use When |
-|----------|----------|
-| [quickstart.template.md](templates/quickstart.template.md) | **Try APS in 5 minutes** — minimal single-file format |
-| [index.template.md](templates/index.template.md) | Starting a new plan or initiative |
-| [index-expanded.template.md](templates/index-expanded.template.md) | Larger initiatives with 6+ modules or rich metadata |
-| [module.template.md](templates/module.template.md) | Defining a bounded module with work items |
-| [simple.template.md](templates/simple.template.md) | Small, self-contained features |
-| [actions.template.md](templates/actions.template.md) | Breaking work items into executable actions |
-| [design.template.md](templates/design.template.md) | Technical/architectural design for complex work |
-| [solution.template.md](templates/solution.template.md) | Documenting solved problems (compound phase) |
+| Template                                                           | Use When                                              |
+| ------------------------------------------------------------------ | ----------------------------------------------------- |
+| [quickstart.template.md](templates/quickstart.template.md)         | **Try APS in 5 minutes** — minimal single-file format |
+| [index.template.md](templates/index.template.md)                   | Starting a new plan or initiative                     |
+| [index-expanded.template.md](templates/index-expanded.template.md) | Larger initiatives with 6+ modules or rich metadata   |
+| [module.template.md](templates/module.template.md)                 | Defining a bounded module with work items             |
+| [simple.template.md](templates/simple.template.md)                 | Small, self-contained features                        |
+| [actions.template.md](templates/actions.template.md)               | Breaking work items into executable actions           |
+| [design.template.md](templates/design.template.md)                 | Technical/architectural design for complex work       |
+| [solution.template.md](templates/solution.template.md)             | Documenting solved problems (compound phase)          |
 
 ## Examples
 
@@ -155,11 +161,11 @@ No plugins. No integrations. No configuration. It's just files.
 
 ## Platform Support
 
-| Platform | Authoring (lint/init) | Orchestration (next/start/complete/graph) |
-|----------|-----------------------|--------------------------------------------|
-| **Linux**   | Bash 4.0+ | Bash 4.0+ |
-| **macOS**   | Bash 4.0+ via `brew install bash` | Bash 4.0+ via `brew install bash` |
-| **Windows** | PowerShell 5.1+ (native `aps.ps1`) | Bash 4.0+ via WSL or Git Bash |
+| Platform    | Authoring (lint/init)              | Orchestration (next/start/complete/graph) |
+| ----------- | ---------------------------------- | ----------------------------------------- |
+| **Linux**   | Bash 4.0+                          | Bash 4.0+                                 |
+| **macOS**   | Bash 4.0+ via `brew install bash`  | Bash 4.0+ via `brew install bash`         |
+| **Windows** | PowerShell 5.1+ (native `aps.ps1`) | Bash 4.0+ via WSL or Git Bash             |
 
 The bash CLI uses `#!/usr/bin/env bash`, so Homebrew's bash is picked up
 automatically once it's on your `PATH`. macOS ships Bash 3.2 (2007), which is
@@ -201,12 +207,12 @@ Plan → Execute → Validate → Learn → Plan again
   └──────────────────────────────────────┘
 ```
 
-| Phase | What Happens | How It Serves Planning |
-|-------|--------------|------------------------|
-| **Plan** | Define scope, success criteria, work items | Reference past patterns and solutions |
-| **Execute** | Work against well-defined specs | Clean implementation, fewer blockers |
-| **Validate** | Check outcomes against spec | Verify plan was correct, update if not |
-| **Learn** | Document solutions and learnings | Future plans start with known answers |
+| Phase        | What Happens                               | How It Serves Planning                 |
+| ------------ | ------------------------------------------ | -------------------------------------- |
+| **Plan**     | Define scope, success criteria, work items | Reference past patterns and solutions  |
+| **Execute**  | Work against well-defined specs            | Clean implementation, fewer blockers   |
+| **Validate** | Check outcomes against spec                | Verify plan was correct, update if not |
+| **Learn**    | Document solutions and learnings           | Future plans start with known answers  |
 
 Planning without validation is guesswork. Validation without learning repeats
 mistakes. The cycle exists to make each plan better than the last.

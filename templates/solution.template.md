@@ -44,7 +44,7 @@ Examples:
 
 ## Template
 
-```markdown
+````markdown
 # [Problem Title]
 
 Brief one-line summary of the problem.
@@ -84,6 +84,7 @@ What fixed it:
 # After
 [new code]
 ```
+````
 
 ### Configuration Changes
 
@@ -114,12 +115,12 @@ How to avoid this in future:
 
 ## Metadata
 
-| Field | Value |
-|-------|-------|
-| Date | YYYY-MM-DD |
-| Component | [affected module/area] |
-| Severity | [critical/moderate/minor] |
-| Time to fix | [rough estimate] |
+| Field       | Value                     |
+| ----------- | ------------------------- |
+| Date        | YYYY-MM-DD                |
+| Component   | [affected module/area]    |
+| Severity    | [critical/moderate/minor] |
+| Time to fix | [rough estimate]          |
 
 ```
 
@@ -151,3 +152,4 @@ After documenting 3+ similar issues, consider:
 2. **Updating conventions** — Add to project coding standards
 3. **Creating a checklist** — Add to review process
 4. **Updating templates** — Prevent the issue in new code
+```

@@ -2,12 +2,12 @@
 
 # Action Plan: CORE-001
 
-| Field | Value |
-|-------|-------|
-| Source | [./modules/core.aps.md](../modules/core.aps.md) |
-| Work Item | CORE-001 — Implement config discovery and parsing |
-| Created by | AI |
-| Status | Ready |
+| Field      | Value                                             |
+| ---------- | ------------------------------------------------- |
+| Source     | [./modules/core.aps.md](../modules/core.aps.md)   |
+| Work Item  | CORE-001 — Implement config discovery and parsing |
+| Created by | AI                                                |
+| Status     | Ready                                             |
 
 ## Prerequisites
 

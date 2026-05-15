@@ -1,8 +1,8 @@
 # Billing Module
 
-| ID | Owner | Status |
-|----|-------|--------|
-| BILLING | @test | Ready |
+| ID      | Owner | Status |
+| ------- | ----- | ------ |
+| BILLING | @test | Ready  |
 
 ## Purpose
 

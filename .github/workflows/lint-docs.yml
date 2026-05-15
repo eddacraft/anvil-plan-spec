@@ -6,14 +6,14 @@ on:
       - main
       - dev
     paths:
-      - '**.md'
-      - '.markdownlint.json'
-      - '.github/workflows/lint-docs.yml'
+      - "**.md"
+      - ".markdownlint.json"
+      - ".github/workflows/lint-docs.yml"
   pull_request:
     paths:
-      - '**.md'
-      - '.markdownlint.json'
-      - '.github/workflows/lint-docs.yml'
+      - "**.md"
+      - ".markdownlint.json"
+      - ".github/workflows/lint-docs.yml"
 
 jobs:
   markdownlint:
@@ -28,7 +28,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "20"
 
       - name: Run markdownlint
         run: npx markdownlint-cli "**/*.md"

@@ -3,13 +3,13 @@
   "version": "0.2.0",
   "private": true,
   "description": "A lightweight specification format for planning and work item authorisation in AI-assisted development.",
+  "license": "Apache-2.0",
   "scripts": {
     "lint": "markdownlint \"**/*.md\"",
     "lint:fix": "markdownlint --fix \"**/*.md\"",
     "validate": "./bin/aps lint",
     "prepare": "husky"
   },
-  "license": "Apache-2.0",
   "devDependencies": {
     "husky": "^9.1.7",
     "lint-staged": "^16.4.0",

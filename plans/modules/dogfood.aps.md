@@ -73,7 +73,6 @@ repo and see the same discipline we recommend elsewhere.
   headers no longer matched reality. The same audit pattern, formalized,
   would make these drifts cheap to catch.
 - **Expected Outcome:** Two-layer hygiene:
-
   1. **Static checks** (lint-level, fast) — extend `lib/lint.sh` and
      `lib/Lint.psm1` to flag:
      - Module link in `index.aps.md` pointing to a non-existent file

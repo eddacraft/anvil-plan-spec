@@ -11,12 +11,12 @@ name: Lint APS Documents
 on:
   push:
     paths:
-      - 'plans/**/*.aps.md'
-      - 'plans/**/*.actions.md'
+      - "plans/**/*.aps.md"
+      - "plans/**/*.actions.md"
   pull_request:
     paths:
-      - 'plans/**/*.aps.md'
-      - 'plans/**/*.actions.md'
+      - "plans/**/*.aps.md"
+      - "plans/**/*.actions.md"
 
 jobs:
   lint:

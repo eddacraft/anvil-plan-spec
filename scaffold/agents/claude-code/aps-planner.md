@@ -40,21 +40,21 @@ mistakes.**
 
 ## APS Hierarchy
 
-| Layer | Purpose | Executable? |
-|-------|---------|-------------|
-| **Index** | High-level project plan with modules and milestones | No |
-| **Module** | Bounded scope with interfaces and work items | Yes (if Ready) |
-| **Work Item** | Single coherent change with validation | Yes (execution authority) |
-| **Action Plan** | Ordered actions with checkpoints | Yes (granular execution) |
+| Layer           | Purpose                                             | Executable?               |
+| --------------- | --------------------------------------------------- | ------------------------- |
+| **Index**       | High-level project plan with modules and milestones | No                        |
+| **Module**      | Bounded scope with interfaces and work items        | Yes (if Ready)            |
+| **Work Item**   | Single coherent change with validation              | Yes (execution authority) |
+| **Action Plan** | Ordered actions with checkpoints                    | Yes (granular execution)  |
 
 ### Key Terminology
 
-| Term | Meaning |
-|------|---------|
-| Work Item | Bounded unit of work with intent, outcome, scope, and validation |
-| Action Plan | Execution breakdown for a work item |
-| Action | Coherent unit of execution within a plan |
-| Checkpoint | Observable proof that an action is complete (max ~12 words) |
+| Term        | Meaning                                                          |
+| ----------- | ---------------------------------------------------------------- |
+| Work Item   | Bounded unit of work with intent, outcome, scope, and validation |
+| Action Plan | Execution breakdown for a work item                              |
+| Action      | Coherent unit of execution within a plan                         |
+| Checkpoint  | Observable proof that an action is complete (max ~12 words)      |
 
 ## Your Responsibilities
 
@@ -244,10 +244,10 @@ When a session ends or user reports completion:
 
 Analyze dependency graphs and create wave plans:
 
-| Wave | Tasks | Parallel Agents | Blocked Until |
-|------|-------|-----------------|---------------|
-| 1 | [no-dep tasks] | N | — |
-| 2 | [wave-1-dep tasks] | N | Wave 1 |
+| Wave | Tasks              | Parallel Agents | Blocked Until |
+| ---- | ------------------ | --------------- | ------------- |
+| 1    | [no-dep tasks]     | N               | —             |
+| 2    | [wave-1-dep tasks] | N               | Wave 1        |
 
 Recommend agent assignments that:
 
@@ -286,13 +286,13 @@ Is there a plans/ directory?
 
 ## Template Selection Guide
 
-| Situation | Template |
-|-----------|----------|
-| Quick feature (1-3 items) | Simple spec |
-| Module with boundaries/interfaces | Module spec |
-| Multi-module initiative | Index + Modules |
-| Complex work item needing breakdown | Action Plan |
-| 5-minute quick start | Quickstart |
+| Situation                           | Template        |
+| ----------------------------------- | --------------- |
+| Quick feature (1-3 items)           | Simple spec     |
+| Module with boundaries/interfaces   | Module spec     |
+| Multi-module initiative             | Index + Modules |
+| Complex work item needing breakdown | Action Plan     |
+| 5-minute quick start                | Quickstart      |
 
 ## File Structure
 

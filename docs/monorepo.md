@@ -47,11 +47,11 @@ A prioritized queue across all packages:
 ```markdown
 ## What's Next
 
-| # | Work Item | Module | Packages | Owner | Status |
-|---|-----------|--------|----------|-------|--------|
-| 1 | AUTH-002 | auth | core, api | @josh | Ready |
-| 2 | CLI-001 | cli | cli, shared | @josh | Ready |
-| 3 | UI-003 | components | web, ui | — | Ready |
+| #   | Work Item | Module     | Packages    | Owner | Status |
+| --- | --------- | ---------- | ----------- | ----- | ------ |
+| 1   | AUTH-002  | auth       | core, api   | @josh | Ready  |
+| 2   | CLI-001   | cli        | cli, shared | @josh | Ready  |
+| 3   | UI-003    | components | web, ui     | —     | Ready  |
 ```
 
 This answers "what should I work on next?" without digging through modules.
@@ -64,20 +64,24 @@ Navigation view grouped by package:
 ## Modules by Package
 
 ### apps/api
+
 - [auth](./modules/01-auth.aps.md) — AUTH-002 ready
 
 ### apps/web
+
 - [components](./modules/03-components.aps.md) — UI-003 ready
 
 ### packages/core
+
 - [auth](./modules/01-auth.aps.md) — AUTH-002 ready
 - [data](./modules/04-data.aps.md) — no ready items
 
 ### packages/shared
+
 - [cli](./modules/02-cli.aps.md) — CLI-001 ready
 ```
 
-Note: Modules can appear under multiple packages. This grouping is a *view*, not ownership—ownership lives in the module metadata.
+Note: Modules can appear under multiple packages. This grouping is a _view_, not ownership—ownership lives in the module metadata.
 
 ### Cross-Cutting Section
 
@@ -85,6 +89,7 @@ For modules that span multiple packages:
 
 ```markdown
 ## Cross-Cutting Concerns
+
 - [auth](./modules/01-auth.aps.md) — spans core + api + web
 ```
 
@@ -95,9 +100,9 @@ Add a `Packages` column to module metadata:
 ```markdown
 # Auth Module
 
-| ID | Owner | Priority | Status | Packages |
-|----|-------|----------|--------|----------|
-| AUTH | @josh | high | Ready | core, api |
+| ID   | Owner | Priority | Status | Packages  |
+| ---- | ----- | -------- | ------ | --------- |
+| AUTH | @josh | high     | Ready  | core, api |
 ```
 
 Work items can inherit or narrow the package scope:
@@ -105,9 +110,9 @@ Work items can inherit or narrow the package scope:
 ```markdown
 ### AUTH-002: Token refresh
 
-| Status | Packages | Dependencies |
-|--------|----------|--------------|
-| Ready | core, api | AUTH-001 |
+| Status | Packages  | Dependencies |
+| ------ | --------- | ------------ |
+| Ready  | core, api | AUTH-001     |
 
 - **Intent:** Implement refresh token rotation
 - **Expected Outcome:** Refresh endpoint returns new token pair
@@ -184,8 +189,8 @@ Example:
 ### AUTH-003: Handle token refresh edge case
 
 | Status | Packages | Discovered during |
-|--------|----------|-------------------|
-| Draft | core | AUTH-002 |
+| ------ | -------- | ----------------- |
+| Draft  | core     | AUTH-002          |
 
 - **Intent:** Handle expired refresh tokens gracefully
 ```

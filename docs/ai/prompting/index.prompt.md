@@ -5,10 +5,10 @@ This document is **non-executable**: do not invent implementation tasks unless e
 
 ## Objectives
 
-1) Clarify intent, scope, and success criteria
-2) Identify constraints and named architectural patterns
-3) Propose a modular decomposition (modules only, not tasks)
-4) Identify risks, open questions, and decisions required
+1. Clarify intent, scope, and success criteria
+2. Identify constraints and named architectural patterns
+3. Propose a modular decomposition (modules only, not tasks)
+4. Identify risks, open questions, and decisions required
 
 ## Inputs you should request (if missing)
 

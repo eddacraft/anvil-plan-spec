@@ -5,10 +5,10 @@ repository hygiene tasks.
 
 ## Agents Overview
 
-| Agent | Purpose | Model | Invocation |
-|-------|---------|-------|------------|
-| **APS Planner** | Planning, execution, status tracking, wave coordination | Opus | `@aps-planner` or Task dispatch |
-| **APS Librarian** | Archiving, cross-refs, orphan detection, repo hygiene | Sonnet | `@aps-librarian` or Task dispatch |
+| Agent             | Purpose                                                 | Model  | Invocation                        |
+| ----------------- | ------------------------------------------------------- | ------ | --------------------------------- |
+| **APS Planner**   | Planning, execution, status tracking, wave coordination | Opus   | `@aps-planner` or Task dispatch   |
+| **APS Librarian** | Archiving, cross-refs, orphan detection, repo hygiene   | Sonnet | `@aps-librarian` or Task dispatch |
 
 ### APS Planner
 
@@ -37,14 +37,14 @@ the repo feels disorganized.
 
 ## Planner vs Librarian
 
-| Task | Agent |
-|------|-------|
-| "Create a plan for feature X" | Planner |
-| "What's the status of our work?" | Planner |
-| "Execute AUTH-001" | Planner |
+| Task                             | Agent     |
+| -------------------------------- | --------- |
+| "Create a plan for feature X"    | Planner   |
+| "What's the status of our work?" | Planner   |
+| "Execute AUTH-001"               | Planner   |
 | "Clean up after the auth module" | Librarian |
-| "Are our docs consistent?" | Librarian |
-| "Archive completed specs" | Librarian |
+| "Are our docs consistent?"       | Librarian |
+| "Archive completed specs"        | Librarian |
 
 ## Agents vs Skill
 

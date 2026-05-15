@@ -1,8 +1,8 @@
 # Feature Without Work Items
 
-| ID | Owner | Status |
-|----|-------|--------|
-| EMPTY | @test | Ready |
+| ID    | Owner | Status |
+| ----- | ----- | ------ |
+| EMPTY | @test | Ready  |
 
 ## Purpose
 

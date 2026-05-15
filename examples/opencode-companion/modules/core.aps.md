@@ -3,9 +3,9 @@
 
 # Core Module
 
-| ID | Owner | Priority | Status |
-|----|-------|----------|--------|
-| CORE | @josh | high | Ready |
+| ID   | Owner | Priority | Status |
+| ---- | ----- | -------- | ------ |
+| CORE | @josh | high     | Ready  |
 
 ## Purpose
 
@@ -51,10 +51,10 @@ Provide data access layer for OpenCode configuration and session history. Handle
 
 ## Risks & Mitigations
 
-| Risk | Mitigation |
-|------|------------|
-| Config format unknown | Start with documented fields only |
-| Large session files | Stream/paginate, don't load all into memory |
+| Risk                  | Mitigation                                  |
+| --------------------- | ------------------------------------------- |
+| Config format unknown | Start with documented fields only           |
+| Large session files   | Stream/paginate, don't load all into memory |
 
 ## Work Items
 

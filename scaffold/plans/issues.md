@@ -27,7 +27,7 @@ Example:
 **Impact:** Will need retry logic or batching for bulk operations.
 -->
 
-*(No issues yet)*
+_(No issues yet)_
 
 ---
 
@@ -56,7 +56,7 @@ Example:
 2. Transport layer — centralized, but may hide failures
 -->
 
-*(No questions yet)*
+_(No questions yet)_
 
 ---
 
@@ -67,16 +67,16 @@ Move resolved issues and answered questions here.
 Keep for 1-2 sprints as reference, then archive or delete.
 -->
 
-*(Nothing resolved yet)*
+_(Nothing resolved yet)_
 
 ---
 
 ## Quick Reference
 
-| ID Type | Format | Example |
-|---------|--------|---------|
-| Issue | ISS-NNN | ISS-001 |
-| Question | Q-NNN | Q-001 |
+| ID Type  | Format  | Example |
+| -------- | ------- | ------- |
+| Issue    | ISS-NNN | ISS-001 |
+| Question | Q-NNN   | Q-001   |
 
 **Severities:** Critical > High > Medium > Low
 

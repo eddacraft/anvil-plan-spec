@@ -3,9 +3,9 @@
 
 # Authentication Module
 
-| ID | Owner | Priority | Status |
-|----|-------|----------|--------|
-| AUTH | @josh | high | Ready |
+| ID   | Owner | Priority | Status |
+| ---- | ----- | -------- | ------ |
+| AUTH | @josh | high     | Ready  |
 
 ## Purpose
 
@@ -49,10 +49,10 @@ Handle user registration and credential verification. This module owns password 
 
 ## Risks & Mitigations
 
-| Risk | Mitigation |
-|------|------------|
-| Timing attacks on login | Use constant-time comparison |
-| Weak passwords | Enforce minimum length (8 chars) |
+| Risk                    | Mitigation                       |
+| ----------------------- | -------------------------------- |
+| Timing attacks on login | Use constant-time comparison     |
+| Weak passwords          | Enforce minimum length (8 chars) |
 
 ## Work Items
 

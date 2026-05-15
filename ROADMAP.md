@@ -5,12 +5,12 @@ to plan APS.
 
 ## Quick Overview
 
-| Horizon | Focus | Status |
-|---------|-------|--------|
-| **v0.2 Usability** | Scaffold, templates, docs, validation | Done |
-| **v0.3 Distribution** | Install overhaul, multi-harness agents | Done |
-| **Near Term** | Orchestration CLI (`next`/`start`/`complete`/`graph`), TUI wizard | Current |
-| **Future** | Conductor agent, MCP server, GitHub Action, formal spec | Planned |
+| Horizon               | Focus                                                             | Status  |
+| --------------------- | ----------------------------------------------------------------- | ------- |
+| **v0.2 Usability**    | Scaffold, templates, docs, validation                             | Done    |
+| **v0.3 Distribution** | Install overhaul, multi-harness agents                            | Done    |
+| **Near Term**         | Orchestration CLI (`next`/`start`/`complete`/`graph`), TUI wizard | Current |
+| **Future**            | Conductor agent, MCP server, GitHub Action, formal spec           | Planned |
 
 See [plans/index.aps.md](plans/index.aps.md) for the full breakdown with modules,
 status, and work items.

@@ -1,8 +1,8 @@
 # Authentication Module
 
-| ID | Owner | Status |
-|----|-------|--------|
-| AUTH | @test | Ready |
+| ID   | Owner | Status |
+| ---- | ----- | ------ |
+| AUTH | @test | Ready  |
 
 ## Purpose
 
@@ -83,4 +83,4 @@ Validate dependency-aware item selection.
 
 ## Decisions
 
-- **D-001:** Fixture decision after work items - *decided: yes*
+- **D-001:** Fixture decision after work items - _decided: yes_

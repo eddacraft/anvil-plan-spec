@@ -15,17 +15,17 @@ the minimum fields (Problem, Design, Status metadata).
 
 # [Design Title]
 
-| Field | Value |
-|-------|-------|
-| Status | Draft |
-| Created | YYYY-MM-DD |
+| Field   | Value                                     |
+| ------- | ----------------------------------------- |
+| Status  | Draft                                     |
+| Created | YYYY-MM-DD                                |
 | Modules | [module-id](plans/modules/NN-name.aps.md) |
 
 ## Problem
 
 [What problem does this design address? Why can't the existing approach work?]
 
-## Constraints *(optional)*
+## Constraints _(optional)_
 
 - [Constraint that shapes the design — performance, compatibility, security, etc.]
 
@@ -35,13 +35,13 @@ the minimum fields (Problem, Design, Status metadata).
 Use diagrams (mermaid), tables, or pseudocode where they help.
 Focus on WHAT the architecture looks like, not HOW to code it.]
 
-## Alternatives Considered *(optional)*
+## Alternatives Considered _(optional)_
 
-| Alternative | Pros | Cons | Verdict |
-|-------------|------|------|---------|
-| [Option A] | ... | ... | Rejected — [reason] |
+| Alternative | Pros | Cons | Verdict             |
+| ----------- | ---- | ---- | ------------------- |
+| [Option A]  | ...  | ...  | Rejected — [reason] |
 
-## Implementation Notes *(optional)*
+## Implementation Notes _(optional)_
 
 [How should this design translate to modules and work items?
 Which modules does it affect? What order should work proceed?]
@@ -50,6 +50,6 @@ Which modules does it affect? What order should work proceed?]
 
 - **D-001:** [Decision] — [rationale]
 
-## Open Questions *(optional)*
+## Open Questions _(optional)_
 
 - [ ] [Unresolved question that needs answering before work begins]

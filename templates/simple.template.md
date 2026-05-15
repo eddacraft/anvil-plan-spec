@@ -7,9 +7,9 @@ ID: Use 2-6 uppercase chars (DARK, EXPORT, NOTIFY, etc.)
 
 # [Feature Name]
 
-| ID | Owner | Status |
-|----|-------|--------|
-| FEAT | @username | Draft |
+| ID   | Owner     | Status |
+| ---- | --------- | ------ |
+| FEAT | @username | Draft  |
 
 ## Purpose
 
@@ -37,12 +37,12 @@ Confidence: high (clear, familiar) / medium (some unknowns) / low (exploratory)
 - **Intent:** [What this achieves]
 - **Expected Outcome:** [Testable result]
 - **Validation:** `[test command]`
-- **Dependencies:** FEAT-001 *(optional)*
+- **Dependencies:** FEAT-001 _(optional)_
 
-## Execution *(optional)*
+## Execution _(optional)_
 
 Action Plan: [./execution/FEAT.actions.md](./execution/FEAT.actions.md)
 
-## Notes *(optional)*
+## Notes _(optional)_
 
 - [Additional context]

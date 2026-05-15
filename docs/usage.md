@@ -41,28 +41,28 @@ Errors cause a non-zero exit code. Warnings are informational.
 
 #### Error codes
 
-| Code | Scope | Description |
-|------|-------|-------------|
-| E001 | Module | Missing `## Purpose` section |
-| E002 | Module | Missing `## Work Items` section |
-| E003 | Module | Missing ID/Status metadata table |
-| E004 | Index | Missing `## Modules` section |
+| Code | Scope     | Description                                                                           |
+| ---- | --------- | ------------------------------------------------------------------------------------- |
+| E001 | Module    | Missing `## Purpose` section                                                          |
+| E002 | Module    | Missing `## Work Items` section                                                       |
+| E003 | Module    | Missing ID/Status metadata table                                                      |
+| E004 | Index     | Missing `## Modules` section                                                          |
 | E005 | Work Item | Missing required field (`**Intent:**`, `**Expected Outcome:**`, or `**Validation:**`) |
-| E010 | Issues | Missing `## Issues` section |
-| E011 | Issues | Missing `## Questions` section |
+| E010 | Issues    | Missing `## Issues` section                                                           |
+| E011 | Issues    | Missing `## Questions` section                                                        |
 
 #### Warning codes
 
-| Code | Scope | Description |
-|------|-------|-------------|
-| W001 | Work Item | ID does not match `PREFIX-NNN` pattern (e.g., `AUTH-001`) |
-| W003 | Work Item | Dependency references a task ID not found in the same file |
+| Code | Scope          | Description                                                                                                             |
+| ---- | -------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| W001 | Work Item      | ID does not match `PREFIX-NNN` pattern (e.g., `AUTH-001`)                                                               |
+| W003 | Work Item      | Dependency references a task ID not found in the same file                                                              |
 | W004 | Module / Index | Section exists but is empty (`## Purpose`, `## In Scope`, `## Overview`, `## Problem & Success Criteria`, `## Modules`) |
-| W005 | Module | Status is `Ready` but no work items are defined |
-| W010 | Issues | Issue entry missing `Status`, `Discovered`, or `Severity` field |
-| W011 | Issues | Question entry missing `Status`, `Discovered`, or `Priority` field |
-| W012 | Issues | Issue ID does not match `ISS-NNN` format or uses wrong casing |
-| W013 | Issues | Question ID does not match `Q-NNN` format or uses wrong casing |
+| W005 | Module         | Status is `Ready` but no work items are defined                                                                         |
+| W010 | Issues         | Issue entry missing `Status`, `Discovered`, or `Severity` field                                                         |
+| W011 | Issues         | Question entry missing `Status`, `Discovered`, or `Priority` field                                                      |
+| W012 | Issues         | Issue ID does not match `ISS-NNN` format or uses wrong casing                                                           |
+| W013 | Issues         | Question ID does not match `Q-NNN` format or uses wrong casing                                                          |
 
 #### JSON output
 
@@ -102,12 +102,12 @@ Draft ──→ Ready ──→ In Progress ──→ Complete
               └───────────┘  (reset only by manual edit)
 ```
 
-| Command | Transition enforced |
-|---------|---------------------|
-| `aps next`     | None — read-only |
+| Command        | Transition enforced                                     |
+| -------------- | ------------------------------------------------------- |
+| `aps next`     | None — read-only                                        |
 | `aps start`    | Ready → In Progress (all dependencies must be Complete) |
-| `aps complete` | In Progress → Complete |
-| `aps graph`    | None — read-only |
+| `aps complete` | In Progress → Complete                                  |
+| `aps graph`    | None — read-only                                        |
 
 Invalid transitions are rejected with a clear error. The CLI never silently
 forces a state change.
@@ -125,7 +125,7 @@ $ aps next --plans docs/plans
 ```
 
 `next` walks every work item across every module, picks the first whose status
-is `Ready` and whose dependencies (work-item IDs *and* module IDs) all resolve
+is `Ready` and whose dependencies (work-item IDs _and_ module IDs) all resolve
 to Complete. Decision dependencies (`D-NNN`) are treated as resolved inline in
 the plan text. Items in `Complete`, `Draft`, or `Blocked` modules are skipped.
 
@@ -232,9 +232,9 @@ name: Lint APS Documents
 
 on:
   push:
-    paths: ['plans/**/*.aps.md', 'plans/**/*.actions.md']
+    paths: ["plans/**/*.aps.md", "plans/**/*.actions.md"]
   pull_request:
-    paths: ['plans/**/*.aps.md', 'plans/**/*.actions.md']
+    paths: ["plans/**/*.aps.md", "plans/**/*.actions.md"]
 
 jobs:
   lint:

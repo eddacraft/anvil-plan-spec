@@ -92,9 +92,9 @@ graph LR
 
 ## Risks & Mitigations
 
-| Risk | Impact | Likelihood | Mitigation |
-|------|--------|------------|------------|
-| [Risk description] | high | medium | [How we address it] |
+| Risk               | Impact | Likelihood | Mitigation          |
+| ------------------ | ------ | ---------- | ------------------- |
+| [Risk description] | high   | medium     | [How we address it] |
 
 ## Decisions
 

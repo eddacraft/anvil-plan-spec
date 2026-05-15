@@ -215,19 +215,19 @@ need less human intervention between steps.
 
 ## 3. Comparison Matrix
 
-| Dimension | BMAD | Overseer | APS (current) |
-|-----------|------|----------|---------------|
-| **Engine** | LLM reads files | Rust binary + SQLite | LLM reads markdown specs |
-| **State store** | `sprint-status.yaml` | SQLite database | Markdown Status fields |
-| **State enforcement** | Prompt instructions | Programmatic | None (human reviews) |
-| **Dispatch** | User picks slash command | Agent calls `nextReady()` | Human-directed |
-| **Dependencies** | Implicit (phase ordering) | Explicit (DAG in SQLite) | Explicit (Dependencies field) |
-| **Context** | Epic sharding → story files | Progressive (parent + learnings) | Re-read spec (5-Op Rule) |
-| **VCS** | None | Branch-per-task | None |
-| **Portability** | Any LLM that reads files | MCP-capable tools only | Any tool (pure markdown) |
-| **Runtime deps** | None | Rust binary + SQLite | None |
-| **Learning** | Previous story intelligence | Milestone learnings | Compound (solution docs) |
-| **Platform support** | 20+ IDEs via command files | MCP clients | Any tool via AGENTS.md/skills |
+| Dimension             | BMAD                        | Overseer                         | APS (current)                 |
+| --------------------- | --------------------------- | -------------------------------- | ----------------------------- |
+| **Engine**            | LLM reads files             | Rust binary + SQLite             | LLM reads markdown specs      |
+| **State store**       | `sprint-status.yaml`        | SQLite database                  | Markdown Status fields        |
+| **State enforcement** | Prompt instructions         | Programmatic                     | None (human reviews)          |
+| **Dispatch**          | User picks slash command    | Agent calls `nextReady()`        | Human-directed                |
+| **Dependencies**      | Implicit (phase ordering)   | Explicit (DAG in SQLite)         | Explicit (Dependencies field) |
+| **Context**           | Epic sharding → story files | Progressive (parent + learnings) | Re-read spec (5-Op Rule)      |
+| **VCS**               | None                        | Branch-per-task                  | None                          |
+| **Portability**       | Any LLM that reads files    | MCP-capable tools only           | Any tool (pure markdown)      |
+| **Runtime deps**      | None                        | Rust binary + SQLite             | None                          |
+| **Learning**          | Previous story intelligence | Milestone learnings              | Compound (solution docs)      |
+| **Platform support**  | 20+ IDEs via command files  | MCP clients                      | Any tool via AGENTS.md/skills |
 
 ---
 

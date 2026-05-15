@@ -1,9 +1,9 @@
 # Authentication Architecture
 
-| Field | Value |
-|-------|-------|
-| Status | Approved |
-| Created | 2025-01-05 |
+| Field   | Value                                                                |
+| ------- | -------------------------------------------------------------------- |
+| Status  | Approved                                                             |
+| Created | 2025-01-05                                                           |
 | Modules | [AUTH](../modules/auth.aps.md), [SESSION](../modules/session.aps.md) |
 
 ## Problem
@@ -43,10 +43,10 @@ password change) without a separate store.
 
 ### Module Boundaries
 
-| Module | Responsibility | Exposes |
-|--------|----------------|---------|
-| AUTH | Registration, credential verification, password hashing | `register()`, `verify()` |
-| SESSION | Token creation, validation, refresh, revocation | `createSession()`, `validateToken()`, `refreshToken()` |
+| Module  | Responsibility                                          | Exposes                                                |
+| ------- | ------------------------------------------------------- | ------------------------------------------------------ |
+| AUTH    | Registration, credential verification, password hashing | `register()`, `verify()`                               |
+| SESSION | Token creation, validation, refresh, revocation         | `createSession()`, `validateToken()`, `refreshToken()` |
 
 AUTH handles identity (who you are). SESSION handles access (proving you're
 authenticated). This separation means we can swap token strategies later without
@@ -61,11 +61,11 @@ Two new tables:
 
 ## Alternatives Considered
 
-| Alternative | Pros | Cons | Verdict |
-|-------------|------|------|---------|
-| Session cookies (server-side) | Simple, easy revocation | Requires Redis or DB lookup per request | Rejected — adds infrastructure |
-| OAuth-only (delegate to Google/GitHub) | No password management | Not all users have OAuth accounts | Deferred to v2 |
-| Argon2 instead of bcrypt | More modern, tunable | Less library support in our stack | Rejected — bcrypt is proven, well-supported |
+| Alternative                            | Pros                    | Cons                                    | Verdict                                     |
+| -------------------------------------- | ----------------------- | --------------------------------------- | ------------------------------------------- |
+| Session cookies (server-side)          | Simple, easy revocation | Requires Redis or DB lookup per request | Rejected — adds infrastructure              |
+| OAuth-only (delegate to Google/GitHub) | No password management  | Not all users have OAuth accounts       | Deferred to v2                              |
+| Argon2 instead of bcrypt               | More modern, tunable    | Less library support in our stack       | Rejected — bcrypt is proven, well-supported |
 
 ## Implementation Notes
 

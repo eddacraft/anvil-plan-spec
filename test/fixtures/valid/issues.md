@@ -8,12 +8,12 @@
 
 ### ISS-001: Example issue
 
-| Field | Value |
-|-------|-------|
-| Status | Open |
-| Severity | High |
+| Field      | Value    |
+| ---------- | -------- |
+| Status     | Open     |
+| Severity   | High     |
 | Discovered | AUTH-002 |
-| Module | AUTH |
+| Module     | AUTH     |
 
 **Context:** Example context.
 
@@ -25,12 +25,12 @@
 
 ### Q-001: Example question
 
-| Field | Value |
-|-------|-------|
-| Status | Open |
-| Priority | Medium |
+| Field      | Value    |
+| ---------- | -------- |
+| Status     | Open     |
+| Priority   | Medium   |
 | Discovered | AUTH-002 |
-| Assigned | @user |
+| Assigned   | @user    |
 
 **Context:** Example context.
 
@@ -38,4 +38,4 @@
 
 ## Resolved
 
-*(Nothing resolved yet)*
+_(Nothing resolved yet)_

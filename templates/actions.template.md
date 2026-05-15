@@ -10,18 +10,18 @@ See: docs/ai/prompting/actions.prompt.md
 
 # Action Plan: [WORK-ITEM-ID or MODULE]
 
-| Field | Value |
-|-------|-------|
-| Source | [./modules/module.aps.md](./modules/module.aps.md) |
-| Work Item | WORK-ITEM-ID — [Work item title] |
-| Created by | @username / AI |
-| Status | Draft |
+| Field      | Value                                              |
+| ---------- | -------------------------------------------------- |
+| Source     | [./modules/module.aps.md](./modules/module.aps.md) |
+| Work Item  | WORK-ITEM-ID — [Work item title]                   |
+| Created by | @username / AI                                     |
+| Status     | Draft                                              |
 
 ## Prerequisites
 
 - [ ] [Dependency, decision, or precondition]
 
-## Waves *(optional)*
+## Waves _(optional)_
 
 <!--
 Use waves to group actions that can run in parallel.
@@ -30,10 +30,10 @@ Each wave completes before the next begins.
 Omit this section for purely sequential action plans.
 -->
 
-| Wave | Actions | Gate |
-|------|---------|------|
-| 1 | 1, 2 | Both checkpoints pass |
-| 2 | 3 | Checkpoint passes |
+| Wave | Actions | Gate                  |
+| ---- | ------- | --------------------- |
+| 1    | 1, 2    | Both checkpoints pass |
+| 2    | 3       | Checkpoint passes     |
 
 ## Actions
 
@@ -49,10 +49,10 @@ Omit this section for purely sequential action plans.
 [Observable state (max ~12 words)]
 
 **Validate**
-`[command]` *(optional)*
+`[command]` _(optional)_
 
-**Wave** 1 *(optional — omit for sequential plans)*
-**Agent** general-purpose *(optional — agent type for dispatch)*
+**Wave** 1 _(optional — omit for sequential plans)_
+**Agent** general-purpose _(optional — agent type for dispatch)_
 
 ### Action 2 — [Action verb] [target]
 
@@ -66,7 +66,7 @@ Omit this section for purely sequential action plans.
 [Observable state]
 
 **Validate**
-`[command]` *(optional)*
+`[command]` _(optional)_
 
 **Wave** 1
 
@@ -81,10 +81,10 @@ Omit this section for purely sequential action plans.
 **Checkpoint**
 [Observable state]
 
-**Depends on** 1, 2 *(optional — action numbers that must complete first)*
+**Depends on** 1, 2 _(optional — action numbers that must complete first)_
 
 **Status**
-Blocked — [reason] *(only if blocked/deferred)*
+Blocked — [reason] _(only if blocked/deferred)_
 
 ## Completion
 

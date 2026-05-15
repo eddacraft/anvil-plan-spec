@@ -1,9 +1,9 @@
 # Test Plan
 
-| Field | Value |
-|-------|-------|
+| Field  | Value  |
+| ------ | ------ |
 | Status | Active |
-| Owner | @test |
+| Owner  | @test  |
 
 ## Problem
 
@@ -15,11 +15,11 @@ Test orchestration dependency resolution.
 
 ## Modules
 
-| Module | Purpose | Status |
-|--------|---------|--------|
-| [core](./modules/core.aps.md) | Core completed work | Ready |
-| [auth](./modules/auth.aps.md) | Authentication work | Ready |
-| [billing](./modules/billing.aps.md) | Billing work | Ready |
+| Module                              | Purpose             | Status |
+| ----------------------------------- | ------------------- | ------ |
+| [core](./modules/core.aps.md)       | Core completed work | Ready  |
+| [auth](./modules/auth.aps.md)       | Authentication work | Ready  |
+| [billing](./modules/billing.aps.md) | Billing work        | Ready  |
 
 ## Non-Goals
 

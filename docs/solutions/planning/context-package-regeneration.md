@@ -65,9 +65,9 @@ aps start AUTH-003
 
 ## Metadata
 
-| Field | Value |
-|-------|-------|
-| Date | 2026-05-15 |
-| Component | APS orchestration |
-| Severity | minor |
-| Time to fix | 30 minutes |
+| Field       | Value             |
+| ----------- | ----------------- |
+| Date        | 2026-05-15        |
+| Component   | APS orchestration |
+| Severity    | minor             |
+| Time to fix | 30 minutes        |

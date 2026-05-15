@@ -51,17 +51,17 @@ graph LR
 
 ## Modules
 
-| Module | ID | Owner | Status | Priority | Tags | Dependencies |
-|--------|----|-------|--------|----------|------|--------------|
-| [auth](./modules/auth.aps.md) | AUTH | @josh | Ready | high | security, api | — |
-| [session](./modules/session.aps.md) | SESSION | @josh | Draft | high | security, jwt | auth |
+| Module                              | ID      | Owner | Status | Priority | Tags          | Dependencies |
+| ----------------------------------- | ------- | ----- | ------ | -------- | ------------- | ------------ |
+| [auth](./modules/auth.aps.md)       | AUTH    | @josh | Ready  | high     | security, api | —            |
+| [session](./modules/session.aps.md) | SESSION | @josh | Draft  | high     | security, jwt | auth         |
 
 ## Risks & Mitigations
 
-| Risk | Impact | Likelihood | Mitigation |
-|------|--------|------------|------------|
-| Password breach | high | low | Use bcrypt, enforce strong passwords |
-| Session hijacking | high | medium | Use httpOnly cookies, short expiry |
+| Risk              | Impact | Likelihood | Mitigation                           |
+| ----------------- | ------ | ---------- | ------------------------------------ |
+| Password breach   | high   | low        | Use bcrypt, enforce strong passwords |
+| Session hijacking | high   | medium     | Use httpOnly cookies, short expiry   |
 
 ## Decisions
 

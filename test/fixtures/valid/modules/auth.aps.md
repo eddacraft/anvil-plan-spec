@@ -1,8 +1,8 @@
 # Authentication Module
 
-| ID | Owner | Priority | Status |
-|----|-------|----------|--------|
-| AUTH | @test | high | Ready |
+| ID   | Owner | Priority | Status |
+| ---- | ----- | -------- | ------ |
+| AUTH | @test | high     | Ready  |
 
 ## Purpose
 

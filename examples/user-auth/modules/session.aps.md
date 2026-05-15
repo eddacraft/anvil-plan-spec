@@ -3,9 +3,9 @@
 
 # Session Module
 
-| ID | Owner | Priority | Status |
-|----|-------|----------|--------|
-| SESSION | @josh | high | Draft |
+| ID      | Owner | Priority | Status |
+| ------- | ----- | -------- | ------ |
+| SESSION | @josh | high     | Draft  |
 
 ## Purpose
 
@@ -49,10 +49,10 @@ Manage user sessions using JWT tokens. Issue access tokens on login, validate to
 
 ## Risks & Mitigations
 
-| Risk | Mitigation |
-|------|------------|
-| Token theft | Short access token expiry, httpOnly cookies |
-| Refresh token reuse | Rotate on each use, detect reuse |
+| Risk                | Mitigation                                  |
+| ------------------- | ------------------------------------------- |
+| Token theft         | Short access token expiry, httpOnly cookies |
+| Refresh token reuse | Rotate on each use, detect reuse            |
 
 ## Work Items
 

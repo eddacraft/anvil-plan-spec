@@ -50,10 +50,10 @@ Add an optional **Waves** table before the actions:
 ```markdown
 ## Waves
 
-| Wave | Actions | Gate |
-|------|---------|------|
-| 1 | 1, 2 | Both checkpoints pass |
-| 2 | 3 | Checkpoint passes |
+| Wave | Actions | Gate                  |
+| ---- | ------- | --------------------- |
+| 1    | 1, 2    | Both checkpoints pass |
+| 2    | 3       | Checkpoint passes     |
 ```
 
 Rules:

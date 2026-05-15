@@ -1,8 +1,8 @@
 # Feature With Incomplete Work Items
 
-| ID | Owner | Status |
-|----|-------|--------|
-| INC | @test | Draft |
+| ID  | Owner | Status |
+| --- | ----- | ------ |
+| INC | @test | Draft  |
 
 ## Purpose
 

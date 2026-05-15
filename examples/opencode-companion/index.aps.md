@@ -52,17 +52,17 @@ graph LR
 
 ## Modules
 
-| Module | ID | Owner | Status | Priority | Tags | Dependencies |
-|--------|----|-------|--------|----------|------|--------------|
-| [core](./modules/core.aps.md) | CORE | @josh | Ready | high | domain, fs | — |
-| [ui](./modules/ui.aps.md) | UI | @josh | Draft | high | frontend, tauri | core |
+| Module                        | ID   | Owner | Status | Priority | Tags            | Dependencies |
+| ----------------------------- | ---- | ----- | ------ | -------- | --------------- | ------------ |
+| [core](./modules/core.aps.md) | CORE | @josh | Ready  | high     | domain, fs      | —            |
+| [ui](./modules/ui.aps.md)     | UI   | @josh | Draft  | high     | frontend, tauri | core         |
 
 ## Risks & Mitigations
 
-| Risk | Impact | Likelihood | Mitigation |
-|------|--------|------------|------------|
-| OpenCode config format changes | medium | medium | Version detection, graceful degradation |
-| File watching performance | low | low | Use native fs.watch, debounce |
+| Risk                           | Impact | Likelihood | Mitigation                              |
+| ------------------------------ | ------ | ---------- | --------------------------------------- |
+| OpenCode config format changes | medium | medium     | Version detection, graceful degradation |
+| File watching performance      | low    | low        | Use native fs.watch, debounce           |
 
 ## Decisions
 

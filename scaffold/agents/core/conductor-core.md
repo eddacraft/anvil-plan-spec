@@ -75,13 +75,13 @@ If the CLI is unavailable:
 
 Choose the smallest effective execution path:
 
-| Situation | Action |
-|-----------|--------|
-| Simple docs/spec edit | Execute directly after reading context |
-| Non-trivial code change | Dispatch implementation agent with context file |
-| Multiple independent ready items | Propose a wave plan before dispatch |
-| Blocked item | Report unmet dependency and stop |
-| Invalid explicit status | Treat as not ready |
+| Situation                        | Action                                          |
+| -------------------------------- | ----------------------------------------------- |
+| Simple docs/spec edit            | Execute directly after reading context          |
+| Non-trivial code change          | Dispatch implementation agent with context file |
+| Multiple independent ready items | Propose a wave plan before dispatch             |
+| Blocked item                     | Report unmet dependency and stop                |
+| Invalid explicit status          | Treat as not ready                              |
 
 After completing a work item, run `aps next [module]` again before selecting
 further work. Do not assume the next item from a previous graph; re-query plan

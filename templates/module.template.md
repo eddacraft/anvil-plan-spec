@@ -8,9 +8,9 @@ Packages: For monorepos, list affected packages (see docs/monorepo.md)
 
 # [Module Title]
 
-| ID | Owner | Priority | Status | Packages |
-|----|-------|----------|--------|----------|
-| AUTH | @username | medium | Draft | *(monorepo only)* |
+| ID   | Owner     | Priority | Status | Packages          |
+| ---- | --------- | -------- | ------ | ----------------- |
+| AUTH | @username | medium   | Draft  | _(monorepo only)_ |
 
 ## Purpose
 
@@ -20,11 +20,11 @@ Packages: For monorepos, list affected packages (see docs/monorepo.md)
 
 - [What this module handles]
 
-## Out of Scope *(optional)*
+## Out of Scope _(optional)_
 
 - [What belongs elsewhere — only if clarification needed]
 
-## Interfaces *(optional)*
+## Interfaces _(optional)_
 
 **Depends on:**
 
@@ -34,7 +34,7 @@ Packages: For monorepos, list affected packages (see docs/monorepo.md)
 
 - [API/function] — [what others use]
 
-## Constraints *(optional)*
+## Constraints _(optional)_
 
 - [Architectural rules, e.g., "AUTH must not import from UI"]
 
@@ -64,10 +64,10 @@ Confidence levels:
 - **Expected Outcome:** [Observable/testable result]
 - **Validation:** `[test command]`
 - **Confidence:** medium
-- **Packages:** [Affected packages] *(monorepo only — inherits from module if omitted)*
-- **Non-scope:** [What won't change] *(optional)*
-- **Files:** [Likely files] *(optional — best effort)*
-- **Dependencies:** AUTH-XXX *(optional)*
+- **Packages:** [Affected packages] _(monorepo only — inherits from module if omitted)_
+- **Non-scope:** [What won't change] _(optional)_
+- **Files:** [Likely files] _(optional — best effort)_
+- **Dependencies:** AUTH-XXX _(optional)_
 
 ### AUTH-002: [Another work item]
 
@@ -76,14 +76,14 @@ Confidence levels:
 - **Validation:** `[test command]`
 - **Confidence:** medium
 
-## Execution *(optional)*
+## Execution _(optional)_
 
 Action Plan: [./execution/AUTH.actions.md](./execution/AUTH.actions.md)
 
-## Decisions *(optional)*
+## Decisions _(optional)_
 
 - **D-001:** [Decision] — [rationale]
 
-## Notes *(optional)*
+## Notes _(optional)_
 
 - [Additional context]

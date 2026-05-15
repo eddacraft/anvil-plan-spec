@@ -1,8 +1,8 @@
 # Install v2 Module
 
-| ID | Owner | Priority | Status |
-|----|-------|----------|--------|
-| INSTALL | @aneki | high | Complete |
+| ID      | Owner  | Priority | Status   |
+| ------- | ------ | -------- | -------- |
+| INSTALL | @aneki | high     | Complete |
 
 ## Purpose
 
@@ -66,20 +66,20 @@ Since then:
 
 ## Decisions
 
-- **D-011:** `.aps/` as tooling root — *decided: yes, consolidate all
-  APS-owned files (CLI, scripts, config, ephemeral) under `.aps/`*
-- **D-012:** CLI location — *decided: `.aps/bin/aps` with PATH hint*
-- **D-013:** Skill/instruction format per tool — *decided, see below*
-- **D-014:** Agent model defaults — *decided: Planner on Opus, Librarian on
-  Sonnet*
-- **D-022:** External planning repo reversed — *decided: plans move back to
-  main repo*
-- **D-023:** Commands fully dropped — *decided: skills only, no
-  `.claude/commands/` shipped*
-- **D-024:** aps-rules.md split — *decided: `aps-rules.md` (APS-managed) +
-  `project-context.md` (user-owned)*
-- **D-025:** designs/ and issues.md into plans/ — *decided: single planning
-  content root*
+- **D-011:** `.aps/` as tooling root — _decided: yes, consolidate all
+  APS-owned files (CLI, scripts, config, ephemeral) under `.aps/`_
+- **D-012:** CLI location — _decided: `.aps/bin/aps` with PATH hint_
+- **D-013:** Skill/instruction format per tool — _decided, see below_
+- **D-014:** Agent model defaults — _decided: Planner on Opus, Librarian on
+  Sonnet_
+- **D-022:** External planning repo reversed — _decided: plans move back to
+  main repo_
+- **D-023:** Commands fully dropped — _decided: skills only, no
+  `.claude/commands/` shipped_
+- **D-024:** aps-rules.md split — _decided: `aps-rules.md` (APS-managed) +
+  `project-context.md` (user-owned)_
+- **D-025:** designs/ and issues.md into plans/ — _decided: single planning
+  content root_
 
 **D-013 Detail: Multi-Tool Skill Compatibility (Researched 2026-02-19)**
 
@@ -87,13 +87,13 @@ Five target tools support a `<name>/SKILL.md` skill format with identical
 frontmatter (name + description). The differences are discovery paths and
 whether skills require explicit installation.
 
-| Tool | Skill Paths (project) | Auto-discover? | Install Cmd? |
-|------|-----------------------|----------------|--------------|
-| **Claude Code** | `.claude/skills/` | Yes | No |
-| **Codex** | `.agents/skills/` | No | `codex skills install <path>` |
-| **Copilot** | `.github/skills/`, `.claude/skills/` | Yes | No |
-| **OpenCode** | `.opencode/skills/`, `.claude/skills/`, `.agents/skills/` | Yes | No |
-| **Gemini** | `.gemini/skills/`, `.agents/skills/` | No | `gemini skills install <path>` or `link` |
+| Tool            | Skill Paths (project)                                     | Auto-discover? | Install Cmd?                             |
+| --------------- | --------------------------------------------------------- | -------------- | ---------------------------------------- |
+| **Claude Code** | `.claude/skills/`                                         | Yes            | No                                       |
+| **Codex**       | `.agents/skills/`                                         | No             | `codex skills install <path>`            |
+| **Copilot**     | `.github/skills/`, `.claude/skills/`                      | Yes            | No                                       |
+| **OpenCode**    | `.opencode/skills/`, `.claude/skills/`, `.agents/skills/` | Yes            | No                                       |
+| **Gemini**      | `.gemini/skills/`, `.agents/skills/`                      | No             | `gemini skills install <path>` or `link` |
 
 **Convergence points:**
 
@@ -114,13 +114,13 @@ The APS installer should:
 
 Instruction files (project-level guidance, not skills):
 
-| Tool | Instruction File |
-|------|-----------------|
-| **Claude Code** | `CLAUDE.md` |
-| **Codex** | `AGENTS.md` (hierarchical, concatenated root→cwd) |
-| **Copilot** | `AGENTS.md`, `.github/copilot-instructions.md` |
-| **Gemini** | `GEMINI.md` |
-| **OpenCode** | N/A (uses skills) |
+| Tool            | Instruction File                                  |
+| --------------- | ------------------------------------------------- |
+| **Claude Code** | `CLAUDE.md`                                       |
+| **Codex**       | `AGENTS.md` (hierarchical, concatenated root→cwd) |
+| **Copilot**     | `AGENTS.md`, `.github/copilot-instructions.md`    |
+| **Gemini**      | `GEMINI.md`                                       |
+| **OpenCode**    | N/A (uses skills)                                 |
 
 **Strategy:** Primary skill install to `.claude/skills/aps-planning/`
 (auto-discovered by 3 tools). Copy to `.agents/skills/aps-planning/` for
@@ -172,21 +172,21 @@ Copilot) and/or `GEMINI.md`. Agents are Claude Code-specific
 ```yaml
 # .aps/config.yml — written by installer, read by updater
 aps:
-  version: "0.3.0"                    # APS release version installed
-  config_schema: 1                    # config.yml schema version
-  installed: "2026-02-19"             # date of initial install
-  updated: "2026-02-19"              # date of last aps update
+  version: "0.3.0" # APS release version installed
+  config_schema: 1 # config.yml schema version
+  installed: "2026-02-19" # date of initial install
+  updated: "2026-02-19" # date of last aps update
 
 project:
-  type: simple                        # simple | monorepo
-  monorepo_tool: ~                    # pnpm | turbo | lerna | nx (null if simple)
-  profile: solo                       # solo | team | agent
+  type: simple # simple | monorepo
+  monorepo_tool: ~ # pnpm | turbo | lerna | nx (null if simple)
+  profile: solo # solo | team | agent
 
-tools:                                # Multi-select — one or more entries
+tools: # Multi-select — one or more entries
   - name: claude-code
     skill: .claude/skills/aps-planning
-    hooks: full                       # full | minimal | none
-    agents:                           # Optional list
+    hooks: full # full | minimal | none
+    agents: # Optional list
       - aps-planner
       - aps-librarian
   - name: codex
@@ -200,7 +200,7 @@ tools:                                # Multi-select — one or more entries
     instruction_file: AGENTS.md
   - name: opencode
     skill: .claude/skills/aps-planning
-  - name: generic                     # No tool integration
+  - name: generic # No tool integration
 ```
 
 Notes on schema:
@@ -223,10 +223,10 @@ Notes on schema:
   2. **Scope** (single-select): small feature / module / multi-module / monorepo
   3. **AI Tooling** (multi-select): Claude Code / Copilot / Codex / OpenCode /
      Gemini / None
-  Followed by scaffold, agent context bootstrap message, and `aps lint`
-  verification. Non-interactive fallback via flags:
-  `--profile solo --scope small --tools claude-code,copilot`. Writes choices
-  to `.aps/config.yml`.
+     Followed by scaffold, agent context bootstrap message, and `aps lint`
+     verification. Non-interactive fallback via flags:
+     `--profile solo --scope small --tools claude-code,copilot`. Writes choices
+     to `.aps/config.yml`.
 - **Validation:** Run install in test dir; script asks questions, creates
   `.aps/config.yml` with answers, installs correct files per selection;
   non-interactive mode works with flags
@@ -294,8 +294,8 @@ Notes on schema:
   - **OpenCode:** skill at `.claude/skills/aps-planning/`, agents at
     `.opencode/agents/`
   - **Generic:** just `plans/` + CLI, no tool integration
-  Multi-select means a single install can target multiple tools (e.g. Claude
-  Code + Codex installs to both `.claude/skills/` and `.agents/skills/`).
+    Multi-select means a single install can target multiple tools (e.g. Claude
+    Code + Codex installs to both `.claude/skills/` and `.agents/skills/`).
 - **Validation:** Install with each tool selection produces the expected files
   in the expected locations; install-required tools get printed instructions
 - **Confidence:** medium

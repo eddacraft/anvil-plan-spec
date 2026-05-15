@@ -24,12 +24,12 @@ Severity: Critical | High | Medium | Low
 
 ### ISS-001: [Brief description]
 
-| Field | Value |
-|-------|-------|
-| Status | Open |
-| Severity | Medium |
+| Field      | Value                                                            |
+| ---------- | ---------------------------------------------------------------- |
+| Status     | Open                                                             |
+| Severity   | Medium                                                           |
 | Discovered | [WORK-ITEM-ID or activity, e.g., "AUTH-002" or "manual testing"] |
-| Module | [MODULE-ID, e.g., "AUTH"] |
+| Module     | [MODULE-ID, e.g., "AUTH"]                                        |
 
 **Context:** [What you observed — be specific]
 
@@ -54,16 +54,16 @@ Priority: High | Medium | Low
 
 ### Q-001: [The question]
 
-| Field | Value |
-|-------|-------|
-| Status | Open |
-| Priority | Medium |
-| Discovered | [WORK-ITEM-ID or activity] |
-| Assigned | [@username or "unassigned"] |
+| Field      | Value                       |
+| ---------- | --------------------------- |
+| Status     | Open                        |
+| Priority   | Medium                      |
+| Discovered | [WORK-ITEM-ID or activity]  |
+| Assigned   | [@username or "unassigned"] |
 
 **Context:** [Why this question came up]
 
-**Options considered:** *(optional)*
+**Options considered:** _(optional)_
 
 1. [Option A] — [tradeoffs]
 2. [Option B] — [tradeoffs]
@@ -86,12 +86,12 @@ Keep entries for 1-2 sprints as reference, then archive or delete.
 
 ### ISS-000: [Example resolved issue]
 
-| Field | Value |
-|-------|-------|
-| Status | Resolved |
-| Severity | Medium |
+| Field      | Value    |
+| ---------- | -------- |
+| Status     | Resolved |
+| Severity   | Medium   |
 | Discovered | AUTH-001 |
-| Module | AUTH |
+| Module     | AUTH     |
 
 **Context:** Rate limiting triggered unexpectedly during load testing.
 
@@ -107,12 +107,12 @@ Keep entries for 1-2 sprints as reference, then archive or delete.
 
 ### Issue Severities
 
-| Severity | Meaning |
-|----------|---------|
+| Severity | Meaning                                     |
+| -------- | ------------------------------------------- |
 | Critical | Blocks work, data loss risk, security issue |
-| High | Significant impact, needs attention soon |
-| Medium | Moderate impact, can be scheduled |
-| Low | Minor inconvenience, fix when convenient |
+| High     | Significant impact, needs attention soon    |
+| Medium   | Moderate impact, can be scheduled           |
+| Low      | Minor inconvenience, fix when convenient    |
 
 ### Referencing from Other Documents
 

@@ -6,17 +6,17 @@ This guide walks you through adopting Anvil Plan Spec (APS) in your project.
 
 Start here. Pick based on what you're trying to do:
 
-| Situation | Template | Time to Value |
-|-----------|----------|---------------|
-| **Just trying APS** | [quickstart](../templates/quickstart.template.md) | 5 minutes |
-| **Small feature** (1-3 work items, self-contained) | [simple](../templates/simple.template.md) | 15 minutes |
-| **Module with boundaries** (interfaces, deps) | [module](../templates/module.template.md) | 30 minutes |
-| **Multi-module initiative** | [index](../templates/index.template.md) | 1 hour |
-| **Large initiative** (6+ modules) | [index-expanded](../templates/index-expanded.template.md) | 1-2 hours |
-| **Monorepo** (multiple packages/apps) | [index-monorepo](../templates/index-monorepo.template.md) | 1-2 hours |
-| **Breaking a work item into actions** | [actions](../templates/actions.template.md) | 15 minutes |
-| **Technical/architectural design** | [design](../templates/design.template.md) | 30 minutes |
-| **Tracking dev-time discoveries** | [issues](../templates/issues.template.md) | 10 minutes |
+| Situation                                          | Template                                                  | Time to Value |
+| -------------------------------------------------- | --------------------------------------------------------- | ------------- |
+| **Just trying APS**                                | [quickstart](../templates/quickstart.template.md)         | 5 minutes     |
+| **Small feature** (1-3 work items, self-contained) | [simple](../templates/simple.template.md)                 | 15 minutes    |
+| **Module with boundaries** (interfaces, deps)      | [module](../templates/module.template.md)                 | 30 minutes    |
+| **Multi-module initiative**                        | [index](../templates/index.template.md)                   | 1 hour        |
+| **Large initiative** (6+ modules)                  | [index-expanded](../templates/index-expanded.template.md) | 1-2 hours     |
+| **Monorepo** (multiple packages/apps)              | [index-monorepo](../templates/index-monorepo.template.md) | 1-2 hours     |
+| **Breaking a work item into actions**              | [actions](../templates/actions.template.md)               | 15 minutes    |
+| **Technical/architectural design**                 | [design](../templates/design.template.md)                 | 30 minutes    |
+| **Tracking dev-time discoveries**                  | [issues](../templates/issues.template.md)                 | 10 minutes    |
 
 ### Decision Tree
 
@@ -26,18 +26,18 @@ graph TD
     B -->|Large initiative| C[Create Index]
     B -->|Single module| D{Self-contained?}
     B -->|Single work item| E[Add to existing module]
-    
+
     C --> F[Add modules]
     D -->|Yes| G[Use simple.template.md]
     D -->|No| H[Use module.template.md]
-    
+
     F --> I{Ready to implement?}
     G --> I
     H --> I
-    
+
     I -->|Yes| J[Add Work Items, set status=Ready]
     I -->|No| K[Leave as Draft, list blockers]
-    
+
     J --> L{Complex work item?}
     L -->|Yes| M[Create Action Plan file]
     L -->|No| N[Execute directly]
@@ -189,9 +189,9 @@ APS provides three index formats:
 **Table format** (`index.template.md`) — compact, scannable, best for 2-6 modules:
 
 ```markdown
-| Module | Purpose | Status | Dependencies |
-|--------|---------|--------|--------------|
-| [auth](./modules/auth.aps.md) | User authentication | Ready | — |
+| Module                        | Purpose             | Status | Dependencies |
+| ----------------------------- | ------------------- | ------ | ------------ |
+| [auth](./modules/auth.aps.md) | User authentication | Ready  | —            |
 ```
 
 **List format** (`index-expanded.template.md`) — more readable with many modules:
@@ -209,12 +209,12 @@ APS provides three index formats:
 
 APS includes prompts for AI tools:
 
-| Task | Prompt |
-|------|--------|
-| Planning | `docs/ai/prompting/index.prompt.md` |
-| Module design | `docs/ai/prompting/module.prompt.md` |
+| Task               | Prompt                                  |
+| ------------------ | --------------------------------------- |
+| Planning           | `docs/ai/prompting/index.prompt.md`     |
+| Module design      | `docs/ai/prompting/module.prompt.md`    |
 | Work item creation | `docs/ai/prompting/work-item.prompt.md` |
-| Execution | `docs/ai/prompting/actions.prompt.md` |
+| Execution          | `docs/ai/prompting/actions.prompt.md`   |
 
 OpenCode/Claude users: see `docs/ai/prompting/opencode/` for optimized variants.
 

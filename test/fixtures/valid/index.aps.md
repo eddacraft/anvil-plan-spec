@@ -20,6 +20,6 @@ A test project for validating APS linter functionality.
 
 ## Modules
 
-| Module | Scope | Owner | Status |
-|--------|-------|-------|--------|
-| [auth](./modules/auth.aps.md) | AUTH | @test | Ready |
+| Module                        | Scope | Owner | Status |
+| ----------------------------- | ----- | ----- | ------ |
+| [auth](./modules/auth.aps.md) | AUTH  | @test | Ready  |

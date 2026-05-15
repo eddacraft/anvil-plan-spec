@@ -26,7 +26,7 @@ knowledge-compounding problem and that APS doesn't yet ship:
    traceability. The "history of what we built" in one place.
 3. **`plans/releases/v0.3.0-beta.md`** — narrative release planning docs
    (theme, what ships, success criteria). Richer than `CHANGELOG.md` because
-   it tells the story of *why* a release is being cut.
+   it tells the story of _why_ a release is being cut.
 
 The orchestration CLI already captures per-work-item learnings inline (via
 `aps complete --learning`, per ORCH D-002). COMPOUND turns those inline
@@ -50,7 +50,7 @@ learnings into a navigable corpus.
 - AI model training datasets
 - Automatic semantic search across solutions
 - Replacing per-module decision records (`plans/decisions/`) — solutions
-  document *recurring* patterns; ADRs document one-off choices
+  document _recurring_ patterns; ADRs document one-off choices
 
 ## Interfaces
 
@@ -73,13 +73,13 @@ learnings into a navigable corpus.
 - **D-001:** Should `aps archive` ship in v0.3? — **deferred.** Land the
   doc-only patterns first (templates + workflow guidance). Add the CLI
   helper in a follow-up if manual archival proves painful.
-- **D-002:** `completed.aps.md` location — *decided: at the plan root
-  (`plans/completed.aps.md`), parallel to `plans/index.aps.md`*. Matches
+- **D-002:** `completed.aps.md` location — _decided: at the plan root
+  (`plans/completed.aps.md`), parallel to `plans/index.aps.md`_. Matches
   anvil-001's layout and keeps both "what we're doing" and "what we've
   done" at the same level.
-- **D-003:** Solutions vs ADRs — *decided: ADRs document the one-off
+- **D-003:** Solutions vs ADRs — _decided: ADRs document the one-off
   decision (`use JWT`); solutions document the recurring pattern
-  (`token-refresh under network partitions`). Cross-link liberally.*
+  (`token-refresh under network partitions`). Cross-link liberally._
 
 ## Work Items
 

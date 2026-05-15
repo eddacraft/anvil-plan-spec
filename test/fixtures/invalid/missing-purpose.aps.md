@@ -1,8 +1,8 @@
 # Feature Without Purpose
 
-| ID | Owner | Status |
-|----|-------|--------|
-| BAD | @test | Draft |
+| ID  | Owner | Status |
+| --- | ----- | ------ |
+| BAD | @test | Draft  |
 
 ## Work Items
 

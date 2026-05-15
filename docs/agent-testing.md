@@ -5,13 +5,13 @@ environment.
 
 ## Test Matrix
 
-| Tool | Agent Format | Test Method | Status |
-|------|-------------|-------------|--------|
-| Claude Code | `.claude/agents/*.md` | Task dispatch in live project | Validated |
-| Codex | `.codex/agents/*.toml` + config | `/agent spawn` | Manual (needs Codex) |
-| Copilot | `.github/agents/*.md` | Agent discovery | Manual (needs Copilot) |
-| OpenCode | `.opencode/agents/*.md` | `@mention` invocation | Manual (needs OpenCode) |
-| Gemini | `.gemini/skills/*/SKILL.md` | `gemini skills link` | Manual (needs Gemini) |
+| Tool        | Agent Format                    | Test Method                   | Status                  |
+| ----------- | ------------------------------- | ----------------------------- | ----------------------- |
+| Claude Code | `.claude/agents/*.md`           | Task dispatch in live project | Validated               |
+| Codex       | `.codex/agents/*.toml` + config | `/agent spawn`                | Manual (needs Codex)    |
+| Copilot     | `.github/agents/*.md`           | Agent discovery               | Manual (needs Copilot)  |
+| OpenCode    | `.opencode/agents/*.md`         | `@mention` invocation         | Manual (needs OpenCode) |
+| Gemini      | `.gemini/skills/*/SKILL.md`     | `gemini skills link`          | Manual (needs Gemini)   |
 
 ## Automated Validation (Complete)
 
@@ -20,7 +20,7 @@ environment.
 - [x] `build.sh` runs without errors
 - [x] `build.sh` is idempotent (running twice produces identical output)
 - [x] All 14 output files generated (2 core + 2 Claude Code + 2 Copilot + 2
-  OpenCode + 3 Codex + 2 Gemini verified)
+      OpenCode + 3 Codex + 2 Gemini verified)
 
 ### Format Validation
 
@@ -39,10 +39,10 @@ environment.
 **OpenCode:**
 
 - [x] YAML frontmatter: `description`, `mode`, `model`, `steps`, `tools`,
-  `permission`
+      `permission`
 - [x] `mode: subagent` (not primary)
 - [x] Model uses `provider/model-id` format (`anthropic/claude-opus-4-6`,
-  `anthropic/claude-sonnet-4-6`)
+      `anthropic/claude-sonnet-4-6`)
 - [x] No `name` field (filename-derived)
 - [x] Permission maps set dangerous tools to `"ask"`
 

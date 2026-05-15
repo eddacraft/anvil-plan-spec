@@ -48,11 +48,11 @@ Based on what the user needs:
 **If plans exist but are empty:** Ask what they're building and help create the
 right spec. Use the template picker:
 
-| Situation | Template |
-|-----------|----------|
-| Quick feature (1-3 items) | Simple spec |
-| Module with boundaries | Module spec |
-| Multi-module initiative | Index + Modules |
+| Situation                 | Template        |
+| ------------------------- | --------------- |
+| Quick feature (1-3 items) | Simple spec     |
+| Module with boundaries    | Module spec     |
+| Multi-module initiative   | Index + Modules |
 
 **If plans exist but need work items:** Help define work items with Intent,
 Expected Outcome, and Validation fields.

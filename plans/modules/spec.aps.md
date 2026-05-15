@@ -73,7 +73,6 @@ incremental — both vocabularies exist side-by-side today.
 ## Decisions
 
 - **D-026:** Status vocabulary — **unresolved.** Two viable options:
-
   - **A. Accept both vocabularies as aliases.** Canonical APS continues to be
     `Draft / Ready / In Progress / Complete / Blocked`. Lint and orchestrate
     accept `Proposed → Draft` and `Done → Complete` as synonyms and never

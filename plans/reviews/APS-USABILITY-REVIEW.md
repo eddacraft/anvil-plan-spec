@@ -106,7 +106,7 @@ APS presents a compelling vision for portable, tool-agnostic planning in AI-assi
 
 **Recommendation:**
 
-- Mark optional sections clearly with *(optional)* in template
+- Mark optional sections clearly with _(optional)_ in template
 - Provide field-by-field guidance in comments
 - Create a "minimal leaf" example showing bare essentials
 
@@ -151,6 +151,7 @@ APS presents a compelling vision for portable, tool-agnostic planning in AI-assi
 
 ```markdown
 # hello-world.aps.md - Complete minimal example
+
 Copy this file, replace the bracketed parts, and you're using APS!
 
 ## What: [One sentence - what you're building]
@@ -158,11 +159,14 @@ Copy this file, replace the bracketed parts, and you're using APS!
 ## Why: [One sentence - what problem it solves]
 
 ## Success:
+
 - [ ] [Observable outcome 1]
 - [ ] [Observable outcome 2]
 
 ## Tasks:
+
 ### Task 001: [First thing to build]
+
 - **Outcome:** [How you know it's done]
 - **Test:** `[command to verify]`
 ```
@@ -237,7 +241,9 @@ Copy this file, replace the bracketed parts, and you're using APS!
 
 ```markdown
 ## Ready Checklist
+
 Mark status as "Ready" when:
+
 - [ ] Purpose and scope are clear
 - [ ] Interfaces defined (or confirmed none needed)
 - [ ] Dependencies resolved or explicitly blocked
@@ -489,7 +495,7 @@ Worth preserving and emphasizing:
 
 1. Create `quickstart.template.md` with minimal fields
 2. Add "hello world" single-file example to README
-3. Mark optional fields in templates with *(optional)*
+3. Mark optional fields in templates with _(optional)_
 4. Add checkpoint and confidence guidance to templates
 5. Fix terminology: SCOPE → MODULE-ID in examples
 

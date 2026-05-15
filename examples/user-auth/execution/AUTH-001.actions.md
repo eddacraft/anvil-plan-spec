@@ -2,12 +2,12 @@
 
 # Action Plan: AUTH-001
 
-| Field | Value |
-|-------|-------|
-| Source | [./modules/auth.aps.md](../modules/auth.aps.md) |
-| Work Item | AUTH-001 — Create user registration function |
-| Created by | AI |
-| Status | Ready |
+| Field      | Value                                           |
+| ---------- | ----------------------------------------------- |
+| Source     | [./modules/auth.aps.md](../modules/auth.aps.md) |
+| Work Item  | AUTH-001 — Create user registration function    |
+| Created by | AI                                              |
+| Status     | Ready                                           |
 
 ## Prerequisites
 

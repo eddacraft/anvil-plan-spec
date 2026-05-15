@@ -1,7 +1,7 @@
 # Core Module
 
-| ID | Owner | Status |
-|----|-------|--------|
+| ID   | Owner | Status   |
+| ---- | ----- | -------- |
 | CORE | @test | Complete |
 
 ## Purpose

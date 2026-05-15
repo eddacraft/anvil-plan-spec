@@ -10,12 +10,12 @@ The goal is to make intent, execution, and verification clearly distinct — wit
 
 ### Renamed Concepts
 
-| Old Term | New Term | Meaning |
-|----------|----------|---------|
-| Task | Work Item | A bounded unit of work with intent, outcome, scope, and validation |
-| Step (file) | Action Plan | Execution breakdown for a work item |
-| Step (numbered) | Action | A coherent unit of execution within a plan |
-| Checkpoint | Checkpoint | Observable proof that an action is complete |
+| Old Term        | New Term    | Meaning                                                            |
+| --------------- | ----------- | ------------------------------------------------------------------ |
+| Task            | Work Item   | A bounded unit of work with intent, outcome, scope, and validation |
+| Step (file)     | Action Plan | Execution breakdown for a work item                                |
+| Step (numbered) | Action      | A coherent unit of execution within a plan                         |
+| Checkpoint      | Checkpoint  | Observable proof that an action is complete                        |
 
 ---
 
@@ -32,14 +32,14 @@ Implementation emerges from patterns and agent judgement.
 
 ## Hierarchy
 
-| Layer | Purpose | You Write | You DON'T Write |
-|-------|---------|-----------|-----------------|
-| Index | Plan overview | Modules, milestones, risks | Implementation detail |
-| Module | Bounded work area | Interfaces, boundaries, work items | Code snippets |
-| Work Item | Outcome unit | Intent, outcome, validation | How to implement |
-| Action Plan | Execution breakdown | Actions, checkpoints | Tutorials |
-| Action | Unit of work | Purpose, produces, checkpoint | Code structure |
-| Checkpoint | Verification | Observable state | Implementation steps |
+| Layer       | Purpose             | You Write                          | You DON'T Write       |
+| ----------- | ------------------- | ---------------------------------- | --------------------- |
+| Index       | Plan overview       | Modules, milestones, risks         | Implementation detail |
+| Module      | Bounded work area   | Interfaces, boundaries, work items | Code snippets         |
+| Work Item   | Outcome unit        | Intent, outcome, validation        | How to implement      |
+| Action Plan | Execution breakdown | Actions, checkpoints               | Tutorials             |
+| Action      | Unit of work        | Purpose, produces, checkpoint      | Code structure        |
+| Checkpoint  | Verification        | Observable state                   | Implementation steps  |
 
 ---
 
@@ -180,6 +180,7 @@ Checkpoints are observable proofs of state, not instructions.
 
 ```markdown
 Checkpoint:
+
 - Extract JWT from header
 - Decode with jsonwebtoken
 - Attach user to request

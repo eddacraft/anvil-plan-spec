@@ -45,16 +45,16 @@ graph LR
 
 ## Modules
 
-| Module | ID | Owner | Status | Priority | Tags | Dependencies |
-|--------|----|-------|--------|----------|------|--------------|
-| [module-id](./modules/module-name.aps.md) | MOD | @username | Draft | medium | core | — |
-| [another-id](./modules/another.aps.md) | API | @username | Draft | high | api | module-id |
+| Module                                    | ID  | Owner     | Status | Priority | Tags | Dependencies |
+| ----------------------------------------- | --- | --------- | ------ | -------- | ---- | ------------ |
+| [module-id](./modules/module-name.aps.md) | MOD | @username | Draft  | medium   | core | —            |
+| [another-id](./modules/another.aps.md)    | API | @username | Draft  | high     | api  | module-id    |
 
 ## Risks & Mitigations
 
-| Risk | Impact | Likelihood | Mitigation |
-|------|--------|------------|------------|
-| [Risk description] | high | medium | [How we address it] |
+| Risk               | Impact | Likelihood | Mitigation          |
+| ------------------ | ------ | ---------- | ------------------- |
+| [Risk description] | high   | medium     | [How we address it] |
 
 ## Decisions
 

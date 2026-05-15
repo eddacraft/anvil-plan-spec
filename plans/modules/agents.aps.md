@@ -1,8 +1,8 @@
 # Agents Module
 
-| ID | Owner | Priority | Status |
-|----|-------|----------|--------|
-| AGENT | @aneki | high | Complete |
+| ID    | Owner  | Priority | Status   |
+| ----- | ------ | -------- | -------- |
+| AGENT | @aneki | high     | Complete |
 
 ## Purpose
 
@@ -28,15 +28,15 @@ These need to be:
 
 ### Agent Mechanism Per Tool
 
-| Tool | Agent Mechanism | Format |
-|------|----------------|--------|
-| **Claude Code** | `.claude/agents/<name>.md` | Frontmatter (name, description, model, tools) + system prompt |
-| **Codex** | Multi-agent TOML + skills | `[agents.<name>]` in `.codex/config.toml` with `config_file` overlay; also `.agents/skills/` for passive guidance |
-| **Copilot** | `.github/agents/<name>.md` | Frontmatter (name, description) + system prompt — very similar to Claude Code format |
-| **Gemini** | `.gemini/skills/<name>/SKILL.md` | SKILL.md activated via `activate_skill` tool |
-| **OpenCode** | `.opencode/agents/<name>.md` + skills | Frontmatter (description, mode, model, tools, permission) + system prompt; also skills at `.opencode/skills/` or `.claude/skills/` |
+| Tool            | Agent Mechanism                       | Format                                                                                                                             |
+| --------------- | ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| **Claude Code** | `.claude/agents/<name>.md`            | Frontmatter (name, description, model, tools) + system prompt                                                                      |
+| **Codex**       | Multi-agent TOML + skills             | `[agents.<name>]` in `.codex/config.toml` with `config_file` overlay; also `.agents/skills/` for passive guidance                  |
+| **Copilot**     | `.github/agents/<name>.md`            | Frontmatter (name, description) + system prompt — very similar to Claude Code format                                               |
+| **Gemini**      | `.gemini/skills/<name>/SKILL.md`      | SKILL.md activated via `activate_skill` tool                                                                                       |
+| **OpenCode**    | `.opencode/agents/<name>.md` + skills | Frontmatter (description, mode, model, tools, permission) + system prompt; also skills at `.opencode/skills/` or `.claude/skills/` |
 
-The agent *content* (system prompt, decision tree, APS knowledge) is largely
+The agent _content_ (system prompt, decision tree, APS knowledge) is largely
 shared. What differs is frontmatter, file location, and tool-specific
 affordances.
 
@@ -85,14 +85,14 @@ at `.opencode/agents/<name>.md` (project) or `~/.config/opencode/agents/`
 ```yaml
 ---
 description: Agent purpose
-mode: subagent          # primary | subagent | all
+mode: subagent # primary | subagent | all
 model: anthropic/claude-opus-4-20250514
 steps: 50
 tools:
   write: true
   bash: true
 permission:
-  edit: "ask"           # ask | allow | deny
+  edit: "ask" # ask | allow | deny
 ---
 System prompt here.
 ```
@@ -144,13 +144,13 @@ mode agents (users invoke them deliberately, not as the default primary agent).
 
 - **D-016:** Agent scope — Planner covers planning + execution + status +
   waves. Librarian covers archiving + cross-refs + orphans. No overlap.
-  *decided: yes*
+  _decided: yes_
 - **D-017:** Should agents reference `.aps/` paths or `plans/` paths?
-  *decided: agents reference `plans/` (user content) and `.aps/scripts/`
-  (tooling). They don't need to know about `.aps/config.yml`.*
-- **D-018:** Shared core vs per-tool rewrite — *decided: write a shared core
+  _decided: agents reference `plans/` (user content) and `.aps/scripts/`
+  (tooling). They don't need to know about `.aps/config.yml`._
+- **D-018:** Shared core vs per-tool rewrite — _decided: write a shared core
   prompt, then wrap it in tool-specific frontmatter/packaging. Minimises
-  drift between harness variants.*
+  drift between harness variants._
 
 ## Ready Checklist
 
@@ -199,8 +199,8 @@ mode agents (users invoke them deliberately, not as the default primary agent).
      with `config_file` pointing to the TOML overlays.
   2. Codex config snippet — example `[agents.*]` blocks for documentation and
      installer to use when writing `.codex/config.toml`.
-  Core planning/librarian logic identical to Claude versions, adapted for
-  Codex's `developer_instructions` field and TOML format.
+     Core planning/librarian logic identical to Claude versions, adapted for
+     Codex's `developer_instructions` field and TOML format.
 - **Validation:** Agent role appears in Codex; `/agent spawn aps-planner`
   starts agent thread; agent reads plans and reports status. Fallback: skill
   at `.agents/skills/aps-planning/` still works as passive guidance.
@@ -225,7 +225,7 @@ mode agents (users invoke them deliberately, not as the default primary agent).
      `scaffold/agents/gemini/aps-librarian/SKILL.md`. Skill format only
      (Gemini has no agent mechanism). Installs to `.gemini/skills/` or
      `.agents/skills/` with post-install `gemini skills link` instruction.
-  Core logic identical to Claude versions across all three.
+     Core logic identical to Claude versions across all three.
 - **Validation:** Copilot agent discoverable at `.github/agents/`; OpenCode
   agent appears as subagent; Gemini skill links correctly
 - **Confidence:** high

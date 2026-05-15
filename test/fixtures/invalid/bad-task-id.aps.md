@@ -1,8 +1,8 @@
 # Feature With Bad Task IDs
 
-| ID | Owner | Status |
-|----|-------|--------|
-| TEST | @test | Draft |
+| ID   | Owner | Status |
+| ---- | ----- | ------ |
+| TEST | @test | Draft  |
 
 ## Purpose
 

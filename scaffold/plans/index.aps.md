@@ -8,10 +8,10 @@ See: plans/aps-rules.md
 
 # [Plan Title]
 
-| Field | Value |
-|-------|-------|
-| Status | Draft |
-| Owner | @username |
+| Field   | Value      |
+| ------- | ---------- |
+| Status  | Draft      |
+| Owner   | @username  |
 | Created | YYYY-MM-DD |
 
 ## Problem
@@ -29,14 +29,14 @@ See: plans/aps-rules.md
 
 ## Modules
 
-| Module | Purpose | Status | Dependencies |
-|--------|---------|--------|--------------|
-| [module](./modules/module.aps.md) | [One-line purpose] | Draft | — |
+| Module                            | Purpose            | Status | Dependencies |
+| --------------------------------- | ------------------ | ------ | ------------ |
+| [module](./modules/module.aps.md) | [One-line purpose] | Draft  | —            |
 
 ## Risks
 
-| Risk | Impact | Mitigation |
-|------|--------|------------|
+| Risk   | Impact   | Mitigation   |
+| ------ | -------- | ------------ |
 | [Risk] | [Impact] | [Mitigation] |
 
 ## Open Questions
@@ -45,4 +45,4 @@ See: plans/aps-rules.md
 
 ## Decisions
 
-- **D-001:** [Decision needed] — *pending*
+- **D-001:** [Decision needed] — _pending_

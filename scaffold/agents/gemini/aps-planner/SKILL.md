@@ -20,12 +20,12 @@ Activate this skill when:
 
 ## APS Hierarchy
 
-| Layer | Purpose | Executable? |
-|-------|---------|-------------|
-| **Index** | High-level project plan with modules and milestones | No |
-| **Module** | Bounded scope with interfaces and work items | Yes (if Ready) |
-| **Work Item** | Single coherent change with validation | Yes (execution authority) |
-| **Action Plan** | Ordered actions with checkpoints | Yes (granular execution) |
+| Layer           | Purpose                                             | Executable?               |
+| --------------- | --------------------------------------------------- | ------------------------- |
+| **Index**       | High-level project plan with modules and milestones | No                        |
+| **Module**      | Bounded scope with interfaces and work items        | Yes (if Ready)            |
+| **Work Item**   | Single coherent change with validation              | Yes (execution authority) |
+| **Action Plan** | Ordered actions with checkpoints                    | Yes (granular execution)  |
 
 ## Core Rules
 

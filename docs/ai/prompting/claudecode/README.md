@@ -15,12 +15,12 @@ APS remains the **planning layer** (durable, git-versioned), while Tasks handle 
 
 ## Prompts
 
-| Prompt | Use When |
-|--------|----------|
-| [tasks-from-module.prompt.md](./tasks-from-module.prompt.md) | Starting work on an APS module |
-| [wave-planning.prompt.md](./wave-planning.prompt.md) | Planning parallel execution |
-| [agent-assignment.prompt.md](./agent-assignment.prompt.md) | Distributing work across multiple agents |
-| [sync-status.prompt.md](./sync-status.prompt.md) | Session end - updating APS files |
+| Prompt                                                       | Use When                                 |
+| ------------------------------------------------------------ | ---------------------------------------- |
+| [tasks-from-module.prompt.md](./tasks-from-module.prompt.md) | Starting work on an APS module           |
+| [wave-planning.prompt.md](./wave-planning.prompt.md)         | Planning parallel execution              |
+| [agent-assignment.prompt.md](./agent-assignment.prompt.md)   | Distributing work across multiple agents |
+| [sync-status.prompt.md](./sync-status.prompt.md)             | Session end - updating APS files         |
 
 ## Quick Start
 

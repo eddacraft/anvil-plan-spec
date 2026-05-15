@@ -115,34 +115,34 @@ Shows what was installed, per-platform next steps, and doc links.
 
 ### By Profile
 
-| Profile | Effect |
-|---------|--------|
-| Solo dev | Defaults to quickstart template, skips team-oriented guidance |
-| Team adoption | Defaults to index template, includes review workflow guidance |
-| AI agent setup | Defaults to module template, emphasises tool integration |
+| Profile        | Effect                                                        |
+| -------------- | ------------------------------------------------------------- |
+| Solo dev       | Defaults to quickstart template, skips team-oriented guidance |
+| Team adoption  | Defaults to index template, includes review workflow guidance |
+| AI agent setup | Defaults to module template, emphasises tool integration      |
 
 ### By Scope
 
-| Scope | Templates Installed |
-|-------|-------------------|
-| Small feature | `quickstart.template.md` as `plans/index.aps.md` |
-| Module with boundaries | `module.template.md` in `plans/modules/` |
-| Multi-module initiative | `index.template.md` + `module.template.md` |
-| Monorepo | `index-monorepo.template.md` + `module.template.md` |
+| Scope                   | Templates Installed                                 |
+| ----------------------- | --------------------------------------------------- |
+| Small feature           | `quickstart.template.md` as `plans/index.aps.md`    |
+| Module with boundaries  | `module.template.md` in `plans/modules/`            |
+| Multi-module initiative | `index.template.md` + `module.template.md`          |
+| Monorepo                | `index-monorepo.template.md` + `module.template.md` |
 
 All scopes also get `aps-rules.md`, `execution/.steps.template.md`, and
 `decisions/.gitkeep`.
 
 ### By AI Tooling
 
-| Tool | What Gets Installed |
-|------|-------------------|
-| Claude Code | `aps-planning/` skill, `.claude/commands/`, `.claude/agents/aps-planner.md` + `aps-librarian.md`, hooks in `.claude/settings.local.json` |
-| GitHub Copilot | `.github/copilot/agents/aps-planner.md` + `aps-librarian.md` |
-| Codex | `codex.toml` snippet, agents in codex format |
-| OpenCode | `.opencode/agents/aps-planner.md` + `aps-librarian.md` |
-| Gemini | `.gemini/skills/aps-planner/SKILL.md` + `aps-librarian/SKILL.md` |
-| None | Plans + CLI only, no integrations |
+| Tool           | What Gets Installed                                                                                                                      |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| Claude Code    | `aps-planning/` skill, `.claude/commands/`, `.claude/agents/aps-planner.md` + `aps-librarian.md`, hooks in `.claude/settings.local.json` |
+| GitHub Copilot | `.github/copilot/agents/aps-planner.md` + `aps-librarian.md`                                                                             |
+| Codex          | `codex.toml` snippet, agents in codex format                                                                                             |
+| OpenCode       | `.opencode/agents/aps-planner.md` + `aps-librarian.md`                                                                                   |
+| Gemini         | `.gemini/skills/aps-planner/SKILL.md` + `aps-librarian/SKILL.md`                                                                         |
+| None           | Plans + CLI only, no integrations                                                                                                        |
 
 ## Non-Interactive Fallback
 
@@ -192,22 +192,22 @@ keyboard conventions). Compiled to a single static binary via
 
 ## Keyboard Conventions (from Anvil-001)
 
-| Action | Keys |
-|--------|------|
-| Navigate | Arrow keys or j/k |
-| Select/confirm | Enter |
-| Toggle checkbox | Space |
-| Go back | Esc or left arrow |
-| Quit | q or Ctrl+C |
+| Action          | Keys              |
+| --------------- | ----------------- |
+| Navigate        | Arrow keys or j/k |
+| Select/confirm  | Enter             |
+| Toggle checkbox | Space             |
+| Go back         | Esc or left arrow |
+| Quit            | q or Ctrl+C       |
 
 ## Decisions
 
-| Decision | Choice | Notes |
-|----------|--------|-------|
-| TUI framework | **Ratatui** (Rust) | Shared EddaCraft TUI library, same product family as Anvil. Supersedes OpenTUI (Bun/Zig) decision from 2026-02-27. |
-| Distribution | **Single binary** via `cargo build --release` | Cross-compile for linux-x64, linux-arm64, darwin-arm64, darwin-x64, windows-x64. Zero runtime deps for end users. |
-| Where source lives | TBD | APS is public, Anvil is private. Need to decide whether aps-cli lives in APS repo or elsewhere. |
-| Shared TUI components | TBD | Depends on source location. Ratatui widgets may be extracted as a shared crate or vendored. |
+| Decision              | Choice                                        | Notes                                                                                                              |
+| --------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| TUI framework         | **Ratatui** (Rust)                            | Shared EddaCraft TUI library, same product family as Anvil. Supersedes OpenTUI (Bun/Zig) decision from 2026-02-27. |
+| Distribution          | **Single binary** via `cargo build --release` | Cross-compile for linux-x64, linux-arm64, darwin-arm64, darwin-x64, windows-x64. Zero runtime deps for end users.  |
+| Where source lives    | TBD                                           | APS is public, Anvil is private. Need to decide whether aps-cli lives in APS repo or elsewhere.                    |
+| Shared TUI components | TBD                                           | Depends on source location. Ratatui widgets may be extracted as a shared crate or vendored.                        |
 
 ### Why Ratatui
 

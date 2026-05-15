@@ -224,22 +224,22 @@ When TTY is not available or `--non-interactive` flag is set:
 ```yaml
 # .aps/config.yml — written by installer, read by updater
 aps:
-  version: "0.3.0"              # APS release version that was installed
-  config_schema: 1               # config.yml schema version (for future compat)
-  installed: "2026-03-16"        # date of initial install
-  updated: "2026-03-16"         # date of last aps update
+  version: "0.3.0" # APS release version that was installed
+  config_schema: 1 # config.yml schema version (for future compat)
+  installed: "2026-03-16" # date of initial install
+  updated: "2026-03-16" # date of last aps update
 
 project:
-  type: simple                   # simple | monorepo
-  monorepo_tool: ~               # pnpm | turbo | lerna | nx
-  planning: internal             # internal | external
-  planning_repo: ~               # path or URL (null if internal)
-  profile: solo                  # solo | team | agent
+  type: simple # simple | monorepo
+  monorepo_tool: ~ # pnpm | turbo | lerna | nx
+  planning: internal # internal | external
+  planning_repo: ~ # path or URL (null if internal)
+  profile: solo # solo | team | agent
 
 tools:
   - name: claude-code
     skill: .claude/skills/aps-planning
-    hooks: full                  # full | minimal | none
+    hooks: full # full | minimal | none
     agents:
       - aps-planner
       - aps-librarian
@@ -262,14 +262,14 @@ tools:
 
 **Canonical tool identifiers** (used in config.yml, CLI flags, and internally):
 
-| Display Name | Identifier |
-|-------------|------------|
-| Claude Code | `claude-code` |
-| GitHub Copilot | `copilot` |
-| Codex | `codex` |
-| OpenCode | `opencode` |
-| Gemini | `gemini` |
-| None / manual | `generic` |
+| Display Name   | Identifier    |
+| -------------- | ------------- |
+| Claude Code    | `claude-code` |
+| GitHub Copilot | `copilot`     |
+| Codex          | `codex`       |
+| OpenCode       | `opencode`    |
+| Gemini         | `gemini`      |
+| None / manual  | `generic`     |
 
 CLI flags use these identifiers: `--tools claude-code,copilot`
 
@@ -325,21 +325,21 @@ v1 layout is detected by the presence of any of: `bin/aps` at project root,
 
 ### File Moves
 
-| v1 Location | v2 Location | Action |
-|-------------|-------------|--------|
-| `bin/aps` | `.aps/bin/aps` | Move |
-| `bin/lib/` or `lib/` | `.aps/lib/` | Move |
-| `aps-planning/SKILL.md` | `.claude/skills/aps-planning/SKILL.md` | Move |
-| `aps-planning/reference.md` | `.claude/skills/aps-planning/reference.md` | Move |
-| `aps-planning/examples.md` | `.claude/skills/aps-planning/examples.md` | Move |
-| `aps-planning/hooks.md` | Deleted | Remove (hook scripts are the source of truth; hooks.md was human reference only) |
-| `aps-planning/scripts/` | `.aps/scripts/` | Move |
-| `.claude/commands/plan.md` | Deleted | Back up to `.aps/backup/commands/` then remove |
-| `.claude/commands/plan-status.md` | Deleted | Back up to `.aps/backup/commands/` then remove |
-| `designs/` | `plans/designs/` | Move |
-| `plans/aps-rules.md` (mixed) | `plans/aps-rules.md` + `plans/project-context.md` | Split (see below) |
-| (none) | `.aps/config.yml` | Create (inferred) |
-| (none) | `plans/issues.md` | Create from template |
+| v1 Location                       | v2 Location                                       | Action                                                                           |
+| --------------------------------- | ------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `bin/aps`                         | `.aps/bin/aps`                                    | Move                                                                             |
+| `bin/lib/` or `lib/`              | `.aps/lib/`                                       | Move                                                                             |
+| `aps-planning/SKILL.md`           | `.claude/skills/aps-planning/SKILL.md`            | Move                                                                             |
+| `aps-planning/reference.md`       | `.claude/skills/aps-planning/reference.md`        | Move                                                                             |
+| `aps-planning/examples.md`        | `.claude/skills/aps-planning/examples.md`         | Move                                                                             |
+| `aps-planning/hooks.md`           | Deleted                                           | Remove (hook scripts are the source of truth; hooks.md was human reference only) |
+| `aps-planning/scripts/`           | `.aps/scripts/`                                   | Move                                                                             |
+| `.claude/commands/plan.md`        | Deleted                                           | Back up to `.aps/backup/commands/` then remove                                   |
+| `.claude/commands/plan-status.md` | Deleted                                           | Back up to `.aps/backup/commands/` then remove                                   |
+| `designs/`                        | `plans/designs/`                                  | Move                                                                             |
+| `plans/aps-rules.md` (mixed)      | `plans/aps-rules.md` + `plans/project-context.md` | Split (see below)                                                                |
+| (none)                            | `.aps/config.yml`                                 | Create (inferred)                                                                |
+| (none)                            | `plans/issues.md`                                 | Create from template                                                             |
 
 ### aps-rules.md Split Logic
 
@@ -373,21 +373,21 @@ customized the file), it preserves the original as
 When creating `config.yml` from an existing v1 install, the migration
 infers choices by checking for installed files:
 
-| Check | Inference |
-|-------|-----------|
-| `plans/modules/` contains `*-monorepo*` or `index-monorepo*` | `project.type: monorepo` |
-| `pnpm-workspace.yaml` exists | `project.monorepo_tool: pnpm` |
-| `turbo.json` exists | `project.monorepo_tool: turbo` |
-| `lerna.json` exists | `project.monorepo_tool: lerna` |
-| `nx.json` exists | `project.monorepo_tool: nx` |
-| `.claude/agents/aps-planner.md` exists | tool: `claude-code` with agents |
-| `.claude/skills/aps-planning/` exists | tool: `claude-code` (or copilot/opencode) |
-| `.github/agents/aps-planner.md` exists | tool: `copilot` |
-| `.opencode/agents/aps-planner.md` exists | tool: `opencode` |
-| `.codex/agents/aps-planner.toml` exists | tool: `codex` |
-| `.gemini/skills/aps-planner/` exists | tool: `gemini` |
-| `.agents/skills/aps-planning/` exists (no `.codex/` or `.gemini/` to disambiguate) | tool: `codex` (more common v1 install) |
-| None of the above tool markers | tool: `generic` |
+| Check                                                                              | Inference                                 |
+| ---------------------------------------------------------------------------------- | ----------------------------------------- |
+| `plans/modules/` contains `*-monorepo*` or `index-monorepo*`                       | `project.type: monorepo`                  |
+| `pnpm-workspace.yaml` exists                                                       | `project.monorepo_tool: pnpm`             |
+| `turbo.json` exists                                                                | `project.monorepo_tool: turbo`            |
+| `lerna.json` exists                                                                | `project.monorepo_tool: lerna`            |
+| `nx.json` exists                                                                   | `project.monorepo_tool: nx`               |
+| `.claude/agents/aps-planner.md` exists                                             | tool: `claude-code` with agents           |
+| `.claude/skills/aps-planning/` exists                                              | tool: `claude-code` (or copilot/opencode) |
+| `.github/agents/aps-planner.md` exists                                             | tool: `copilot`                           |
+| `.opencode/agents/aps-planner.md` exists                                           | tool: `opencode`                          |
+| `.codex/agents/aps-planner.toml` exists                                            | tool: `codex`                             |
+| `.gemini/skills/aps-planner/` exists                                               | tool: `gemini`                            |
+| `.agents/skills/aps-planning/` exists (no `.codex/` or `.gemini/` to disambiguate) | tool: `codex` (more common v1 install)    |
+| None of the above tool markers                                                     | tool: `generic`                           |
 
 For ambiguous cases (e.g., `.claude/skills/` exists but could be any of
 three tools), the migration defaults to `claude-code` since that's the
@@ -454,21 +454,21 @@ shell prompts as an interim step. The TUI design remains the target UX.
 
 ## New Decisions
 
-| Decision | Choice | Notes |
-|----------|--------|-------|
-| D-022 | External planning repo reversed | Plans move back to main repo. aps-closed deleted. |
-| D-023 | Commands fully dropped | Skills only. No `.claude/commands/` shipped. Supersedes D-015. |
-| D-024 | aps-rules.md split | `aps-rules.md` (APS-managed) + `project-context.md` (user-owned). |
-| D-025 | designs/ and issues.md into plans/ | Single planning content root. |
+| Decision | Choice                             | Notes                                                             |
+| -------- | ---------------------------------- | ----------------------------------------------------------------- |
+| D-022    | External planning repo reversed    | Plans move back to main repo. aps-closed deleted.                 |
+| D-023    | Commands fully dropped             | Skills only. No `.claude/commands/` shipped. Supersedes D-015.    |
+| D-024    | aps-rules.md split                 | `aps-rules.md` (APS-managed) + `project-context.md` (user-owned). |
+| D-025    | designs/ and issues.md into plans/ | Single planning content root.                                     |
 
 ## Risks
 
-| Risk | Impact | Mitigation |
-|------|--------|------------|
-| Existing users have customized `aps-rules.md` | Medium | Migration backs up original, splits by section headers, preserves unrecognized content in `project-context.md` |
-| Hook path changes break active sessions | Low | Migration updates `settings.local.json` automatically |
-| Agent can't infer project context accurately | Low | Template with TODO markers as fallback |
-| Users resist `.aps/` hidden directory | Low | Same convention as `.git/`, `.github/`, `.vscode/` |
-| Users have customized `.claude/commands/` files | Low | Migration backs up to `.aps/backup/commands/` before deletion |
-| New `aps-rules.md` references `plans/designs/` on v1 layout | High | New rules only ship with v2 layout; `aps update` on v1 projects uses the old rules (see Sequencing section) |
-| config.yml inference guesses wrong tool | Low | Generated config includes review comment; user can edit |
+| Risk                                                        | Impact | Mitigation                                                                                                     |
+| ----------------------------------------------------------- | ------ | -------------------------------------------------------------------------------------------------------------- |
+| Existing users have customized `aps-rules.md`               | Medium | Migration backs up original, splits by section headers, preserves unrecognized content in `project-context.md` |
+| Hook path changes break active sessions                     | Low    | Migration updates `settings.local.json` automatically                                                          |
+| Agent can't infer project context accurately                | Low    | Template with TODO markers as fallback                                                                         |
+| Users resist `.aps/` hidden directory                       | Low    | Same convention as `.git/`, `.github/`, `.vscode/`                                                             |
+| Users have customized `.claude/commands/` files             | Low    | Migration backs up to `.aps/backup/commands/` before deletion                                                  |
+| New `aps-rules.md` references `plans/designs/` on v1 layout | High   | New rules only ship with v2 layout; `aps update` on v1 projects uses the old rules (see Sequencing section)    |
+| config.yml inference guesses wrong tool                     | Low    | Generated config includes review comment; user can edit                                                        |

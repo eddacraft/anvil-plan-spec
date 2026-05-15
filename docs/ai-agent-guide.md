@@ -157,36 +157,36 @@ When starting work, read in this order:
 
 ## Common Scenarios
 
-| User Says | You Do |
-|-----------|--------|
-| "Set up planning for this project" | Initialization Workflow → Create index |
-| "Plan the auth module" | Planning Workflow → Create module spec, NO work items yet |
-| "Break down the auth work" | Planning Workflow → Add work items to existing module |
-| "Implement AUTH-001" | Execution Workflow → Verify Ready, execute, validate |
-| "What's the plan for payments?" | Read plans/modules/*payment*.aps.md, summarize |
-| "Is this project using APS?" | Check for plans/ dir and aps-rules.md |
+| User Says                          | You Do                                                    |
+| ---------------------------------- | --------------------------------------------------------- |
+| "Set up planning for this project" | Initialization Workflow → Create index                    |
+| "Plan the auth module"             | Planning Workflow → Create module spec, NO work items yet |
+| "Break down the auth work"         | Planning Workflow → Add work items to existing module     |
+| "Implement AUTH-001"               | Execution Workflow → Verify Ready, execute, validate      |
+| "What's the plan for payments?"    | Read plans/modules/_payment_.aps.md, summarize            |
+| "Is this project using APS?"       | Check for plans/ dir and aps-rules.md                     |
 
 ## Anti-Patterns to Avoid
 
-| NEVER Do This | DO This Instead |
-|---------------|-----------------|
-| Implement without a work item | Create work item or ask for approval |
-| Write implementation details in action plans | Write observable checkpoints only (12 words max) |
-| Execute work item with status "Proposed" | Ask user to approve (change status to Ready) |
-| Create work items in every module at once | Create work items per module as it becomes Ready |
-| Guess validation commands | Use language/framework conventions or ask |
-| Skip reading aps-rules.md | Always read first — it contains your instructions |
+| NEVER Do This                                | DO This Instead                                   |
+| -------------------------------------------- | ------------------------------------------------- |
+| Implement without a work item                | Create work item or ask for approval              |
+| Write implementation details in action plans | Write observable checkpoints only (12 words max)  |
+| Execute work item with status "Proposed"     | Ask user to approve (change status to Ready)      |
+| Create work items in every module at once    | Create work items per module as it becomes Ready  |
+| Guess validation commands                    | Use language/framework conventions or ask         |
+| Skip reading aps-rules.md                    | Always read first — it contains your instructions |
 
 ## Prompt Entry Points
 
 Use these prompts to generate APS documents:
 
-| Document Type | Prompt File |
-|---------------|-------------|
-| Index (project root) | [docs/ai/prompting/index.prompt.md](ai/prompting/index.prompt.md) |
-| Module (bounded area) | [docs/ai/prompting/module.prompt.md](ai/prompting/module.prompt.md) |
+| Document Type              | Prompt File                                                               |
+| -------------------------- | ------------------------------------------------------------------------- |
+| Index (project root)       | [docs/ai/prompting/index.prompt.md](ai/prompting/index.prompt.md)         |
+| Module (bounded area)      | [docs/ai/prompting/module.prompt.md](ai/prompting/module.prompt.md)       |
 | Work Item (execution unit) | [docs/ai/prompting/work-item.prompt.md](ai/prompting/work-item.prompt.md) |
-| Action Plan (actions) | [docs/ai/prompting/actions.prompt.md](ai/prompting/actions.prompt.md) |
+| Action Plan (actions)      | [docs/ai/prompting/actions.prompt.md](ai/prompting/actions.prompt.md)     |
 
 **OpenCode/Claude variants:** [docs/ai/prompting/opencode/](ai/prompting/opencode/)
 

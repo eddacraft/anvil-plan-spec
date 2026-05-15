@@ -8,11 +8,11 @@
 
 ### Q-001: Example question
 
-| Field | Value |
-|-------|-------|
-| Status | Open |
-| Priority | Medium |
+| Field      | Value    |
+| ---------- | -------- |
+| Status     | Open     |
+| Priority   | Medium   |
 | Discovered | AUTH-002 |
-| Assigned | @user |
+| Assigned   | @user    |
 
 **Context:** Example context.

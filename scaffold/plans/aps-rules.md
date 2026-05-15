@@ -9,12 +9,12 @@
 
 ## Hierarchy
 
-| Layer | Purpose | You Write | You DON'T Write |
-|-------|---------|-----------|-----------------|
-| Index | Plan overview | Modules, milestones, risks | Implementation details |
-| Module | Bounded work area | Interfaces, work items, boundaries | Code snippets |
-| Work Item | Execution authority | Outcome, validation command | How to implement |
-| Action | Checkpoint | Observable state | Implementation steps |
+| Layer     | Purpose             | You Write                          | You DON'T Write        |
+| --------- | ------------------- | ---------------------------------- | ---------------------- |
+| Index     | Plan overview       | Modules, milestones, risks         | Implementation details |
+| Module    | Bounded work area   | Interfaces, work items, boundaries | Code snippets          |
+| Work Item | Execution authority | Outcome, validation command        | How to implement       |
+| Action    | Checkpoint          | Observable state                   | Implementation steps   |
 
 ## Actions: The Lean Rule
 
@@ -31,22 +31,23 @@ Actions translate work item intent into **observable checkpoints**. They are NOT
 
 ### What Goes WHERE
 
-| Write in Action | Write NOWHERE (emerges from patterns) |
-|---------------|---------------------------------------|
-| "Auth middleware exists" | Which library to use |
-| "Tests pass" | Test implementation details |
-| "Migration applied" | SQL schema definition |
-| "Function handles errors" | Try/catch structure |
+| Write in Action           | Write NOWHERE (emerges from patterns) |
+| ------------------------- | ------------------------------------- |
+| "Auth middleware exists"  | Which library to use                  |
+| "Tests pass"              | Test implementation details           |
+| "Migration applied"       | SQL schema definition                 |
+| "Function handles errors" | Try/catch structure                   |
 
 ### Anti-Patterns (NEVER do this)
 
 ```markdown
 # ❌ BAD: Implementation tutorial disguised as action
+
 ### 1. Create authentication middleware
 
 - **Checkpoint:** Middleware created in src/middleware/auth.ts that:
   - Extracts JWT from Authorization header
-  - Validates token using jsonwebtoken library  
+  - Validates token using jsonwebtoken library
   - Decodes payload and extracts user ID
   - Attaches user object to request context
   - Returns 401 if token invalid or expired
@@ -55,6 +56,7 @@ Actions translate work item intent into **observable checkpoints**. They are NOT
 
 ```markdown
 # ✅ GOOD: Observable checkpoint only
+
 ### 1. Create authentication middleware
 
 - **Checkpoint:** Auth middleware validates requests, attaches user to context
@@ -87,11 +89,11 @@ Work items are **execution authority** — permission to make changes.
 
 ### Work Item Anti-Patterns
 
-| ❌ Don't | ✅ Do |
-|----------|-------|
-| "Implement JWT auth using jsonwebtoken" | "Add token-based authentication" |
-| "Create UserService class with methods..." | "User operations are encapsulated" |
-| "Add try/catch blocks to all handlers" | "API errors return consistent format" |
+| ❌ Don't                                   | ✅ Do                                 |
+| ------------------------------------------ | ------------------------------------- |
+| "Implement JWT auth using jsonwebtoken"    | "Add token-based authentication"      |
+| "Create UserService class with methods..." | "User operations are encapsulated"    |
+| "Add try/catch blocks to all handlers"     | "API errors return consistent format" |
 
 ## Action Plans: Waves and Parallel Execution
 
@@ -104,10 +106,10 @@ completes before the next begins.
 ```markdown
 ## Waves
 
-| Wave | Actions | Gate |
-|------|---------|------|
-| 1 | 1, 2 | Both checkpoints pass |
-| 2 | 3 | Checkpoint passes |
+| Wave | Actions | Gate                  |
+| ---- | ------- | --------------------- |
+| 1    | 1, 2    | Both checkpoints pass |
+| 2    | 3       | Checkpoint passes     |
 ```
 
 ### Action-Level Fields
@@ -120,11 +122,11 @@ Actions support optional execution metadata:
 
 ### When to Use Waves
 
-| Use Waves | Stay Sequential |
-|-----------|-----------------|
-| 3+ actions with independent work | Each action depends on the previous |
-| Multi-agent dispatch needed | Single-agent linear execution |
-| Work item has natural parallel boundaries | Actions share mutable state |
+| Use Waves                                 | Stay Sequential                     |
+| ----------------------------------------- | ----------------------------------- |
+| 3+ actions with independent work          | Each action depends on the previous |
+| Multi-agent dispatch needed               | Single-agent linear execution       |
+| Work item has natural parallel boundaries | Actions share mutable state         |
 
 ### When NOT to Use Waves
 
@@ -136,7 +138,9 @@ Actions support optional execution metadata:
 
 ```markdown
 # ❌ BAD: Everything in one wave to look fast
+
 ## Waves
+
 | Wave | Actions | Gate |
 | 1 | 1, 2, 3, 4, 5 | All pass |
 ```
@@ -231,6 +235,7 @@ Reference designs from the Index or Module metadata:
 
 ```markdown
 ## Designs
+
 - [Auth Architecture](../designs/2025-01-05-auth-architecture.design.md)
 ```
 
@@ -290,11 +295,11 @@ Use `plans/issues.md` to log development-time discoveries:
 
 ### When to Log
 
-| Log as Issue | Log as Question |
-|--------------|-----------------|
-| "API rate-limits at 100 req/min" | "Should retry logic live in client or transport?" |
-| "Login fails intermittently on Safari" | "What's the session expiry policy?" |
-| "Edge case: empty array not handled" | "Do we need to support IE11?" |
+| Log as Issue                           | Log as Question                                   |
+| -------------------------------------- | ------------------------------------------------- |
+| "API rate-limits at 100 req/min"       | "Should retry logic live in client or transport?" |
+| "Login fails intermittently on Safari" | "What's the session expiry policy?"               |
+| "Edge case: empty array not handled"   | "Do we need to support IE11?"                     |
 
 ### Referencing
 
@@ -313,12 +318,12 @@ This is for **planning-level visibility**, not routine bugs. Use your project's 
 
 ## Quick Reference
 
-| If agent is... | Check for... |
-|----------------|--------------|
-| Writing a design | Problem + Design sections present? No implementation prescriptions? |
-| Writing steps | Max 12 words per checkpoint? No implementation detail? |
-| Writing tasks | Outcome-focused? Has validation command? |
-| Planning module | Boundaries clear? No premature tasks? |
-| Executing | Work item status is Ready? Prerequisites met? |
-| In monorepo | Packages tagged? "What's Next" updated? |
-| Found issue/question | Logged in issues.md with proper ID? |
+| If agent is...       | Check for...                                                        |
+| -------------------- | ------------------------------------------------------------------- |
+| Writing a design     | Problem + Design sections present? No implementation prescriptions? |
+| Writing steps        | Max 12 words per checkpoint? No implementation detail?              |
+| Writing tasks        | Outcome-focused? Has validation command?                            |
+| Planning module      | Boundaries clear? No premature tasks?                               |
+| Executing            | Work item status is Ready? Prerequisites met?                       |
+| In monorepo          | Packages tagged? "What's Next" updated?                             |
+| Found issue/question | Logged in issues.md with proper ID?                                 |
