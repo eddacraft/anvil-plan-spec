@@ -85,7 +85,9 @@ get_status() {
       next
     }
     status_col && /^\|/ && !/^\| *ID *\|/ {
-      if ($0 ~ /^\|[[:space:]-]+\|/) next
+      row = $0
+      gsub(/[|: -]/, "", row)
+      if (row == "") next
       n = split($0, vals, "|")
       gsub(/^ +| +$/, "", vals[status_col])
       print vals[status_col]
