@@ -139,6 +139,7 @@ decisions) adds another place to look and another thing to keep in sync. The
 markdown tables.
 
 Status is scattered across:
+
 - Module metadata tables (module-level status)
 - Work item prose (per-item status via `- **Status:** Complete`)
 - Action plan checkboxes
@@ -158,6 +159,7 @@ everything every time. For 15+ files, this is slow and error-prone.
 understands APS, then 2-3 more before it understands this project.
 
 The installed files an agent needs to potentially process:
+
 - `aps-planning/SKILL.md` (250 lines)
 - `aps-planning/reference.md` (149 lines)
 - `aps-planning/examples.md` (185 lines)
@@ -209,12 +211,14 @@ The codebase has terminology inconsistencies that create confusion:
 **Symptom:** The linter validates structure but not semantics.
 
 What `aps lint` checks:
+
 - Required sections exist (Purpose, Work Items)
 - Metadata table present
 - Work item has Intent, Expected Outcome, Validation
 - ID format (PREFIX-NNN)
 
 What it doesn't check:
+
 - Cross-file consistency (does the index reference modules that exist?)
 - Dependency validity (does AUTH-002's dependency on AUTH-001 exist?)
 - Status consistency (module says Ready but has no work items)
@@ -242,6 +246,7 @@ not a legitimate end state.
 maintenance surface.
 
 Files that have .sh and .ps1/.psm1 pairs:
+
 - bin/aps + bin/aps.ps1
 - lib/lint.sh + lib/Lint.psm1
 - lib/output.sh + lib/Output.psm1
@@ -291,6 +296,7 @@ Users want to reduce eye strain.
 
 No metadata table required. No ID prefix required. No status field. The
 linter infers:
+
 - No metadata table → single-file mode, no module ID needed
 - Work item IDs without prefix → auto-assigned sequential
 - No status → Draft by default
@@ -333,6 +339,7 @@ plans/.status.json
 ```
 
 **Benefits:**
+
 - `aps status` is instant — read one file
 - No markdown parsing required
 - Git-diffable (JSON changes are clear in PRs)
@@ -392,6 +399,7 @@ aps lint --fix              # Auto-fix what's possible
 ```
 
 New rules:
+
 - **Cross-ref validation:** Index references modules that exist, dependencies
   reference valid IDs
 - **Status sync:** .status.json matches metadata tables
@@ -445,6 +453,7 @@ aps context                  # Output everything the AI needs in one shot
 ```
 
 This command:
+
 1. Outputs the condensed APS rules (50 lines, not 300)
 2. Shows current status (from .status.json)
 3. Shows the relevant module spec for any In Progress items
@@ -483,6 +492,7 @@ every AI interaction.
 ### Increment 2: Fix Terminology (half day)
 
 Global find-and-replace:
+
 - "Task" → "Work Item" everywhere in aps-rules.md
 - "Steps" → "Actions" everywhere in aps-rules.md and templates
 - `.steps.template.md` → `.actions.template.md`

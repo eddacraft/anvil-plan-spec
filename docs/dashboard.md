@@ -150,25 +150,32 @@ Or a systemd timer for more control over logging and failure handling.
 ## Sections
 
 ### Checked Out
+
 Items currently being worked on. Sorted by checkout duration (longest first — surfaces stale checkouts). Shows owner and elapsed time.
 
 ### Ready
+
 Items available for pickup. Sorted by priority, then by dependency chain depth (items that unblock others float up). Shows blocking dependencies.
 
 ### In Review
+
 Items that have been checked in but not yet verified complete. Shows CI status if available.
 
 ### Recently Completed
+
 Items verified complete in the last N days (default 7). Provides a sense of velocity and recent progress.
 
 ### Alerts
+
 Actionable issues:
+
 - Stale checkouts (no commits past threshold)
 - Failed verification (CI red on checked-in items)
 - Orphaned commits (commits referencing item codes not in the plan)
 - Drift (items marked complete with no commit evidence)
 
 ### Summary Line
+
 One-line counts: active · ready · review · complete · stale
 
 ## JSON Output

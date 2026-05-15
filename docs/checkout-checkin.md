@@ -53,6 +53,7 @@ Claiming a work item for active work. Prevents duplicate effort.
 ```
 
 **Rules:**
+
 1. Cannot check out an item that is already `Checked Out` (unless the checkout has expired — see Stale Checkouts below)
 2. Owner must be identifiable — agent session ID, GitHub username, or human name
 3. Checking out an item SHOULD be atomic (to avoid race conditions in multi-agent setups)
@@ -71,6 +72,7 @@ Submitting completed work for verification. This is NOT the same as marking `Com
 ```
 
 **Rules:**
+
 1. Must include at least one commit reference
 2. Commits MUST contain the APS item code in the message (e.g., `feat(engine): add boundary check (RENG-003)`)
 3. Check-in does NOT mean complete — verification happens next
@@ -101,6 +103,7 @@ All commits associated with a work item MUST include the item code:
 ```
 
 Examples:
+
 ```
 feat(engine): add boundary check (RENG-003)
 fix(checks): handle empty dependency list (RENG-003)
@@ -110,6 +113,7 @@ test(engine): boundary check edge cases (RENG-003)
 This is the **primary traceability mechanism**. It works regardless of who made the commit — human, Claude Code, Codex, or any other agent.
 
 **Enforcement options:**
+
 - **Git hook** (`commit-msg`): Warn or reject commits without a valid item code
 - **Agent instructions**: Skill/AGENTS.md instructs agents to always include the code
 - **CI check**: Lint PR commits for item code presence
@@ -119,11 +123,13 @@ This is the **primary traceability mechanism**. It works regardless of who made 
 Checkouts can go stale — an agent crashed, a human forgot, work was abandoned.
 
 **Rules:**
+
 1. A checkout older than **24 hours** without new commits is flagged as `Stale`
 2. A checkout older than **72 hours** without activity is auto-released (status → `Released`)
 3. Sweep can be run manually or on a schedule (heartbeat, cron, CI)
 
 **Sweep logic:**
+
 ```
 For each Checked Out item:
   1. Check git log for commits with item code since checkout time
@@ -157,6 +163,7 @@ When multiple agents operate on the same repo:
 ### Skills / AGENTS.md
 
 Agent-facing instructions should include:
+
 - Always check out before starting work on an APS item
 - Always include the item code in commit messages
 - Check in when work is complete (don't just mark as Done)
@@ -165,6 +172,7 @@ Agent-facing instructions should include:
 ### Git Hooks
 
 Optional `commit-msg` hook:
+
 ```bash
 #!/bin/sh
 # Warn if commit message doesn't contain an APS item code
@@ -178,6 +186,7 @@ fi
 ### CI
 
 Optional PR check:
+
 - Verify all commits in the PR contain a valid APS item code
 - Cross-reference with plan files to confirm the item exists and is `Checked Out`
 

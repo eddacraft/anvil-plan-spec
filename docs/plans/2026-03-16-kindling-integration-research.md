@@ -71,6 +71,7 @@ kindling capsule open \
 The capsule ID is stored in the action plan or work item metadata.
 
 **During execution**, the Claude Code adapter auto-captures:
+
 - Every tool call (Read, Edit, Write, Bash) → `tool_call` observations
 - Every command run → `command` observations with exit codes
 - Every file edit → `file_diff` observations
