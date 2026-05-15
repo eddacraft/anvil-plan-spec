@@ -58,7 +58,7 @@ Manage user sessions using JWT tokens. Issue access tokens on login, validate to
 
 > **Status: Draft** — Blocked on AUTH module completion
 
-No tasks authorised. Blockers:
+No work items authorised. Blockers:
 
 - [ ] AUTH-001 and AUTH-002 must be complete
 - [ ] Decision needed on refresh token storage schema
