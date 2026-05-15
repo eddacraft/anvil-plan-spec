@@ -366,8 +366,8 @@ function Invoke-ApsInit {
     Write-Host "  +-- scripts/                         <- Hook install + session scripts"
     Write-Host ""
     Write-Host "  .claude/commands/"
-    Write-Host "  +-- plan.md                          <- /plan command"
-    Write-Host "  +-- plan-status.md                   <- /plan-status command"
+    Write-Host "  +-- plan.md                          <- legacy Claude command"
+    Write-Host "  +-- plan-status.md                   <- legacy Claude command"
 
     # Hooks
     Invoke-ApsHookPrompt -Target $target
@@ -379,7 +379,7 @@ function Invoke-ApsInit {
     Write-ApsInfo "Next steps:"
     Write-Host "  1. Edit plans/index.aps.md to define your plan"
     Write-Host "  2. Copy templates to create modules (remove leading dot)"
-    Write-Host "  3. Use /plan in Claude Code to start planning"
+    Write-Host "  3. Point your AI agent at plans\aps-rules.md, or run aps next"
     Write-Host ""
 }
 

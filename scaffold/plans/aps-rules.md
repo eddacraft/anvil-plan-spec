@@ -5,20 +5,20 @@
 
 ## Core Principle
 
-**Specs describe intent. Tasks authorise execution. Steps are checkpoints, not tutorials.**
+**Specs describe intent. Work items authorise execution. Actions are checkpoints, not tutorials.**
 
 ## Hierarchy
 
 | Layer | Purpose | You Write | You DON'T Write |
 |-------|---------|-----------|-----------------|
 | Index | Plan overview | Modules, milestones, risks | Implementation details |
-| Module | Bounded work area | Interfaces, tasks, boundaries | Code snippets |
-| Task | Execution authority | Outcome, validation command | How to implement |
-| Step | Checkpoint | Observable state | Implementation steps |
+| Module | Bounded work area | Interfaces, work items, boundaries | Code snippets |
+| Work Item | Execution authority | Outcome, validation command | How to implement |
+| Action | Checkpoint | Observable state | Implementation steps |
 
-## Steps: The Lean Rule
+## Actions: The Lean Rule
 
-Steps translate task intent into **observable checkpoints**. They are NOT implementation guides.
+Actions translate work item intent into **observable checkpoints**. They are NOT implementation guides.
 
 ### Format
 
@@ -31,7 +31,7 @@ Steps translate task intent into **observable checkpoints**. They are NOT implem
 
 ### What Goes WHERE
 
-| Write in Step | Write NOWHERE (emerges from patterns) |
+| Write in Action | Write NOWHERE (emerges from patterns) |
 |---------------|---------------------------------------|
 | "Auth middleware exists" | Which library to use |
 | "Tests pass" | Test implementation details |
@@ -41,7 +41,7 @@ Steps translate task intent into **observable checkpoints**. They are NOT implem
 ### Anti-Patterns (NEVER do this)
 
 ```markdown
-# ❌ BAD: Implementation tutorial disguised as step
+# ❌ BAD: Implementation tutorial disguised as action
 ### 1. Create authentication middleware
 
 - **Checkpoint:** Middleware created in src/middleware/auth.ts that:
@@ -61,16 +61,16 @@ Steps translate task intent into **observable checkpoints**. They are NOT implem
 - **Validate:** `npm test -- auth.middleware.test.ts`
 ```
 
-### Why Lean Steps?
+### Why Lean Actions?
 
 1. **Implementation emerges** from existing patterns + agent judgment
 2. **Specs don't rot** — checkpoints stay valid even when code changes
 3. **Agents stay autonomous** — they figure out HOW, you verify WHAT
 4. **Review stays fast** — humans scan checkpoints, not implementation plans
 
-## Task Rules
+## Work Item Rules
 
-Tasks are **execution authority** — permission to make changes.
+Work items are **execution authority** — permission to make changes.
 
 ### Required Fields
 
@@ -81,11 +81,11 @@ Tasks are **execution authority** — permission to make changes.
 ### Optional Fields
 
 - **Scope/Non-scope:** What will and won't change
-- **Dependencies:** Other task IDs that must complete first
+- **Dependencies:** Other work item IDs that must complete first
 - **Confidence:** low/medium/high
 - **Files:** Best-effort list (not exhaustive)
 
-### Task Anti-Patterns
+### Work Item Anti-Patterns
 
 | ❌ Don't | ✅ Do |
 |----------|-------|
@@ -161,9 +161,9 @@ modules/
 - Order matches dependency flow (foundational → dependent)
 - Order should reflect the Modules table in `index.aps.md`
 
-### Task IDs
+### Work Item IDs
 
-Tasks use the module's ID prefix: `AUTH-001`, `AUTH-002`, `CORE-001`, etc.
+Work items use the module's ID prefix: `AUTH-001`, `AUTH-002`, `CORE-001`, etc.
 
 ## Creating APS Documents
 
@@ -173,15 +173,15 @@ Tasks use the module's ID prefix: `AUTH-001`, `AUTH-002`, `CORE-001`, etc.
 2. Identify which template fits (index, module, simple)
 3. Fill sections with **intent**, not implementation
 4. Mark assumptions explicitly
-5. Leave tasks empty until module is Ready
+5. Leave work items empty until module is Ready
 
 ### When Asked to Execute
 
-1. Find the task in the relevant `.aps.md` file
-2. Check task has **Ready** status
-3. Create steps file in `plans/execution/` if complex
-4. Execute one step at a time, validate checkpoint
-5. Mark task complete when validation passes
+1. Find the work item in the relevant `.aps.md` file
+2. Check work item has **Ready** status
+3. Create an action plan in `plans/execution/` if complex
+4. Execute one action at a time, validate checkpoint
+5. Mark work item complete when validation passes
 
 ## File Locations
 
@@ -319,6 +319,6 @@ This is for **planning-level visibility**, not routine bugs. Use your project's 
 | Writing steps | Max 12 words per checkpoint? No implementation detail? |
 | Writing tasks | Outcome-focused? Has validation command? |
 | Planning module | Boundaries clear? No premature tasks? |
-| Executing | Task status is Ready? Prerequisites met? |
+| Executing | Work item status is Ready? Prerequisites met? |
 | In monorepo | Packages tagged? "What's Next" updated? |
 | Found issue/question | Logged in issues.md with proper ID? |

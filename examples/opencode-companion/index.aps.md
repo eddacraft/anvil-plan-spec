@@ -52,8 +52,8 @@ graph LR
 
 ## Modules
 
-| Module | Scope | Owner | Status | Priority | Tags | Dependencies |
-|--------|-------|-------|--------|----------|------|--------------|
+| Module | ID | Owner | Status | Priority | Tags | Dependencies |
+|--------|----|-------|--------|----------|------|--------------|
 | [core](./modules/core.aps.md) | CORE | @josh | Ready | high | domain, fs | — |
 | [ui](./modules/ui.aps.md) | UI | @josh | Draft | high | frontend, tauri | core |
 

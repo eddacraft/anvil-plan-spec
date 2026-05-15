@@ -843,7 +843,7 @@ cmd_init() {
   done
 
   if $has_claude; then
-    info "Next: run /plan in Claude Code to populate project-context.md"
+    info "Next: point Claude Code at plans/aps-rules.md and edit plans/project-context.md"
   else
     info "Next: edit plans/project-context.md with your project details"
   fi

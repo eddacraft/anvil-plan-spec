@@ -34,11 +34,11 @@ Fill:
 - Acceptance criteria
 - Risks & mitigations
 - Open questions & decisions
-- Tasks:
+- Work Items:
   - If Ready: 2-8 tasks maximum, each small and independently reviewable
-  - If Not Ready: "No tasks authorised" + list blockers
+  - If Not Ready: "No work items authorised" + list blockers
 
-## Task drafting guidelines (if applicable)
+## Work item drafting guidelines (if applicable)
 
 Each task must include:
 

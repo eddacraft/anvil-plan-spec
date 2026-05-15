@@ -51,8 +51,8 @@ graph LR
 
 ## Modules
 
-| Module | Scope | Owner | Status | Priority | Tags | Dependencies |
-|--------|-------|-------|--------|----------|------|--------------|
+| Module | ID | Owner | Status | Priority | Tags | Dependencies |
+|--------|----|-------|--------|----------|------|--------------|
 | [auth](./modules/auth.aps.md) | AUTH | @josh | Ready | high | security, api | — |
 | [session](./modules/session.aps.md) | SESSION | @josh | Draft | high | security, jwt | auth |
 

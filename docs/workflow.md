@@ -245,7 +245,7 @@ and comments, not specs.
 
 Most work items don't need a Action Plan file. Only create one when:
 
-- Task has 5+ distinct actions
+- Work item has 5+ distinct actions
 - Multiple people might work on it
 - You want granular progress tracking
 

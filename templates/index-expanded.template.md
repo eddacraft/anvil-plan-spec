@@ -63,7 +63,7 @@ graph LR
 ### module-name
 
 - **Path:** ./modules/module-name.aps.md
-- **Scope:** SCOPE
+- **ID:** MOD
 - **Owner:** @username
 - **Status:** Draft
 - **Priority:** high
@@ -73,7 +73,7 @@ graph LR
 ### another-module
 
 - **Path:** ./modules/another-module.aps.md
-- **Scope:** SCOPE2
+- **ID:** API
 - **Owner:** @username
 - **Status:** Draft
 - **Priority:** medium
@@ -83,7 +83,7 @@ graph LR
 ### third-module
 
 - **Path:** ./modules/third-module.aps.md
-- **Scope:** SCOPE3
+- **ID:** UI
 - **Owner:** @username
 - **Status:** Draft
 - **Priority:** low
