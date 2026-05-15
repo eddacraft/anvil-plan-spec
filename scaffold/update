@@ -6,7 +6,7 @@
 #
 # Usage:
 #   curl -fsSL https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/update | bash
-#   curl ... | bash -s -- /path/to/project
+#   curl ... | bash -s -- ./my-project
 #   curl ... | VERSION=0.2.0 bash
 #
 # For new projects, use the install script instead.
@@ -186,8 +186,8 @@ info "modules/.simple.template.md"
 download "plans/modules/.index-monorepo.template.md" "$PLANS_DIR/modules/.index-monorepo.template.md"
 info "modules/.index-monorepo.template.md"
 
-download "plans/execution/.steps.template.md" "$PLANS_DIR/execution/.steps.template.md"
-info "execution/.steps.template.md"
+download "plans/execution/.actions.template.md" "$PLANS_DIR/execution/.actions.template.md"
+info "execution/.actions.template.md"
 
 # Update skill files
 step "Updating APS planning skill"
@@ -232,7 +232,7 @@ echo "    - aps-rules.md (agent guidance)"
 echo "    - modules/.module.template.md"
 echo "    - modules/.simple.template.md"
 echo "    - modules/.index-monorepo.template.md"
-echo "    - execution/.steps.template.md"
+echo "    - execution/.actions.template.md"
 echo "    - aps-planning/ (skill + scripts)"
 echo "    - .claude/commands/ (plan, plan-status)"
 echo ""

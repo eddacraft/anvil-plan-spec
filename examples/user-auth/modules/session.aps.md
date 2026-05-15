@@ -3,8 +3,8 @@
 
 # Session Module
 
-| Scope | Owner | Priority | Status |
-|-------|-------|----------|--------|
+| ID | Owner | Priority | Status |
+|----|-------|----------|--------|
 | SESSION | @josh | high | Draft |
 
 ## Purpose

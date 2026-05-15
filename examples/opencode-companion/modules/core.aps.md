@@ -3,8 +3,8 @@
 
 # Core Module
 
-| Scope | Owner | Priority | Status |
-|-------|-------|----------|--------|
+| ID | Owner | Priority | Status |
+|----|-------|----------|--------|
 | CORE | @josh | high | Ready |
 
 ## Purpose

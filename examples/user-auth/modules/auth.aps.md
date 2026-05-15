@@ -3,8 +3,8 @@
 
 # Authentication Module
 
-| Scope | Owner | Priority | Status |
-|-------|-------|----------|--------|
+| ID | Owner | Priority | Status |
+|----|-------|----------|--------|
 | AUTH | @josh | high | Ready |
 
 ## Purpose

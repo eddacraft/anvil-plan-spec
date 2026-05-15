@@ -3,8 +3,8 @@
 
 # UI Module
 
-| Scope | Owner | Priority | Status |
-|-------|-------|----------|--------|
+| ID | Owner | Priority | Status |
+|----|-------|----------|--------|
 | UI | @josh | high | Draft |
 
 ## Purpose

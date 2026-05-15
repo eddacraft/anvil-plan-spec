@@ -64,7 +64,7 @@ graph TD
 VERSION=v0.2.0 bash <(curl -fsSL https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install)
 
 # Or from a cloned APS repo
-./scaffold/install /path/to/your-project
+./scaffold/install ./your-project
 ```
 
 This creates `plans/` with templates and `aps-rules.md` for AI guidance.
