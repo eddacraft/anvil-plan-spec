@@ -170,7 +170,7 @@ function Install-ApsGlobal {
         "bin/aps", "bin/aps.ps1",
         "lib/output.sh", "lib/Output.psm1",
         "lib/lint.sh", "lib/Lint.psm1",
-        "lib/orch.sh",
+        "lib/orchestrate.sh",
         "lib/scaffold.sh", "lib/Scaffold.psm1",
         "lib/rules/common.sh", "lib/rules/Common.psm1",
         "lib/rules/module.sh", "lib/rules/Module.psm1",
@@ -236,7 +236,7 @@ $cliFilesBash = @(
     "bin/aps"
     "lib/output.sh"
     "lib/lint.sh"
-    "lib/orch.sh"
+    "lib/orchestrate.sh"
     "lib/scaffold.sh"
     "lib/rules/common.sh"
     "lib/rules/module.sh"
