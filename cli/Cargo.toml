@@ -14,7 +14,9 @@ path = "src/main.rs"
 
 [dependencies]
 clap = { version = "4", features = ["derive"] }
+crossterm = "0.29"
 eddacraft-tui = { git = "https://github.com/EddaCraft/eddacraft-tui", rev = "2de997dc2d3bde54adc174834c2089efb0a2002a" }
+ratatui = "0.30"
 
 [lints.rust]
 unsafe_code = "forbid"
