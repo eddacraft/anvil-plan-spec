@@ -122,5 +122,11 @@ grep -qF 'aps-conductor' "$AGENT_DIR/.codex/agents/codex-config-snippet.toml" ||
 rm -rf "$AGENT_DIR"
 pass
 
+# Test 19: Curl install/update scripts include CLI runtime libraries
+echo -n "Test: curl installers include orchestration lib... "
+grep -qF 'lib/orchestrate.sh' "$PROJECT_ROOT/scaffold/install" || fail "install omits lib/orchestrate.sh"
+grep -qF 'lib/orchestrate.sh' "$PROJECT_ROOT/scaffold/update" || fail "update omits lib/orchestrate.sh"
+pass
+
 echo ""
 echo -e "${GREEN}All tests passed!${NC}"
