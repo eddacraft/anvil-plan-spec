@@ -160,6 +160,11 @@ shared theme, keyboard conventions). APS consumes this as a crate dependency.
   shows for selected tools; q/Ctrl+C exits cleanly
 - **Confidence:** high
 - **Dependencies:** TUI-001
+- **Action plan:** [execution/TUI-002.actions.md](../execution/TUI-002.actions.md)
+- **Results:** `aps init` now launches a Ratatui wizard with Profile, Project
+  Shape, AI Tooling, per-tool config, and Summary sections. Wizard state has
+  unit coverage for navigation, conditional monorepo options, selected-tool
+  config, q/Ctrl+C exit handling, and summary-before-completion behavior.
 
 ### TUI-003: Implement template and path customization sections
 

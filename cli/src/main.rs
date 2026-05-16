@@ -3,6 +3,8 @@ use clap::{Parser, Subcommand};
 #[allow(unused_imports)]
 use eddacraft_tui as _;
 
+mod wizard;
+
 #[derive(Parser)]
 #[command(
     name = "aps",
@@ -35,8 +37,10 @@ fn main() {
             println!("aps {} — pass --help for usage", env!("CARGO_PKG_VERSION"));
         }
         Some(Command::Init) => {
-            eprintln!("`aps init` is not yet implemented (TUI-002 onward)");
-            std::process::exit(2);
+            if let Err(err) = wizard::run() {
+                eprintln!("aps init failed: {err}");
+                std::process::exit(1);
+            }
         }
         Some(Command::Lint) => {
             eprintln!("`aps lint` native port pending (TUI-005 / D-028)");
