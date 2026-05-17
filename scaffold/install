@@ -95,6 +95,14 @@ ask_yn() {
     read -r answer
     answer="${answer:-$default}"
     [[ "$answer" =~ ^[Yy] ]]
+  elif [[ -r /dev/tty ]]; then
+    # `curl | bash` makes stdin a pipe; use the controlling terminal when present.
+    local yn_hint
+    if [[ "$default" == "y" ]]; then yn_hint="Y/n"; else yn_hint="y/N"; fi
+    printf "%s [%s] " "$prompt" "$yn_hint" > /dev/tty
+    read -r answer < /dev/tty
+    answer="${answer:-$default}"
+    [[ "$answer" =~ ^[Yy] ]]
   else
     # Non-interactive: use default
     [[ "$default" == "y" ]]
@@ -356,9 +364,9 @@ setup_path
 echo ""
 step "Next steps"
 echo ""
-echo "  1. Edit ${BOLD}plans/index.aps.md${NC} to define your plan"
+printf '  1. Edit %bplans/index.aps.md%b to define your plan\n' "$BOLD" "$NC"
 echo "  2. Copy templates to create modules (remove the leading dot)"
-echo "  3. Point your AI agent at ${BOLD}plans/aps-rules.md${NC}, or run ${BOLD}aps next${NC}"
+printf '  3. Point your AI agent at %bplans/aps-rules.md%b, or run %baps next%b\n' "$BOLD" "$NC" "$BOLD" "$NC"
 echo ""
 echo "Docs: https://github.com/EddaCraft/anvil-plan-spec"
 echo ""
