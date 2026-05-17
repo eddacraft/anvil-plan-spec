@@ -128,5 +128,11 @@ grep -qF 'lib/orchestrate.sh' "$PROJECT_ROOT/scaffold/install" || fail "install 
 grep -qF 'lib/orchestrate.sh' "$PROJECT_ROOT/scaffold/update" || fail "update omits lib/orchestrate.sh"
 pass
 
+# Test 20: Legacy init script includes runtime files referenced by installed tools
+echo -n "Test: legacy init includes referenced runtime files... "
+grep -qF '"lib/rules/issues.sh"' "$PROJECT_ROOT/scaffold/init.sh" || fail "init omits lib/rules/issues.sh"
+grep -qF 'enforce-plan-update.sh' "$PROJECT_ROOT/scaffold/init.sh" || fail "init omits enforce-plan-update.sh"
+pass
+
 echo ""
 echo -e "${GREEN}All tests passed!${NC}"
