@@ -1,8 +1,8 @@
 # Install v2 Module
 
-| ID      | Owner  | Priority | Status   |
-| ------- | ------ | -------- | -------- |
-| INSTALL | @aneki | high     | Complete |
+| ID      | Owner  | Priority | Status                  |
+| ------- | ------ | -------- | ----------------------- |
+| INSTALL | @aneki | high     | In Progress (follow-up) |
 
 ## Purpose
 
@@ -25,6 +25,12 @@ Since then:
 - `bin/` + `lib/` scatter 18+ files across two top-level directories
 - No project type detection (monorepo vs simple gets identical install)
 
+Follow-up review in May 2026 found the public `curl | bash` entrypoint still
+ships the old v1 footprint (`aps-planning/`, `bin/`, `lib/`, and
+`.claude/commands/`) even though `aps init` has moved toward the v2 layout.
+The distribution model needs one more cleanup pass: separate CLI installation,
+minimal repo initialization, agent bootstrap, optional setup, and upgrade.
+
 ## In Scope
 
 - `.aps/` directory as single tooling root
@@ -39,6 +45,10 @@ Since then:
 - `aps-rules.md` split: APS-managed rules + user-owned `project-context.md`
 - `plans/designs/` and `plans/issues.md` as scaffold artifacts
 - Agent context bootstrap for `project-context.md`
+- Public installer mode picker (`install`, `init`, `agent-init`, `setup`,
+  `upgrade`)
+- Minimal default repo footprint with bulky integrations opt-in
+- Upgrade cleanup for v1 and bulky v2 project installs
 
 ## Out of Scope
 
@@ -46,6 +56,10 @@ Since then:
 - MCP server (separate TASKS module concern)
 - Tool-specific plugin/extension development
 - TUI wizard (future replacement for shell-prompt wizard)
+
+Follow-up scope note: the TUI remains the richer interactive frontend, but the
+public shell installer must expose the same high-level choices in a lightweight
+picker so users do not have to read documentation before choosing the safe path.
 
 ## Interfaces
 
@@ -57,7 +71,11 @@ Since then:
 **Exposes:**
 
 - `scaffold/install` — new interactive installer (replaces current)
+- `scaffold/agent-init` — safe repo bootstrap for agents without assuming a
+  global CLI install
 - `scaffold/update` — migration-aware updater
+- `aps setup` — interactive setup picker for optional integrations
+- `aps upgrade` — dry-run-first cleanup and migration for existing projects
 - `.aps/config.yml` — project configuration schema
 - `.claude/skills/aps-planning/` — skill files (cross-tool compatible)
 - `.agents/skills/aps-planning/` — Codex/Gemini-compatible copy (optional)
@@ -80,6 +98,20 @@ Since then:
   `project-context.md` (user-owned)_
 - **D-025:** designs/ and issues.md into plans/ — _decided: single planning
   content root_
+- **D-030:** Public install entrypoint — _decided: `curl | bash` must show an
+  upfront mode picker when TTY is available. Non-interactive use must support
+  explicit flags (`--cli`, `--init`, `--agent`, `--upgrade`) and avoid surprise
+  bulky installs._
+- **D-031:** Command split — _decided: `install` installs the CLI, `aps init`
+  creates minimal planning files, `aps setup` adds optional integrations,
+  `agent-init` bootstraps a repo for remote/agent-led planning, and
+  `aps upgrade` cleans existing projects._
+- **D-032:** Default footprint — _decided: bare defaults only. Hooks, agents,
+  skill copies, local vendored runtime, release templates, and extra tool
+  integrations are opt-in choices._
+- **D-033:** Upgrade safety — _decided: generated legacy files can be removed
+  only after backup. Ambiguous or user-owned files are reported for manual
+  review._
 
 **D-013 Detail: Multi-Tool Skill Compatibility (Researched 2026-02-19)**
 
@@ -344,6 +376,83 @@ Notes on schema:
   (plans/designs/, project-context.md). `project-context.md` template with
   HTML comment TODO markers. Both installed by v2 init and migrate.
 
+### INSTALL-010: Split install, init, setup, agent bootstrap, and upgrade
+
+- **Intent:** Make the public APS entrypoints match the actual user journeys
+  without forcing a large project-local footprint.
+- **Expected Outcome:** `scaffold/install` no longer defaults to project
+  scaffolding. In a TTY it shows a mode picker: install APS CLI on this
+  machine, initialize APS in this repo, initialize this repo for an AI agent,
+  upgrade an existing APS project, or add a tool integration. Non-interactive
+  flags provide the same choices: `--cli`, `--init`, `--agent`, `--upgrade`,
+  and `--setup <tool>`.
+- **Validation:** Running the advertised `curl | bash` command in a TTY shows
+  the picker before writing files. Running with `--cli` installs only the CLI.
+  Running with `--init` creates only minimal planning files. Running with
+  `--agent` creates minimal planning files plus agent-readable next steps.
+- **Confidence:** high
+- **Dependencies:** INSTALL-003, INSTALL-008, INSTALL-009
+- **Files:** scaffold/install, scaffold/install.ps1, docs/installation.md,
+  README.md
+- **Status:** Ready
+
+### INSTALL-011: Make `aps init` minimal by default
+
+- **Intent:** Keep APS adoption lightweight for new projects and avoid making
+  the repo look like it vendors an SDK.
+- **Expected Outcome:** Default `aps init` creates bare planning content only:
+  `plans/index.aps.md`, `plans/aps-rules.md`, `plans/project-context.md`, and
+  the minimum directories needed for modules/execution. It does not install
+  hooks, agents, skill copies, `.claude/commands/`, root `aps-planning/`, or a
+  project-local CLI runtime unless explicitly selected.
+- **Validation:** Fresh `aps init --non-interactive` has no root
+  `aps-planning/`, no root `bin/`, no root `lib/`, no `.claude/commands/`, and
+  no `.aps/lib/` unless `--local-cli` or equivalent is selected.
+- **Confidence:** high
+- **Dependencies:** INSTALL-010
+- **Files:** lib/scaffold.sh, scaffold/install, scaffold/install.ps1,
+  test/run.sh
+- **Status:** Ready
+
+### INSTALL-012: Add `aps setup` picker and shortcuts
+
+- **Intent:** Give users a clear place to add optional integrations after the
+  minimal plan exists.
+- **Expected Outcome:** `aps setup` with no arguments opens a picker for common
+  setup tasks: install APS CLI on this machine, initialize minimal planning in
+  this repo, agent bootstrap, tool integrations, hooks, and upgrade. Shortcut
+  forms remain available: `aps setup claude-code`, `aps setup opencode`,
+  `aps setup codex`, `aps setup hooks`, `aps setup agent`, and
+  `aps setup all`.
+- **Validation:** `aps setup` is safe and asks before writing optional files.
+  Direct shortcuts install only the requested component. `aps setup all`
+  requires confirmation before installing the full footprint.
+- **Confidence:** high
+- **Dependencies:** INSTALL-010
+- **Related:** TUI-007 provides the richer picker frontend for this command.
+- **Files:** bin/aps, lib/scaffold.sh, cli/src/, docs/installation.md
+- **Status:** Ready
+
+### INSTALL-013: Add safe upgrade cleanup for existing projects
+
+- **Intent:** Help existing APS users remove or migrate generated bloat without
+  risking user-authored planning content.
+- **Expected Outcome:** `aps upgrade` detects v1 and bulky v2 layouts, shows a
+  dry-run by default, creates `.aps/backup/<timestamp>/` before deleting or
+  moving generated files, and rewrites known hook paths from
+  `aps-planning/scripts/` to the selected current location when hooks are kept.
+  A companion `scaffold/upgrade` curl entrypoint supports agent-safe dry-runs.
+- **Validation:** Upgrade never deletes `plans/**`, `AGENTS.md`, `CLAUDE.md`,
+  `GEMINI.md`, or user-modified settings automatically. Known generated files
+  (`aps-planning/hooks.md`, `.claude/commands/plan.md`, root `bin/`, root
+  `lib/`, superseded `.aps/lib/`) are backed up before removal. Ambiguous files
+  are listed for manual review.
+- **Confidence:** high
+- **Dependencies:** INSTALL-008, INSTALL-010
+- **Files:** lib/scaffold.sh, scaffold/upgrade, docs/installation.md,
+  test/run.sh
+- **Status:** Ready
+
 ## Execution Strategy
 
 ### Wave 1: Foundations (no dependencies)
@@ -367,6 +476,13 @@ Notes on schema:
 - INSTALL-007: Multi-tool support
 - INSTALL-008: v1 → v2 migration
 
+### Wave 5: Footprint cleanup (follow-up)
+
+- INSTALL-010: Split install/init/setup/agent/upgrade entrypoints
+- INSTALL-011: Minimal default `aps init`
+- INSTALL-012: `aps setup` picker and shortcuts
+- INSTALL-013: Safe upgrade cleanup
+
 ## Notes
 
 - The current `aps-planning/` contains: SKILL.md, reference.md, examples.md,
@@ -387,6 +503,9 @@ Notes on schema:
   Other/Generic. OpenCode and Copilot are "free" if Claude Code is selected
   (they read `.claude/skills/`). Codex and Gemini share `.agents/skills/` but
   both require explicit install commands after file placement.
+- Follow-up direction: the full layout below is an explicit opt-in result, not
+  the default fresh-project footprint. The default should stay close to APS as a
+  markdown specification: planning files first, optional tooling second.
 
 ### Resulting Project Layout (full install, all options)
 

@@ -43,7 +43,7 @@ APS needs continued development to:
 
 | Module                              | Purpose                                         | Status   |
 | ----------------------------------- | ----------------------------------------------- | -------- |
-| [install](./modules/install.aps.md) | Interactive install, `.aps/` layout, multi-tool | Complete |
+| [install](./modules/install.aps.md) | Interactive install, `.aps/` layout, multi-tool | In Progress (follow-up) |
 | [agents](./modules/agents.aps.md)   | APS Planner + Librarian agents, multi-harness   | Complete |
 
 ### In Progress (v0.4 — Orchestration & UX)

@@ -57,6 +57,8 @@ shared theme, keyboard conventions). APS consumes this as a crate dependency.
   wizard
 - Wizard sections: Profile, Project Shape, Templates, AI Tooling, Paths,
   Scaffold, Summary
+- Setup mode picker for `aps setup` and the public installer hand-off:
+  install CLI, initialize repo, agent bootstrap, upgrade, or add integrations
 - Granular customization within each section:
   - **Project shape:** monorepo vs single, workspace detection, per-package
     plans
@@ -92,6 +94,7 @@ shared theme, keyboard conventions). APS consumes this as a crate dependency.
 
 - `aps init` — TUI wizard (replaces shell-prompt wizard as default interactive
   path)
+- `aps setup` — TUI setup picker for optional integrations and upgrade paths
 - `aps init --non-interactive` — flag-based fallback for CI
 - `aps lint` — optional native port of bash linter
 - GitHub release binaries per platform
@@ -109,6 +112,13 @@ shared theme, keyboard conventions). APS consumes this as a crate dependency.
   codebase. Also provides a reference implementation portable to
   `eddacraft/anvil-001` (currently TS). Trade-off: reimplements working bash
   code, but the shared parser justifies the cost._
+- **D-029:** Setup picker scope — _decided: `aps setup` with no arguments opens
+  a TUI picker. `aps setup <thing>` remains a shortcut for non-interactive or
+  scripted use. The public `curl | bash` installer should hand off to the same
+  choice model rather than silently installing the full project footprint._
+- **D-030:** Picker implementation — _decided: use `eddacraft/eddacraft-tui`
+  Select, MultiSelect, Confirm, Spinner, and ResultsDashboard widgets for the
+  Rust path. Shell fallback mirrors the same choices with numbered prompts._
 
 ## Ready Checklist
 
@@ -229,6 +239,41 @@ shared theme, keyboard conventions). APS consumes this as a crate dependency.
 - **Confidence:** medium
 - **Dependencies:** TUI-005
 
+### TUI-007: Add setup mode picker
+
+- **Intent:** Make setup choices obvious before APS writes bulky files.
+- **Expected Outcome:** `aps setup` opens an `eddacraft-tui` picker with these
+  top-level choices: install APS CLI on this machine, initialize minimal APS in
+  this repo, initialize this repo for an AI agent, add tool integrations,
+  configure hooks, and upgrade an existing APS project. Tool integration and
+  component choices use MultiSelect; destructive upgrade actions use Confirm.
+- **Validation:** `aps setup` can complete each top-level flow. `aps setup all`
+  requires confirmation. `aps setup claude-code` and other shortcuts bypass the
+  picker and install only the requested component. Shell fallback presents the
+  same choices when the Rust TUI is unavailable.
+- **Confidence:** high
+- **Dependencies:** TUI-002, TUI-004
+- **Related:** INSTALL-010 and INSTALL-012 define the shell and CLI command
+  contracts that the TUI implements.
+
+### TUI-008: Add agent bootstrap flow
+
+- **Intent:** Support the common remote-planning workflow where a user pastes a
+  curl command to an agent before they are at their computer.
+- **Expected Outcome:** The setup picker and non-interactive flags include an
+  agent bootstrap mode. It creates minimal planning files plus agent-readable
+  next steps, and does not install hooks, agents, local CLI runtime, or tool
+  integrations unless selected. The summary tells the agent to read
+  `plans/aps-rules.md`, ask for project intent, populate
+  `plans/project-context.md`, draft `plans/index.aps.md`, and wait for an
+  approved work item before implementation.
+- **Validation:** `curl | bash -s -- --agent` and the picker path produce the
+  same minimal agent-ready repo footprint.
+- **Confidence:** high
+- **Dependencies:** TUI-007
+- **Related:** INSTALL-010 defines the public installer flag and shell fallback
+  for this flow.
+
 ## Execution Strategy
 
 ### Wave 1: Foundation
@@ -249,6 +294,11 @@ shared theme, keyboard conventions). APS consumes this as a crate dependency.
 
 - TUI-006: Cross-compilation and GitHub releases
 
+### Wave 5: Setup UX cleanup (depends on Wave 3)
+
+- TUI-007: Setup mode picker
+- TUI-008: Agent bootstrap flow
+
 ## Relationship to Other Modules
 
 | Module      | Relationship                                                         |
@@ -260,10 +310,13 @@ shared theme, keyboard conventions). APS consumes this as a crate dependency.
 ## Notes
 
 - The shell-prompt wizard (`scaffold/install`) remains as the lightweight,
-  zero-dependency alternative. Both paths produce the same file structure.
+  zero-dependency fallback, but it should expose the same high-level choices as
+  the TUI. It should not silently install the full project footprint.
 - `eddacraft/eddacraft-tui` provides: Select, MultiSelect, Confirm, Spinner,
   Header, ResultsDashboard widgets plus the shared EddaCraft theme. APS should
   not duplicate these.
+- `aps setup` is the primary post-init customization surface. Bare
+  `aps setup` opens the picker; `aps setup <thing>` is the scripted shortcut.
 - Keyboard conventions are shared across the Anvil product family — arrows/j-k
   for navigation, Enter to confirm, Space to toggle, Esc to go back, q to quit.
 - The binary replaces `bin/aps` (bash) as the primary CLI. The bash version
