@@ -1,5 +1,10 @@
 # Agent Cross-Harness Test Plan
 
+**Date:** 2026-03-15
+**Status:** Validated for Claude Code in v0.3.0; other harnesses pending live
+verification. See [plans/modules/agents.aps.md](../../plans/modules/agents.aps.md)
+(AGENT-006) for the original work item.
+
 Test plan for AGENT-006: verifying APS agents work correctly in each tool's
 environment.
 

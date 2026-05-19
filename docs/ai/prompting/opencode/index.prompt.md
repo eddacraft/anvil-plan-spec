@@ -1,4 +1,4 @@
-# APS Index Prompt (OpenCode / Claude Opus 4.5)
+# APS Index Prompt (OpenCode)
 
 ROLE: Planner
 MODE: Non-executable (do not create implementation work items unless explicitly

@@ -1,7 +1,10 @@
 # APS Interactive Onboarding Design
 
 **Date:** 2026-02-27
-**Status:** Draft
+**Status:** Implemented in v0.3.0 (Ratatui-based `aps init` wizard, TUI-001).
+See [CHANGELOG.md](../../CHANGELOG.md#030---2026-05-20) and
+[docs/getting-started.md](../getting-started.md). The shipped wizard differs
+from the original sketch — refer to the CLI for current behaviour.
 
 ## Problem
 

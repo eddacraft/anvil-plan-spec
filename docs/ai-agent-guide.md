@@ -188,7 +188,15 @@ Use these prompts to generate APS documents:
 | Work Item (execution unit) | [docs/ai/prompting/work-item.prompt.md](ai/prompting/work-item.prompt.md) |
 | Action Plan (actions)      | [docs/ai/prompting/actions.prompt.md](ai/prompting/actions.prompt.md)     |
 
-**OpenCode/Claude variants:** [docs/ai/prompting/opencode/](ai/prompting/opencode/)
+**Tool-specific variants:**
+
+- [docs/ai/prompting/opencode/](ai/prompting/opencode/) — OpenCode-tuned prompts
+- [docs/ai/prompting/claudecode/](ai/prompting/claudecode/) — Claude Code in-session coordination
+
+**First-class agent definitions** ship for Claude Code, Codex, GitHub Copilot,
+OpenCode, and Gemini. `aps init` installs them for the tools you select. See
+[docs/agents.md](agents.md) for installation, invocation, and model defaults
+for each port, plus the APS-aware agents (planner, conductor, librarian).
 
 ## Self-Check Questions
 

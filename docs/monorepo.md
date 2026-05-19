@@ -125,91 +125,35 @@ Key points:
 - `Packages` per work item = can be subset of module's packages
 - Validation commands use workspace flags (`-w packages/core`, `--filter=@myorg/core`)
 
-## Session Rituals
+## Driving Monorepo Work with the CLI
 
-These rituals ensure agents keep documentation in sync with their work.
+The orchestration commands work the same in a monorepo as anywhere else:
 
-### Session Start Ritual
-
-When an agent begins work:
-
-#### 1. Orient to Current State
-
-Read in order:
-
-1. `plans/index.aps.md` — "What's Next" section
-2. The module(s) tagged for your target package
-3. Any work item you're about to execute
-
-#### 2. Confirm Execution Authority
-
-Before touching code, verify:
-
-- [ ] Work item exists and status = Ready
-- [ ] You understand which package(s) are affected
-- [ ] Checkpoint is clear and observable
-
-#### 3. Declare Intent
-
-State which work item you're executing:
-
-> "Executing AUTH-002 (core, api): Implement token refresh"
-
-If no Ready work item exists for what you're asked to do:
-
-- Create Draft work item first
-- Ask human to mark Ready before proceeding
-- OR if trivial fix, note in session end summary
-
-**Key principle:** Agents don't freelance. They either execute authorized work or surface that authorization is missing.
-
-### Session End Ritual
-
-When an agent completes work:
-
-#### 1. Update Work Item Status
-
-For each work item touched:
-
-- `In Progress` → if work started but not complete
-- `Complete: YYYY-MM-DD` → if checkpoint passes
-- `Blocked: [reason]` → if stuck on dependency/question
-
-#### 2. Capture Discovered Work
-
-Any new work uncovered during execution:
-
-- Add as Draft work item to appropriate module
-- Tag with affected packages
-- Note dependency on current work if relevant
-
-Example:
-
-```markdown
-### AUTH-003: Handle token refresh edge case
-
-| Status | Packages | Discovered during |
-| ------ | -------- | ----------------- |
-| Draft  | core     | AUTH-002          |
-
-- **Intent:** Handle expired refresh tokens gracefully
+```bash
+aps next                              # next ready item across all modules and packages
+aps next core                         # filter to the `core` module
+aps start AUTH-002                    # start an item; context package includes module scope
+aps complete AUTH-002 --learning "..."
+aps graph                             # see the full dependency graph
 ```
 
-#### 3. Update "What's Next"
+`aps next` honours module-level dependencies declared in `index.aps.md`, so a
+work item in `cli` whose module depends on `core` won't be returned as ready
+until `core` is done.
 
-In `plans/index.aps.md`:
+For multi-package work that affects more than one module, surface the affected
+packages in the work item's metadata table (see Module Metadata above) — the
+context package carries this through to whichever agent picks it up.
 
-- Remove completed items
-- Add any new Ready items
-- Re-sequence if priorities shifted
+## Session Rituals
 
-#### 4. Session Summary
+These rituals are common to every APS workflow, not just monorepos — they
+live in [docs/workflow.md](workflow.md). The monorepo-specific notes:
 
-Leave a brief note (in commit message or plan file):
-
-> "Session: Completed AUTH-002. Discovered AUTH-003 (draft). Next recommended: CLI-001 or review AUTH-003 for Ready status."
-
-**Key principle:** The next agent (or human) should be able to pick up exactly where you left off without archaeology.
+- Always declare which package(s) you're touching when you `aps start` an item
+  (the context package surfaces this).
+- Capture cross-package discoveries as Draft work items in the appropriate
+  module, tagged with packages affected.
 
 ## When to Use Monorepo Structure
 

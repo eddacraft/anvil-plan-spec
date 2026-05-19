@@ -55,19 +55,24 @@ graph TD
 - Use `simple.template.md` for most features
 - Skip formal modules — go straight to work items
 - Only create an Index if you're planning weeks of work
-- Steps files are optional — use when a work item feels complex
+- Action plans are optional — use when a work item feels complex
 
 **Ready to scaffold?** Run this in your project:
 
 ```bash
 # One-liner install (curl)
-VERSION=v0.2.0 bash <(curl -fsSL https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install)
+curl -fsSL https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install | bash
+
+# Pin to a specific version
+curl -fsSL https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install | VERSION=v0.3.0 bash
 
 # Or from a cloned APS repo
 ./scaffold/install ./your-project
 ```
 
-This creates `plans/` with templates and `aps-rules.md` for AI guidance.
+Then run `aps init` — the Ratatui-based wizard walks you through the rest
+(agent ports, modules, project context). It creates `plans/` with templates
+and `aps-rules.md` for AI guidance.
 
 ## Prerequisites
 
@@ -82,8 +87,6 @@ If you prefer manual setup over the scaffold script:
 
 ```text
 your-project/
-├── designs/                   # Technical designs (optional)
-│   └── 2025-01-05-auth.design.md
 ├── plans/
 │   ├── index.aps.md           # Your main plan
 │   ├── issues.md              # Development-time discoveries
@@ -91,8 +94,13 @@ your-project/
 │   │   └── feature.aps.md
 │   ├── execution/             # Action plan files
 │   │   └── FEAT-001.actions.md
+│   ├── designs/               # Technical designs (optional)
+│   │   └── 2026-01-05-auth.design.md
 │   └── decisions/             # ADRs (optional)
 │       └── 001-use-jwt.md
+└── .aps/                      # Tooling root (gitignored content lives here)
+    └── context/               # Ephemeral context packages from `aps start`
+        └── FEAT-001.md
 ```
 
 ### 2. Create your Index
@@ -117,7 +125,7 @@ Fill in Purpose, Scope, and leave Work Items empty until Ready.
 ### 4. Write a Design (Optional)
 
 For complex or multi-module work where the architecture isn't obvious, create a
-design doc in `designs/` before defining work items:
+design doc in `plans/designs/` before defining work items:
 
 - Use [design.template.md](../templates/design.template.md) as a starting point
 - Name it `YYYY-MM-DD-slug.design.md`
@@ -147,8 +155,9 @@ For complex work items, create an actions file in `plans/execution/`.
 
 Action plans translate "what to achieve" into "what actions to take":
 
-- Each step has a **checkpoint** (observable state)
-- Steps describe **what**, not **how**
+- Each action has a **checkpoint** (observable state)
+- Actions describe **what**, not **how**
+- Actions can be grouped into **waves** for concurrent agents to execute in parallel
 
 ### 7. Track Issues & Questions
 
@@ -158,6 +167,26 @@ As you develop, you'll discover issues and questions that emerge during implemen
 - **Questions (Q-NNN)** — Unknowns that need answers, deferred decisions
 
 This keeps planning-level concerns visible without cluttering work items or your bug tracker.
+
+## Driving Work with the CLI
+
+Once you have a plan with at least one `Ready` work item, the orchestration
+commands take over:
+
+```bash
+aps next                              # what's the next ready item across modules?
+aps start AUTH-003                    # marks it In Progress, writes .aps/context/AUTH-003.md
+# ...implement, run validation step...
+aps complete AUTH-003 --learning "Retry on 5xx improved success rate by 18%"
+aps graph auth                        # see work items + dependency arrows for a module
+```
+
+`aps start` enforces that every dependency is `Complete`. The context package
+it writes (`.aps/context/<ID>.md`) is a focused brief — module scope,
+decisions, upstream learnings, and related files — designed to be pasted into
+any AI agent.
+
+Full reference, error codes, and JSON output: [usage.md](./usage.md).
 
 ## Monorepo Setup
 
@@ -216,7 +245,12 @@ APS includes prompts for AI tools:
 | Work item creation | `docs/ai/prompting/work-item.prompt.md` |
 | Execution          | `docs/ai/prompting/actions.prompt.md`   |
 
-OpenCode/Claude users: see `docs/ai/prompting/opencode/` for optimized variants.
+OpenCode/Claude users: see `docs/ai/prompting/opencode/` for optimised variants.
+
+APS ships first-class agent definitions for Claude Code, Codex, GitHub Copilot,
+OpenCode, and Gemini — `aps init` lets you select which tools to install agents
+for. See [docs/agents.md](./agents.md) for details on each port and the
+APS-aware agents (planner, librarian, conductor).
 
 When you scaffold APS, it includes `aps-rules.md` — point your AI agent at this
 file and it will follow APS conventions automatically.

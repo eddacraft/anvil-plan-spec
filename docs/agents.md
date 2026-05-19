@@ -1,27 +1,36 @@
 # APS Agents
 
-APS provides two distributable agents that automate planning lifecycle and
-repository hygiene tasks.
+APS provides three distributable agents that automate planning, execution, and
+repository hygiene. Agent definitions are ported across Claude Code, Codex,
+GitHub Copilot, OpenCode, and Gemini — pick the variant for your tool below.
 
 ## Agents Overview
 
-| Agent             | Purpose                                                 | Model  | Invocation                        |
-| ----------------- | ------------------------------------------------------- | ------ | --------------------------------- |
-| **APS Planner**   | Planning, execution, status tracking, wave coordination | Opus   | `@aps-planner` or Task dispatch   |
-| **APS Librarian** | Archiving, cross-refs, orphan detection, repo hygiene   | Sonnet | `@aps-librarian` or Task dispatch |
+| Agent              | Purpose                                                 | Model  | Invocation                         |
+| ------------------ | ------------------------------------------------------- | ------ | ---------------------------------- |
+| **APS Planner**    | Planning, scoping modules, drafting work items          | Opus   | `@aps-planner` or Task dispatch    |
+| **APS Conductor**  | Driving execution of Ready work items, wave coordination | Opus   | `@aps-conductor` or Task dispatch  |
+| **APS Librarian**  | Archiving, cross-refs, orphan detection, repo hygiene   | Sonnet | `@aps-librarian` or Task dispatch  |
 
 ### APS Planner
 
-The Planner manages the full APS lifecycle:
+The Planner scopes and shapes work:
 
 - **Initialize** — bootstrap `plans/` in new projects
 - **Plan** — create indexes, modules, work items, action plans
 - **Status** — scan artefacts and report current state
-- **Execute** — pick up Ready work items and implement them
-- **Waves** — analyze dependencies and plan parallel execution
 
-Use the Planner when starting new work, checking progress, or executing
-planned work items.
+Use the Planner when starting new work or checking progress.
+
+### APS Conductor
+
+The Conductor drives execution of authored plans:
+
+- **Execute** — pick up Ready work items and implement them via `aps start` / `aps complete`
+- **Waves** — analyse dependencies and coordinate parallel execution across agents
+- **Learning capture** — fold post-implementation learnings back into the work item
+
+Use the Conductor when you have Ready work items and want them implemented.
 
 ### APS Librarian
 
@@ -35,13 +44,16 @@ The Librarian keeps your repo organized:
 Use the Librarian after completing features, during cleanup sessions, or when
 the repo feels disorganized.
 
-## Planner vs Librarian
+## Planner vs Conductor vs Librarian
 
 | Task                             | Agent     |
 | -------------------------------- | --------- |
 | "Create a plan for feature X"    | Planner   |
+| "Draft a module for payments"    | Planner   |
 | "What's the status of our work?" | Planner   |
-| "Execute AUTH-001"               | Planner   |
+| "Execute AUTH-001"               | Conductor |
+| "Run the next ready work item"   | Conductor |
+| "Coordinate this wave"           | Conductor |
 | "Clean up after the auth module" | Librarian |
 | "Are our docs consistent?"       | Librarian |
 | "Archive completed specs"        | Librarian |
@@ -54,8 +66,9 @@ guidance):
 - **Skill** (`aps-planning/SKILL.md`) — teaches the agent APS conventions.
   Always active. Provides behavioral nudges (plan before building, update
   specs as you work). Lightweight, no model cost.
-- **Agents** (`aps-planner`, `aps-librarian`) — perform specific APS tasks
-  when dispatched. Use tool calls and reasoning. Consume model tokens.
+- **Agents** (`aps-planner`, `aps-conductor`, `aps-librarian`) — perform
+  specific APS tasks when dispatched. Use tool calls and reasoning. Consume
+  model tokens.
 
 Use the skill for day-to-day guidance. Use agents when you need active help
 with planning or cleanup.
@@ -69,11 +82,13 @@ with planning or cleanup.
 ```bash
 mkdir -p .claude/agents
 cp scaffold/agents/claude-code/aps-planner.md .claude/agents/
+cp scaffold/agents/claude-code/aps-conductor.md .claude/agents/
 cp scaffold/agents/claude-code/aps-librarian.md .claude/agents/
 ```
 
-Or if you installed APS via the scaffold scripts, agents are available in
-`scaffold/agents/claude-code/` within the APS repository.
+The easiest path: run `aps init` and select Claude Code at the agent-port
+prompt — the wizard installs all three for you. Manual `cp` is shown here for
+completeness.
 
 **Usage:**
 
@@ -100,6 +115,7 @@ The Planner runs on Opus (deep reasoning). The Librarian runs on Sonnet
 ```bash
 mkdir -p .github/agents
 cp scaffold/agents/copilot/aps-planner.md .github/agents/
+cp scaffold/agents/copilot/aps-conductor.md .github/agents/
 cp scaffold/agents/copilot/aps-librarian.md .github/agents/
 ```
 
@@ -122,6 +138,7 @@ available — Copilot uses its default model.
 ```bash
 mkdir -p .opencode/agents
 cp scaffold/agents/opencode/aps-planner.md .opencode/agents/
+cp scaffold/agents/opencode/aps-conductor.md .opencode/agents/
 cp scaffold/agents/opencode/aps-librarian.md .opencode/agents/
 ```
 
@@ -135,7 +152,7 @@ Agents are configured as subagents (`mode: subagent`). Invoke via `@mention`:
 ```
 
 Switch to an agent as a primary with Tab, or invoke as subagent with
-`@mention`. The Planner uses `anthropic/claude-opus-4-20250514`; edit the
+`@mention`. The Planner and Conductor use `anthropic/claude-opus-4-6`; edit the
 `model` field in the frontmatter to change.
 
 ### Codex
@@ -145,6 +162,7 @@ Switch to an agent as a primary with Tab, or invoke as subagent with
 ```bash
 mkdir -p .codex/agents
 cp scaffold/agents/codex/aps-planner.toml .codex/agents/
+cp scaffold/agents/codex/aps-conductor.toml .codex/agents/
 cp scaffold/agents/codex/aps-librarian.toml .codex/agents/
 ```
 
@@ -155,6 +173,10 @@ Then merge `scaffold/agents/codex/codex-config-snippet.toml` into your
 [agents.aps-planner]
 model = "o4-mini"
 config_file = ".codex/agents/aps-planner.toml"
+
+[agents.aps-conductor]
+model = "o4-mini"
+config_file = ".codex/agents/aps-conductor.toml"
 
 [agents.aps-librarian]
 model = "o4-mini"
@@ -168,6 +190,9 @@ Spawn agent threads with the `/agent` command:
 ```
 /agent spawn aps-planner
 > Plan the user authentication module
+
+/agent spawn aps-conductor
+> Execute the next ready work item
 
 /agent spawn aps-librarian
 > Audit the repo for orphaned files
@@ -184,6 +209,7 @@ Agent threads run concurrently and can be managed with `/agent route` and
 ```bash
 mkdir -p .gemini/skills
 cp -r scaffold/agents/gemini/aps-planner .gemini/skills/
+cp -r scaffold/agents/gemini/aps-conductor .gemini/skills/
 cp -r scaffold/agents/gemini/aps-librarian .gemini/skills/
 gemini skills link . --scope workspace
 ```
@@ -207,10 +233,11 @@ or Codex.
 
 ## Model Cost
 
-- **Planner** uses Opus (most capable, higher cost) because planning requires
-  deep reasoning about architecture, dependencies, and trade-offs.
+- **Planner** and **Conductor** use Opus (most capable, higher cost) because
+  planning and orchestration require deep reasoning about architecture,
+  dependencies, and trade-offs.
 - **Librarian** uses Sonnet (fast, lower cost) because repo hygiene is
-  pattern-matching and file organization — less reasoning-intensive.
+  pattern-matching and file organisation — less reasoning-intensive.
 
 You can change the model in each agent's frontmatter if you prefer different
 cost/capability trade-offs.

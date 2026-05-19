@@ -1,14 +1,14 @@
 # Crosscutting / Conductor Modules
 
-| ID | Owner | Priority | Status |
-|----|-------|----------|--------|
-| COND | @aneki | medium | Draft (Trialing) |
+| ID   | Owner  | Priority | Status           |
+| ---- | ------ | -------- | ---------------- |
+| COND | @aneki | medium   | Draft (Trialing) |
 
 ## Purpose
 
 Introduce a new module type — **crosscutting / conductor** — for concerns
 that don't fit cleanly inside a single domain module because they span,
-coordinate, or sequence work *across* modules.
+coordinate, or sequence work _across_ modules.
 
 The classic APS module is a vertical slice (auth, ingestion, billing). It
 owns its work items end-to-end. But some concerns are horizontal: release
@@ -27,7 +27,7 @@ The trigger for this module came from two converging patterns:
    reference completed work from many modules. They aren't a vertical slice;
    they're a horizontal cut.
 2. **ORCH-005 Conductor agent** (in `orchestrate.aps.md`) — already proposes
-   an *agent* that coordinates work across modules. The current trial
+   an _agent_ that coordinates work across modules. The current trial
    extends that pattern from "an agent role" to "a module type."
 3. **Anvil release coordination** — anvil-001's v0.3.0-beta release plan
    touches RCLI, KERN, RATS, PORT, and others. The plan is the conductor;
@@ -35,13 +35,13 @@ The trigger for this module came from two converging patterns:
 
 ### Crosscutting vs Vertical Modules
 
-| Aspect | Vertical (classic) | Crosscutting / Conductor |
-|--------|-------------------|--------------------------|
-| Owns work items? | Yes | Optional — may reference others |
-| Boundary | Domain (auth, billing) | Concern (release, security audit) |
-| Lifecycle | Draft → Ready → Complete → Archived | Often recurring or rolling |
-| Dependencies | On other modules | On work items across modules |
-| Status meaning | Feature complete | Concern addressed in this slice |
+| Aspect           | Vertical (classic)                  | Crosscutting / Conductor          |
+| ---------------- | ----------------------------------- | --------------------------------- |
+| Owns work items? | Yes                                 | Optional — may reference others   |
+| Boundary         | Domain (auth, billing)              | Concern (release, security audit) |
+| Lifecycle        | Draft → Ready → Complete → Archived | Often recurring or rolling        |
+| Dependencies     | On other modules                    | On work items across modules      |
+| Status meaning   | Feature complete                    | Concern addressed in this slice   |
 
 ## In Scope
 
@@ -91,20 +91,20 @@ The trigger for this module came from two converging patterns:
   considered: Crosscutting, Aspect, Coordinator. Conductor connects naturally
   with the existing Conductor *agent* concept (ORCH-005) and is more
   concrete than "Crosscutting".*
-- **D-002:** Should conductor modules own work items? — *proposed: yes,
+- **D-002:** Should conductor modules own work items? — _proposed: yes,
   optionally. A release conductor may have its own work items (REL-001
   through REL-005) plus references to work items in other modules. Allowing
-  both keeps the type useful.*
-- **D-003:** Type marker location — *proposed: add `Type` column to the
-  metadata table. `Type: Conductor` opt-in; vertical modules omit (default).*
-- **D-004:** Linter handling — *proposed: when `Type: Conductor` is set,
+  both keeps the type useful._
+- **D-003:** Type marker location — _proposed: add `Type` column to the
+  metadata table. `Type: Conductor` opt-in; vertical modules omit (default)._
+- **D-004:** Linter handling — _proposed: when `Type: Conductor` is set,
   W003 (cross-module dependency) downgrades to info or suppresses entirely.
-  Conductor modules legitimately reference IDs from other files.*
-- **D-005:** Index treatment — *proposed: separate "Conductor / Crosscutting"
-  table in `index.aps.md` so the type is visible at a glance.*
-- **D-006:** Lifecycle — *proposed: same Draft/Ready/Active/Complete states,
+  Conductor modules legitimately reference IDs from other files._
+- **D-005:** Index treatment — _proposed: separate "Conductor / Crosscutting"
+  table in `index.aps.md` so the type is visible at a glance._
+- **D-006:** Lifecycle — _proposed: same Draft/Ready/Active/Complete states,
   with an extra "Recurring" state for conductor modules that don't naturally
-  complete (perf budgets, ongoing security posture).*
+  complete (perf budgets, ongoing security posture)._
 
 ## Ready Checklist
 
@@ -126,7 +126,7 @@ The trigger for this module came from two converging patterns:
 - **Intent:** Validate the conductor pattern against a real use case before
   generalising
 - **Expected Outcome:** `release-planning.aps.md` evolves with `Type:
-  Conductor` metadata; references work items from other modules without
+Conductor` metadata; references work items from other modules without
   warnings; serves as the canonical example
 - **Validation:** Release planning module ships, references hold, no
   awkwardness emerges from the type marker

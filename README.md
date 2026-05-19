@@ -1,82 +1,54 @@
 <!-- markdownlint-disable MD041 -->
 
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.2.0-green.svg)](https://github.com/EddaCraft/anvil-plan-spec/releases/tag/v0.2.0)
+[![Version](https://img.shields.io/badge/version-0.3.0-green.svg)](https://github.com/EddaCraft/anvil-plan-spec/releases/tag/v0.3.0)
+[![Made for AI agents](https://img.shields.io/badge/made%20for-AI%20agents-purple.svg)](docs/ai-agent-guide.md)
 
 <!-- markdownlint-enable MD041 -->
 
 # Anvil Plan Spec (APS)
 
-A lightweight specification format for planning and work item authorisation in
-AI-assisted development.
+> **Plan before you prompt.** A portable, markdown-native specification format that
+> turns AI coding agents from improvisers into executors.
 
-## Quick Start
+APS is the planning layer that lives in your repo, travels with your code, and
+works with every AI tool you use — Claude Code, Cursor, Copilot, Codex, OpenCode,
+Gemini, ChatGPT, and whatever comes next.
+
+![aps init wizard](docs/assets/init-wizard.png)
+<!-- TODO: capture `aps init` Ratatui wizard screenshot -->
+
+## Install in 10 seconds
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install | bash
 ```
 
-See [docs/installation.md](docs/installation.md) for Windows, version pinning, and manual setup options.
+Then run `aps init` for the interactive setup wizard.
 
-## What is APS?
-
-APS provides a structured way to:
-
-- **Plan work** before implementation begins
-- **Authorise work items** that AI agents can execute
-- **Track execution** through observable checkpoints
-
-It acts as a trust layer between humans and AI — humans remain accountable
-for decisions while AI assists with planning and implementation.
+Want to inspect the installer first? Pipe to `less`. Need Windows, version
+pinning, or `--global`? See [docs/installation.md](docs/installation.md).
 
 ## Why APS?
 
-There's no shortage of AI coding tools — Cursor, Kiro, Claude Code, Copilot,
-and countless agent frameworks. Each has its own way of handling context,
-rules, and specifications. **The problem: your planning artefacts get locked
-into whatever tool you're using today.**
+There's no shortage of AI coding tools, and each ships its own opinionated way
+of handling rules, context, and specs. **Your planning artefacts get locked
+into whatever tool you used yesterday.** Switch tools and you start over.
 
-APS is different:
+APS solves three problems at once:
 
-- **Portable** — Plain markdown files. No vendor lock-in. Switch tools anytime.
-- **Versioned** — Lives in git. Review plans in PRs. Track changes over time.
-- **Tool-agnostic** — Works with any AI, any IDE, any workflow.
-- **Human-readable** — Your PM, tech lead, and future self can all understand it.
+|     | Without APS                                                                                   | With APS                                                                                |
+| --- | --------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+|     | Specs live in Notion, Linear, or a chat thread                                                | Specs live in `plans/`, versioned with your code                                        |
+|     | Each AI tool needs its own ruleset, context window, and re-explanation                        | One spec works everywhere — every agent reads the same markdown                         |
+|     | Agents wander off, invent scope, or run out of context halfway through                        | Work items are authorised, bounded, and dependency-aware                                |
+|     | No record of why a decision was made                                                          | Decisions, designs, and learnings sit beside the code                                   |
 
-APS isn't a replacement for your AI tools — it's the planning layer that works
-_across_ all of them. Write your spec once, use it everywhere.
+It's just markdown. No vendor lock-in. No daemons. No proprietary formats.
 
-## Hierarchy
+## The 5-minute tour
 
-```mermaid
-graph TD
-    A[Index] -->|contains| B[Module]
-    B -->|contains| C[Work Item]
-    C -->|executed via| D[Action Plan]
-
-    A -.-|"non-executable<br/>describes intent"| A
-    B -.-|"executable if Ready<br/>bounded scope"| B
-    C -.-|"execution authority<br/>single outcome"| C
-    D -.-|"checkpoints<br/>observable actions"| D
-```
-
-| Layer           | Purpose                                      | Executable?               |
-| --------------- | -------------------------------------------- | ------------------------- |
-| **Index**       | High-level plan with modules and milestones  | No                        |
-| **Module**      | Bounded scope with interfaces and work items | If status is Ready        |
-| **Work Item**   | Single coherent change with validation       | Yes — execution authority |
-| **Action Plan** | Ordered actions with checkpoints             | Yes — granular execution  |
-
-**Key concepts:**
-
-- **Index** — The root plan. Describes the whole initiative, lists modules.
-- **Module** — A bounded area where work happens. The smallest unit you _plan_.
-  You don't subdivide modules into sub-plans — they contain work items directly.
-- **Work Item** — A single authorised change. The unit of execution authority.
-- **Action Plan** — How you _execute_ a work item. Optional, generated when needed. Breaks
-  a work item into checkpointed actions for granular progress tracking.
-
-## Hello World
+### 1. Author a plan
 
 ```markdown
 # Add Dark Mode
@@ -94,52 +66,98 @@ Users want to reduce eye strain when working at night.
 
 ### 001: Add theme context
 
+- **Status:** Ready
 - **Outcome:** ThemeProvider wraps app, exposes toggle
 - **Test:** `npm test -- theme.test.tsx`
 
 ### 002: Add toggle to settings
 
+- **Status:** Ready
 - **Outcome:** Settings page has working theme toggle
 - **Test:** Manual verification
 - **Depends on:** 001
 ```
 
-## Driving a Plan
+> Minimal form for illustration. Real specs use a richer schema — see the
+> [templates](#templates) for the full surface.
 
-Once you have a plan, the `aps` CLI drives it through the work-item lifecycle.
-Markdown stays the source of truth — the CLI just reads and rewrites it.
+### 2. Drive it with the CLI
 
 ```bash
-aps lint plans/                       # Validate every spec
-aps next                              # Find the next ready work item
-aps start AUTH-003                    # Mark it In Progress, get a context package
-# ...implement, test...
-aps complete AUTH-003 --learning "Retry on 5xx"
-aps graph auth                        # See dependencies at a glance
+aps lint plans/                       # validate every spec
+aps next                              # what's the next ready work item?
+aps start AUTH-003                    # claim it; writes a context package
+aps complete AUTH-003 --learning "Retry on 5xx improved success rate by 18%"
+aps graph auth                        # see dependencies at a glance
 ```
 
-`aps start` validates that all dependencies are `Complete` and writes a
-focused context package to `.aps/context/<ID>.md` (module scope, decisions,
-upstream learnings). `aps complete` requires the item to be `In Progress` and
-stamps a UTC completion date.
+`aps start` enforces that every dependency is `Complete`, marks the item
+`In Progress`, and writes a focused context package to `.aps/context/<ID>.md`
+(module scope, decisions, upstream learnings, related files). `aps complete`
+stamps a UTC date and captures a learning that surfaces in downstream items.
 
-See [docs/usage.md](docs/usage.md) for the full command reference, state
-machine, error codes, JSON output, and CI integration.
+Full reference: [docs/usage.md](docs/usage.md).
 
-## Works Everywhere
+### 3. Use it with any AI
 
-APS is just markdown. Use it however you work:
+```text
+You have a work item authorised at plans/modules/auth.aps.md (AUTH-003).
+Context package: .aps/context/AUTH-003.md.
+Implement it, run the validation step, and report back.
+```
+
+That prompt works in Claude Code, Cursor, Copilot, Codex, OpenCode, Gemini,
+or pasted into ChatGPT. Same spec, same outcome, no integration code.
+
+## The mental model
+
+```mermaid
+graph TD
+    A[Index] -->|contains| B[Module]
+    B -->|contains| C[Work Item]
+    C -->|executed via| D[Action Plan]
+```
+
+| Layer           | Purpose                                      | Executable?               |
+| --------------- | -------------------------------------------- | ------------------------- |
+| **Index**       | High-level plan with modules and milestones  | No — describes intent     |
+| **Module**      | Bounded scope with interfaces and work items | If status is Ready        |
+| **Work Item**   | Single coherent change with validation       | Yes — execution authority |
+| **Action Plan** | Ordered actions with checkpoints             | Yes — granular execution  |
+
+You author top-down (Index → Module → Work Items). You execute bottom-up
+(Work Item → Action Plan when needed). Action plans are optional; small items
+don't need them.
+
+## Works with your stack
 
 | Context                    | How to use APS                                      |
 | -------------------------- | --------------------------------------------------- |
 | **Claude / ChatGPT**       | Paste the spec into your conversation               |
 | **Cursor / Copilot**       | Keep specs in your repo, reference in prompts       |
 | **Claude Code / aider**    | Point the agent at your spec files                  |
+| **Codex / OpenCode**       | First-class agent definitions ship in `agents/`     |
+| **Gemini CLI**             | First-class agent definitions ship in `agents/`     |
 | **Jira / Linear / Notion** | Link to specs in git, or embed the markdown         |
 | **Code review**            | Review spec changes in PRs before implementation    |
 | **Team planning**          | Specs are human-readable — discuss them in meetings |
 
 No plugins. No integrations. No configuration. It's just files.
+
+## What's new in v0.3.0
+
+Released **2026-05-20** — the orchestration release.
+
+- **Orchestration CLI** — `aps next`, `start`, `complete`, `graph` drive plans through
+  a `Draft → Ready → In Progress → Complete` state machine.
+- **Context packaging** — `aps start` writes a focused brief to `.aps/context/<ID>.md`.
+- **Learning capture** — `aps complete --learning "..."` lets each item teach the next.
+- **TUI init wizard** — Ratatui-based onboarding for `aps init`.
+- **Multi-agent ports** — Codex, GitHub Copilot, OpenCode, and Gemini join Claude Code.
+- **Wave-based execution** — action plans coordinate concurrent agents.
+- **`aps migrate`** — converts v1 layouts to the v2 consolidated `.aps/` root.
+
+Full notes: [CHANGELOG.md](CHANGELOG.md).
 
 ## Templates
 
@@ -148,85 +166,20 @@ No plugins. No integrations. No configuration. It's just files.
 | [quickstart.template.md](templates/quickstart.template.md)         | **Try APS in 5 minutes** — minimal single-file format |
 | [index.template.md](templates/index.template.md)                   | Starting a new plan or initiative                     |
 | [index-expanded.template.md](templates/index-expanded.template.md) | Larger initiatives with 6+ modules or rich metadata   |
+| [index-monorepo.template.md](templates/index-monorepo.template.md) | Monorepos with multiple packages or apps              |
 | [module.template.md](templates/module.template.md)                 | Defining a bounded module with work items             |
 | [simple.template.md](templates/simple.template.md)                 | Small, self-contained features                        |
 | [actions.template.md](templates/actions.template.md)               | Breaking work items into executable actions           |
+| [issues.template.md](templates/issues.template.md)                 | Tracking dev-time discoveries (ISS-NNN / Q-NNN)       |
 | [design.template.md](templates/design.template.md)                 | Technical/architectural design for complex work       |
 | [solution.template.md](templates/solution.template.md)             | Documenting solved problems (compound phase)          |
 
-## Examples
+## Worked examples
 
 - [User Authentication](examples/user-auth/) — Adding auth to an existing app
 - [OpenCode Companion App](examples/opencode-companion/) — Building a companion tool
 
-## Platform Support
-
-| Platform    | Authoring (lint/init)              | Orchestration (next/start/complete/graph) |
-| ----------- | ---------------------------------- | ----------------------------------------- |
-| **Linux**   | Bash 4.0+                          | Bash 4.0+                                 |
-| **macOS**   | Bash 4.0+ via `brew install bash`  | Bash 4.0+ via `brew install bash`         |
-| **Windows** | PowerShell 5.1+ (native `aps.ps1`) | Bash 4.0+ via WSL or Git Bash             |
-
-The bash CLI uses `#!/usr/bin/env bash`, so Homebrew's bash is picked up
-automatically once it's on your `PATH`. macOS ships Bash 3.2 (2007), which is
-too old — APS needs associative arrays.
-
-A native PowerShell port of the orchestration commands is on the roadmap.
-Until then, Windows users on WSL or Git Bash get the full experience.
-
-## AI Guidance
-
-APS includes `aps-rules.md` — a portable guide that travels with your specs.
-Point your AI agent at this file and it will follow APS conventions.
-
-- [AI Agent Implementation Guide](docs/ai-agent-guide.md) — Full guide for LLMs
-- [Prompts](docs/ai/prompting/) — Tool-agnostic prompts
-- [AGENTS.md](AGENTS.md) — Collaboration rules for this repo
-
-## Philosophy: Compound Engineering
-
-APS embraces the principle of **compound engineering**: each unit of engineering
-work should make subsequent units easier—not harder.
-
-Traditional development accumulates technical debt. Every feature adds complexity.
-The codebase becomes harder to work with over time. Compound engineering inverts
-this by investing heavily in planning and review upfront, so execution is fast
-and clean.
-
-**The 80/20 split:**
-
-- **80% planning and review** — Thorough specs, clear work items, validated
-  checkpoints
-- **20% execution** — Fast implementation following well-defined plans
-
-**The planning lifecycle:**
-
-```
-Plan → Execute → Validate → Learn → Plan again
-  ↑                                      │
-  └──────────────────────────────────────┘
-```
-
-| Phase        | What Happens                               | How It Serves Planning                 |
-| ------------ | ------------------------------------------ | -------------------------------------- |
-| **Plan**     | Define scope, success criteria, work items | Reference past patterns and solutions  |
-| **Execute**  | Work against well-defined specs            | Clean implementation, fewer blockers   |
-| **Validate** | Check outcomes against spec                | Verify plan was correct, update if not |
-| **Learn**    | Document solutions and learnings           | Future plans start with known answers  |
-
-Planning without validation is guesswork. Validation without learning repeats
-mistakes. The cycle exists to make each plan better than the last.
-
-See [docs/workflow.md](docs/workflow.md) for the full workflow guide.
-
-## Principles
-
-1. **Specs describe intent** — what and why, not how
-2. **Work items authorise execution** — no work item, no implementation
-3. **Humans remain accountable** — AI proposes, humans approve
-4. **Checkpoints are observable** — every action has a verifiable state
-
-## Project Structure
+## Project structure
 
 ```text
 your-project/
@@ -249,25 +202,63 @@ your-project/
         └── AUTH-001.md           # Gitignored — regenerated on each start
 ```
 
-## Versioning
+## Platform support
 
-The current release is **v0.2.0**. See [CHANGELOG.md](CHANGELOG.md) for what's
-included and [Releases](https://github.com/EddaCraft/anvil-plan-spec/releases)
-for downloads.
+| Platform    | Authoring (`lint`/`init`)          | Orchestration (`next`/`start`/`complete`/`graph`) |
+| ----------- | ---------------------------------- | ------------------------------------------------- |
+| **Linux**   | Bash 4.0+                          | Bash 4.0+                                         |
+| **macOS**   | Bash 4.0+ via `brew install bash`  | Bash 4.0+ via `brew install bash`                 |
+| **Windows** | PowerShell 5.1+ (native `aps.ps1`) | Bash 4.0+ via WSL or Git Bash                     |
 
-To install a specific version:
+Native `aps.ps1` covers `lint` and `init` on Windows today; orchestration is
+bash-only — use WSL or Git Bash for the full experience. A native PowerShell
+port of orchestration is on the roadmap. macOS ships Bash 3.2 (too old —
+APS needs associative arrays); Homebrew's bash is picked up automatically.
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install | VERSION=v0.2.0 bash
+## AI agent guidance
+
+`aps init` scaffolds `plans/aps-rules.md` into your project — a portable guide
+that travels with your specs. Point your agent at it and APS conventions are
+followed by default.
+
+- [AI Agent Implementation Guide](docs/ai-agent-guide.md) — Full guide for LLMs
+- [Agent definitions](docs/agents.md) — Claude Code, Codex, Copilot, OpenCode, Gemini
+- [Prompts](docs/ai/prompting/) — Tool-agnostic prompts
+- [AGENTS.md](AGENTS.md) — Collaboration rules for this repo
+
+## Philosophy: compound engineering
+
+APS embraces the principle that every unit of engineering work should make the
+next one easier — not harder. Traditional development accumulates debt;
+compound engineering inverts this by front-loading planning and review, so
+execution is fast and clean.
+
+```text
+Plan → Execute → Validate → Learn → Plan again
+  ↑                                      │
+  └──────────────────────────────────────┘
 ```
 
-## Roadmap
+**The 80/20 split:** 80% planning and review, 20% execution. The cycle exists
+to make each plan better than the last. See [docs/workflow.md](docs/workflow.md)
+for the full lifecycle.
 
-See [ROADMAP.md](ROADMAP.md) for planned features and direction.
+## Principles
 
-## Contributing
+1. **Specs describe intent** — what and why, not how
+2. **Work items authorise execution** — no work item, no implementation
+3. **Humans remain accountable** — AI proposes, humans approve
+4. **Checkpoints are observable** — every action has a verifiable state
 
-See [CONTRIBUTING.md](CONTRIBUTING.md).
+## Learn more
+
+- [Getting started](docs/getting-started.md) — first plan, end-to-end
+- [Workflow guide](docs/workflow.md) — Plan / Execute / Validate / Learn
+- [CLI reference](docs/usage.md) — every command, every flag, JSON output
+- [Monorepo support](docs/monorepo.md) — multi-package layouts
+- [Terminology](docs/TERMINOLOGY.md) — words APS uses and what they mean
+- [Roadmap](ROADMAP.md) — where this is going
+- [Contributing](CONTRIBUTING.md) — open a PR
 
 ## License
 

@@ -209,7 +209,10 @@ When asked to execute:
 
 ---
 
-## Migration Guidance
+## Historical Renames
+
+These terminology changes shipped in earlier APS releases (v0.2.0). If you are
+upgrading from a pre-v0.2 project, apply these renames:
 
 - Existing **Task** sections become **Work Items**
 - Existing **.steps.md** files become **.actions.md**
@@ -217,3 +220,5 @@ When asked to execute:
 - Existing **Checkpoint:** lines remain unchanged
 
 **No content needs to be rewritten unless it violates checkpoint rules.**
+
+New projects start with the current terminology and need no migration.

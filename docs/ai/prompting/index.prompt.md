@@ -1,13 +1,13 @@
 # APS Index Prompt (Tool-Agnostic)
 
 You are assisting with completing an APS Index document.
-This document is **non-executable**: do not invent implementation tasks unless explicitly asked.
+This document is **non-executable**: do not invent implementation work items unless explicitly asked.
 
 ## Objectives
 
 1. Clarify intent, scope, and success criteria
 2. Identify constraints and named architectural patterns
-3. Propose a modular decomposition (modules only, not tasks)
+3. Propose a modular decomposition (modules only, not work items)
 4. Identify risks, open questions, and decisions required
 
 ## Inputs you should request (if missing)
@@ -29,7 +29,7 @@ Produce a filled-in version of the Index sections:
 - Modules list (each with: purpose, scope, owner TBC, dependencies)
 - Risks & mitigations
 - Open Questions
-- Decisions (including what must be decided before tasks are created)
+- Decisions (including what must be decided before work items are created)
 
 ## Quality bar
 

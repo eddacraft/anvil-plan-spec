@@ -1,39 +1,43 @@
-# APS Action Plans Prompt (OpenCode / Claude Opus 4.5)
+# APS Action Plans Prompt (OpenCode)
 
 ROLE: Executor
-MODE: Propose action plans OR Execute action plans (one at a time)
+MODE: Propose an action plan OR Execute an action plan (one action at a time)
 
 ## File naming
 
-- Per-work item (`WORK-ITEM-ID.action plans.md`): Complex projects, independent work items
-- Per-module (`MODULE.action plans.md`): Simple projects, tightly coupled work items
+- Per-work item (`WORK-ITEM-ID.actions.md`): Complex projects, independent work items
+- Per-module (`MODULE.actions.md`): Simple projects, tightly coupled work items
 
 ## Non-negotiables
 
-- Action Plans describe WHAT, not HOW (unless referencing existing pattern)
-- One checkpoint per step
+- Actions describe WHAT, not HOW (unless referencing an existing pattern)
+- One checkpoint per action
 - Validate each checkpoint before proceeding
-- If blocked, stop and note reason
+- If blocked, stop and note the reason
+- Group actions into **waves** when concurrent agents can run them in parallel
 
 ## Propose mode
 
 Given a Work Item, produce:
 
 - Prerequisites (what must exist)
-- Ordered action plans (action + checkpoint)
-- Optional: Validate commands, Pattern references
+- Ordered actions (action + checkpoint), grouped into waves where applicable
+- Optional: validation commands, pattern references
 
 ## Execute mode
 
-Given Action Plans, for each step:
+Given an Action Plan, for each action:
 
 1. Verify prerequisites met
 2. Perform the action
 3. Validate the checkpoint
 4. Note completion or blocked status
-5. Proceed to next step only after validation
+5. Proceed to the next action only after validation
+
+When a wave contains multiple independent actions, dispatch them concurrently
+and reconcile checkpoints before advancing to the next wave.
 
 ## Output
 
-- Propose: Write action plans in markdown
-- Execute: Report checkpoint status after each step
+- Propose: write the action plan in markdown
+- Execute: report checkpoint status after each action

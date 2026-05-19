@@ -1,10 +1,10 @@
 # Example GitHub Actions workflow for APS linting
 #
-# Add this to .github/workflows/lint-aps.yml in your project
+# Add this to .github/workflows/lint-aps.yml in your project.
 #
-# Prerequisites:
-#   1. Initialize APS in your project: bash <(curl -fsSL https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install)
-#   2. The aps CLI is downloaded automatically by this workflow
+# Prerequisites: none — this workflow installs the APS CLI globally on the
+# runner before linting. If you commit `bin/aps` and `lib/` to your repo,
+# you can skip the install step and call `./bin/aps lint plans/` directly.
 
 name: Lint APS Documents
 
@@ -24,25 +24,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download APS CLI
+      - name: Install APS CLI
         run: |
-          mkdir -p bin lib/rules
-          curl -fsSL https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/bin/aps -o bin/aps
-          curl -fsSL https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/lib/lint.sh -o lib/lint.sh
-          curl -fsSL https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/lib/output.sh -o lib/output.sh
-          curl -fsSL https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/lib/rules/common.sh -o lib/rules/common.sh
-          curl -fsSL https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/lib/rules/module.sh -o lib/rules/module.sh
-          curl -fsSL https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/lib/rules/index.sh -o lib/rules/index.sh
-          curl -fsSL https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/lib/rules/workitem.sh -o lib/rules/workitem.sh
-          curl -fsSL https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/lib/rules/issues.sh -o lib/rules/issues.sh
-          chmod +x bin/aps
+          curl -fsSL https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install \
+            | bash -s -- --global
+          echo "$HOME/.aps/bin" >> "$GITHUB_PATH"
 
       - name: Lint APS documents
-        run: ./bin/aps lint plans/
+        run: aps lint plans/
 
-      - name: Upload results (on failure)
+      - name: Capture results on failure
         if: failure()
-        run: ./bin/aps lint plans/ --json > aps-lint-results.json
+        run: aps lint plans/ --json > aps-lint-results.json
 
       - name: Upload artefact
         if: failure()

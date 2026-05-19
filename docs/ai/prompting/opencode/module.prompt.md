@@ -1,4 +1,4 @@
-# APS Module Prompt (OpenCode / Claude Opus 4.5)
+# APS Module Prompt (OpenCode)
 
 ROLE: Architect/Planner
 MODE: Bounded design, optionally work item-drafting if Ready

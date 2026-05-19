@@ -1,7 +1,10 @@
 # APS v2 Migration & Onboarding Overhaul Design
 
 **Date:** 2026-03-16
-**Status:** Draft
+**Status:** Implemented in v0.3.0 (`aps migrate` command, `.aps/` consolidated
+root, gitignored `.aps/context/`). See
+[CHANGELOG.md](../../CHANGELOG.md#030---2026-05-20) and
+[docs/usage.md](../usage.md#aps-init--update--migrate).
 
 ## Problem
 

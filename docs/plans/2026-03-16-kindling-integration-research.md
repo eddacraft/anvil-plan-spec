@@ -8,7 +8,7 @@ This document analyzes how [Kindling](https://github.com/EddaCraft/kindling) —
 
 APS currently defines a clear hierarchy: Index → Module → Work Item → Action Plan → Checkpoint. Each work item has a Validation field (a command or condition). Each action has a Checkpoint (observable proof of state).
 
-**What's missing:** APS trusts the agent to *self-report* completion. The agent marks a work item "Complete" and notes a proof point, but there's no independent record of:
+**What's missing:** APS trusts the agent to _self-report_ completion. The agent marks a work item "Complete" and notes a proof point, but there's no independent record of:
 
 - What tool calls were made during execution
 - What commands were run and their actual output
@@ -23,15 +23,15 @@ This is the difference between a **spec** (what should happen) and an **observat
 
 Kindling's core primitives map directly to APS concepts:
 
-| Kindling Concept | APS Equivalent | Integration Role |
-|------------------|---------------|------------------|
-| **Capsule** | Work Item execution session | Groups all observations for one work item |
-| **Observation** (tool_call) | Action execution | Records what the agent actually did |
-| **Observation** (command) | Validation run | Captures command output + exit code |
-| **Observation** (file_diff) | Implementation artifact | Records what changed |
-| **Observation** (error) | Blocker / Issue discovery | Captures failures during execution |
-| **Pin** | Critical finding | Marks important observations for review |
-| **Capsule summary** | Work item completion note | Auto-generated summary of what happened |
+| Kindling Concept            | APS Equivalent              | Integration Role                          |
+| --------------------------- | --------------------------- | ----------------------------------------- |
+| **Capsule**                 | Work Item execution session | Groups all observations for one work item |
+| **Observation** (tool_call) | Action execution            | Records what the agent actually did       |
+| **Observation** (command)   | Validation run              | Captures command output + exit code       |
+| **Observation** (file_diff) | Implementation artifact     | Records what changed                      |
+| **Observation** (error)     | Blocker / Issue discovery   | Captures failures during execution        |
+| **Pin**                     | Critical finding            | Marks important observations for review   |
+| **Capsule summary**         | Work item completion note   | Auto-generated summary of what happened   |
 
 ## Integration Design
 
@@ -118,7 +118,7 @@ Add an optional field to work items:
 - **Intent:** Allow new users to create accounts
 - **Expected Outcome:** POST /api/register creates user, returns token
 - **Validation:** `curl -X POST /api/register -d '...'` returns 201
-- **Capsule:** `cap_a1b2c3d4` *(auto-populated on execution)*
+- **Capsule:** `cap_a1b2c3d4` _(auto-populated on execution)_
 ```
 
 This provides a direct link from the spec to its execution evidence.
@@ -156,27 +156,23 @@ The APS install script could detect Kindling and wire both sets of hooks:
     "PreToolUse": [
       {
         "matcher": "Write|Edit|Bash",
-        "hooks": [
-          { "type": "command", "command": "./aps-planning/scripts/pre-tool-check.sh" }
-        ]
+        "hooks": [{ "type": "command", "command": "./aps-planning/scripts/pre-tool-check.sh" }]
       }
     ],
     "PostToolUse": [
       {
         "matcher": "Write|Edit",
-        "hooks": [
-          { "type": "command", "command": "./aps-planning/scripts/post-tool-nudge.sh" }
-        ]
+        "hooks": [{ "type": "command", "command": "./aps-planning/scripts/post-tool-nudge.sh" }]
       },
       {
-        "hooks": [
-          { "type": "command", "command": "kindling-hook post-tool-use" }
-        ]
+        "hooks": [{ "type": "command", "command": "kindling-hook post-tool-use" }]
       }
     ],
     "Stop": [
       { "hooks": [{ "type": "command", "command": "./aps-planning/scripts/check-complete.sh" }] },
-      { "hooks": [{ "type": "command", "command": "./aps-planning/scripts/enforce-plan-update.sh" }] },
+      {
+        "hooks": [{ "type": "command", "command": "./aps-planning/scripts/enforce-plan-update.sh" }]
+      },
       { "hooks": [{ "type": "command", "command": "kindling-hook stop" }] }
     ]
   }
@@ -216,14 +212,14 @@ Every link is either a markdown file (spec-side) or a database record (evidence-
 
 ## Implementation Priority
 
-| Priority | What | Effort | Dependency |
-|----------|------|--------|------------|
-| **P0** | Document the integration pattern (this doc + guide) | Low | None |
-| **P1** | Update `install-hooks.sh` to detect Kindling and wire combined hooks | Low | Kindling CLI installed |
-| **P2** | Add optional `Capsule:` field to work item template | Trivial | None |
-| **P3** | Add `--kindling` flag to scaffold to auto-configure | Medium | P1 |
-| **P4** | Agent guide updates: instruct agents to open/close capsules per work item | Low | P0 |
-| **P5** | Linter rule: warn if completed work items lack capsule reference (when Kindling detected) | Medium | P2 |
+| Priority | What                                                                                      | Effort  | Dependency             |
+| -------- | ----------------------------------------------------------------------------------------- | ------- | ---------------------- |
+| **P0**   | Document the integration pattern (this doc + guide)                                       | Low     | None                   |
+| **P1**   | Update `install-hooks.sh` to detect Kindling and wire combined hooks                      | Low     | Kindling CLI installed |
+| **P2**   | Add optional `Capsule:` field to work item template                                       | Trivial | None                   |
+| **P3**   | Add `--kindling` flag to scaffold to auto-configure                                       | Medium  | P1                     |
+| **P4**   | Agent guide updates: instruct agents to open/close capsules per work item                 | Low     | P0                     |
+| **P5**   | Linter rule: warn if completed work items lack capsule reference (when Kindling detected) | Medium  | P2                     |
 
 ## What NOT to Do
 

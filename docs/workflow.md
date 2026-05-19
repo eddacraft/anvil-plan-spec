@@ -246,13 +246,17 @@ Update specs as you work, not after. Stale specs lose trust.
 Work Items describe **what**, not **how**. Implementation details belong in code
 and comments, not specs.
 
-### Use Steps sparingly
+### Use Action Plans sparingly
 
-Most work items don't need a Action Plan file. Only create one when:
+Most work items don't need an action plan file. Only create one when:
 
 - Work item has 5+ distinct actions
-- Multiple people might work on it
+- Multiple agents or humans might work on it concurrently (waves)
 - You want granular progress tracking
+
+Action plans can be grouped into **waves** — actions in the same wave run in
+parallel, waves run sequentially. Use waves when concurrent agents can pick up
+independent slices of the same work item.
 
 ### Review specs in PRs
 

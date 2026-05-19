@@ -1,10 +1,10 @@
 # APS v2 Architecture Review: "What Would We Do Differently?"
 
-| Field | Value |
-|-------|-------|
-| Status | Draft |
-| Created | 2026-03-08 |
-| Author | Architecture review after months of production use |
+| Field   | Value                                              |
+| ------- | -------------------------------------------------- |
+| Status  | Draft                                              |
+| Created | 2026-03-08                                         |
+| Author  | Architecture review after months of production use |
 
 ## Executive Summary
 
@@ -280,15 +280,18 @@ single `.aps.md` file should be valid, lintable, and fully functional:
 # Add Dark Mode
 
 ## Problem
+
 Users want to reduce eye strain.
 
 ## Work Items
 
 ### 001: Add theme context
+
 - **Outcome:** ThemeProvider wraps app, exposes toggle
 - **Test:** `npm test -- theme.test.tsx`
 
 ### 002: Add toggle to settings
+
 - **Outcome:** Settings page has working theme toggle
 - **Test:** Manual verification
 - **Depends on:** 001
@@ -430,10 +433,10 @@ directly instead of parsing markdown.
 
 ### Change 8: Simplify Templates to Two
 
-| Template | When |
-|----------|------|
-| **spec** | Default. Works for features, modules, everything. |
-| **action-plan** | Breaking down complex work items. |
+| Template        | When                                              |
+| --------------- | ------------------------------------------------- |
+| **spec**        | Default. Works for features, modules, everything. |
+| **action-plan** | Breaking down complex work items.                 |
 
 That's it. One spec template with progressive sections. The metadata table,
 Interfaces, Constraints, etc. are all optional. The linter only requires
@@ -626,13 +629,13 @@ yourself" problem.
 
 ## Summary: If We Started Over
 
-| Keep | Change | Add |
-|------|--------|-----|
-| 4-layer hierarchy | Single-file as first-class | `aps status` from JSON |
-| Plain markdown | One agent doc, not four | `aps context` for AI orientation |
-| Trust layer (Ready gate) | Flat directory by default | `aps new` for zero-ceremony start |
-| Hooks system | Two templates, not nine | Cross-file linting |
-| Lean checkpoints | Pick one language (drop PS) | `aps promote` for progressive upgrade |
-| Compound engineering lifecycle | Status sidecar (.status.json) | Tool-agnostic hook commands |
+| Keep                           | Change                        | Add                                   |
+| ------------------------------ | ----------------------------- | ------------------------------------- |
+| 4-layer hierarchy              | Single-file as first-class    | `aps status` from JSON                |
+| Plain markdown                 | One agent doc, not four       | `aps context` for AI orientation      |
+| Trust layer (Ready gate)       | Flat directory by default     | `aps new` for zero-ceremony start     |
+| Hooks system                   | Two templates, not nine       | Cross-file linting                    |
+| Lean checkpoints               | Pick one language (drop PS)   | `aps promote` for progressive upgrade |
+| Compound engineering lifecycle | Status sidecar (.status.json) | Tool-agnostic hook commands           |
 
 The soul of APS stays. The ceremony goes down. The tooling goes up.

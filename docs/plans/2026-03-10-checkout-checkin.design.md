@@ -1,7 +1,12 @@
 # Work Item Check-out / Check-in Protocol
 
-**Status:** Draft
+**Status:** Superseded by v0.3.0 orchestration CLI (`aps start` / `aps complete`).
 **Date:** 2026-03-10
+**Note:** This design proposed an explicit `checkout`/`checkin` state model. The
+shipped implementation in v0.3.0 uses a leaner `Draft → Ready → In Progress →
+Complete` state machine driven by `aps start` and `aps complete`. See
+[docs/usage.md](../usage.md) for the actual CLI surface. Preserved here as a
+design artefact.
 
 ## Problem
 
@@ -30,15 +35,15 @@ Ready → Checked Out → Checked In → Complete
 
 ### States
 
-| State | Meaning |
-|---|---|
-| `Ready` | Available for pickup — dependencies met, no one working on it |
-| `Checked Out` | Someone (human or agent) is actively working on it |
-| `Blocked` | Cannot proceed — dependency, question, or external blocker |
-| `Released` | Was checked out, but released without completion (abandoned or deferred) |
-| `Checked In` | Work submitted, pending verification |
-| `Review` | Check-in verification failed — needs attention |
-| `Complete` | Verified done — all acceptance criteria met |
+| State         | Meaning                                                                  |
+| ------------- | ------------------------------------------------------------------------ |
+| `Ready`       | Available for pickup — dependencies met, no one working on it            |
+| `Checked Out` | Someone (human or agent) is actively working on it                       |
+| `Blocked`     | Cannot proceed — dependency, question, or external blocker               |
+| `Released`    | Was checked out, but released without completion (abandoned or deferred) |
+| `Checked In`  | Work submitted, pending verification                                     |
+| `Review`      | Check-in verification failed — needs attention                           |
+| `Complete`    | Verified done — all acceptance criteria met                              |
 
 ### Check-out
 
@@ -83,12 +88,12 @@ After check-in, verification determines whether the work is actually done.
 
 **Verification checks (in order of increasing rigour):**
 
-| Level | Check | Automated? |
-|---|---|---|
-| L0 | Commits with item code exist on a pushed branch | ✅ `git log --grep` |
-| L1 | CI passes on the branch | ✅ `gh run list` |
-| L2 | Changed files are plausible for the work item scope | ⚠️ Heuristic |
-| L3 | Acceptance criteria from the work item are satisfied | ⚠️ Agent review or human |
+| Level | Check                                                | Automated?               |
+| ----- | ---------------------------------------------------- | ------------------------ |
+| L0    | Commits with item code exist on a pushed branch      | ✅ `git log --grep`      |
+| L1    | CI passes on the branch                              | ✅ `gh run list`         |
+| L2    | Changed files are plausible for the work item scope  | ⚠️ Heuristic             |
+| L3    | Acceptance criteria from the work item are satisfied | ⚠️ Agent review or human |
 
 **Minimum bar:** L0 + L1 for automated check-in. L2/L3 for high-priority or complex items.
 
@@ -142,12 +147,12 @@ For each Checked Out item:
 
 Periodic scan to find mismatches between plan state and git reality:
 
-| Finding | Action |
-|---|---|
+| Finding                                                            | Action                                                 |
+| ------------------------------------------------------------------ | ------------------------------------------------------ |
 | Item is `Ready` but commits with its code exist on a merged branch | Flag for check-in (likely completed but never updated) |
-| Item is `Complete` but no commits with its code exist | Flag for review (false completion) |
-| Item is `Checked Out` but owner session no longer exists | Release checkout |
-| Commits reference an item code that doesn't exist in the plan | Warn (orphaned work) |
+| Item is `Complete` but no commits with its code exist              | Flag for review (false completion)                     |
+| Item is `Checked Out` but owner session no longer exists           | Release checkout                                       |
+| Commits reference an item code that doesn't exist in the plan      | Warn (orphaned work)                                   |
 
 ### Multi-Agent Coordination
 

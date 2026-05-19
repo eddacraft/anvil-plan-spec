@@ -1,7 +1,12 @@
 # APS Dashboard
 
-**Status:** Draft
+**Status:** Not implemented in v0.3.0. Partially superseded by `aps graph` and
+`aps next`.
 **Date:** 2026-03-10
+**Note:** This design proposed an `aps dash` command for rendering plan state as
+a dashboard. v0.3.0 ships `aps graph [module]` and `aps next` instead, which
+cover the most common "what's going on" queries. A full dashboard view remains
+open; see [ROADMAP.md](../../ROADMAP.md). Preserved here as a design artefact.
 
 ## Purpose
 
@@ -46,37 +51,44 @@ Written to repo root (or configurable path). Same data, GitHub-renderable.
 
 ```markdown
 # APS Dashboard
+
 _Last updated: 2026-03-10 14:50 AWST_
 
 ## 🔨 Checked Out (3)
-| Item | Description | Owner | Duration | Notes |
-|---|---|---|---|---|
-| RENG-003 | Boundary checks | @morgan | 2h | |
-| DEFER-001 | GH Issue filing | codex-abc | 14h | ⚠️ stale |
-| DASH-002 | Core views | @josh | 1h | |
+
+| Item      | Description     | Owner     | Duration | Notes    |
+| --------- | --------------- | --------- | -------- | -------- |
+| RENG-003  | Boundary checks | @morgan   | 2h       |          |
+| DEFER-001 | GH Issue filing | codex-abc | 14h      | ⚠️ stale |
+| DASH-002  | Core views      | @josh     | 1h       |          |
 
 ## 📋 Ready (7)
-| Item | Description | Priority | Blocked by |
-|---|---|---|---|
-| RENG-005 | Command safety | high | RENG-003 |
-| EMBER-002 | Event pipeline | high | — |
-| DASH-003 | Architecture views | medium | — |
+
+| Item      | Description        | Priority | Blocked by |
+| --------- | ------------------ | -------- | ---------- |
+| RENG-005  | Command safety     | high     | RENG-003   |
+| EMBER-002 | Event pipeline     | high     | —          |
+| DASH-003  | Architecture views | medium   | —          |
 
 ## 🔍 In Review (1)
-| Item | Description | Checked in | CI |
-|---|---|---|---|
-| RENG-001 | Secret scan port | 3h ago | pending |
+
+| Item     | Description      | Checked in | CI      |
+| -------- | ---------------- | ---------- | ------- |
+| RENG-001 | Secret scan port | 3h ago     | pending |
 
 ## ✅ Recently Completed (7d)
-| Item | Description | Completed |
-|---|---|---|
-| RENG-002 | Anti-pattern detection | 2d ago |
-| OPA-001 | Policy engine base | 5d ago |
+
+| Item     | Description            | Completed |
+| -------- | ---------------------- | --------- |
+| RENG-002 | Anti-pattern detection | 2d ago    |
+| OPA-001  | Policy engine base     | 5d ago    |
 
 ## ⚠️ Alerts
+
 - **DEFER-001** checked out 14h ago with no commits — may be stale
 
 ---
+
 _3 active · 7 ready · 1 review · 12 complete · 1 stale_
 ```
 
@@ -118,25 +130,25 @@ aps dash --module reng
 
 The dashboard reads exclusively from APS plan files:
 
-| Data | Source |
-|---|---|
-| Work items + status | `plans/index.aps.md` + `plans/modules/*.aps.md` |
-| Checkout state | Inline metadata in work items (owner, timestamp) |
-| Dependencies | `blocked-by` fields in work items |
-| Completion evidence | `branch`, `commits` fields from check-in |
-| Staleness | Checkout timestamp vs current time (+ optional `git log --grep` for commit activity) |
+| Data                | Source                                                                               |
+| ------------------- | ------------------------------------------------------------------------------------ |
+| Work items + status | `plans/index.aps.md` + `plans/modules/*.aps.md`                                      |
+| Checkout state      | Inline metadata in work items (owner, timestamp)                                     |
+| Dependencies        | `blocked-by` fields in work items                                                    |
+| Completion evidence | `branch`, `commits` fields from check-in                                             |
+| Staleness           | Checkout timestamp vs current time (+ optional `git log --grep` for commit activity) |
 
 No API calls. No network. Pure file reads + optional git queries.
 
 ## Refresh Strategies
 
-| Strategy | Trigger | Use case |
-|---|---|---|
-| Manual | `aps dash` | Developer wants a quick look |
-| Watch | `aps dash -f5` | Active work session, keep a terminal open |
-| Cron/systemd timer | Every 10–15 min | Auto-update `STATUS.md` in repo |
-| Post-commit hook | On push to main | Always-current `STATUS.md` on default branch |
-| CI step | On PR merge | Guaranteed fresh after state changes |
+| Strategy           | Trigger         | Use case                                     |
+| ------------------ | --------------- | -------------------------------------------- |
+| Manual             | `aps dash`      | Developer wants a quick look                 |
+| Watch              | `aps dash -f5`  | Active work session, keep a terminal open    |
+| Cron/systemd timer | Every 10–15 min | Auto-update `STATUS.md` in repo              |
+| Post-commit hook   | On push to main | Always-current `STATUS.md` on default branch |
+| CI step            | On PR merge     | Guaranteed fresh after state changes         |
 
 ### Recommended setup
 

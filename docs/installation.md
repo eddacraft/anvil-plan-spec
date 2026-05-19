@@ -9,6 +9,11 @@ curl -fsSL https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaf
 This downloads the APS scaffold into the current directory -- plans,
 templates, skill, and a local copy of the CLI.
 
+After install, run `aps init` to launch the Ratatui-based onboarding wizard.
+It walks you through scaffolding your first plan, picking which AI agent
+ports to install (Claude Code / Codex / Copilot / OpenCode / Gemini), and
+writing `plans/project-context.md`.
+
 ## Global Install
 
 Install the APS CLI system-wide so `aps` is available in any directory:
@@ -17,8 +22,8 @@ Install the APS CLI system-wide so `aps` is available in any directory:
 # Linux/macOS
 curl -fsSL https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install | bash -s -- --global
 
-# Windows (PowerShell)
-irm https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install.ps1 | iex -- --global
+# Windows (PowerShell) — `iex` doesn't forward args, so wrap the script in a scriptblock
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install.ps1))) --global
 ```
 
 This installs only the CLI (`bin/aps` + `lib/`) to `~/.aps/` and adds it
@@ -49,7 +54,7 @@ To uninstall: remove `~/.aps/` and the PATH line from your shell config.
 curl -fsSL https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install | bash -s -- ./my-project
 
 # Install a specific version
-curl -fsSL https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install | VERSION=v0.2.0 bash
+curl -fsSL https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install | VERSION=v0.3.0 bash
 ```
 
 The installer prompts you to set up Claude Code hooks and PATH
@@ -92,7 +97,7 @@ irm https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/in
 To install a specific version:
 
 ```powershell
-$env:VERSION='v0.2.0'; irm https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install.ps1 | iex
+$env:APS_VERSION='v0.3.0'; irm https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install.ps1 | iex
 ```
 
 Or follow the [Manual Setup](#manual-setup) steps below.

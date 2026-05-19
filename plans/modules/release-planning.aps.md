@@ -1,8 +1,8 @@
 # Release Planning Module
 
-| ID | Owner | Priority | Status |
-|----|-------|----------|--------|
-| REL | @aneki | medium | Draft |
+| ID  | Owner  | Priority | Status |
+| --- | ------ | -------- | ------ |
+| REL | @aneki | medium   | Draft  |
 
 ## Purpose
 
@@ -81,17 +81,17 @@ The pattern is generic enough to extract.
 
 ## Decisions
 
-- **D-001:** Where do release plans live? — *proposed: `plans/releases/`
-  with one file per version (`v0.3.0-beta.md`). Matches anvil-001 trial.*
-- **D-002:** How do releases reference work items? — *proposed: free-form
+- **D-001:** Where do release plans live? — _proposed: `plans/releases/`
+  with one file per version (`v0.3.0-beta.md`). Matches anvil-001 trial._
+- **D-002:** How do releases reference work items? — _proposed: free-form
   links + tables (anvil-001 trial style). Linter optionally validates that
-  referenced IDs exist. Decision pending more usage.*
-- **D-003:** Should release files be in the index? — *open. Options:
+  referenced IDs exist. Decision pending more usage._
+- **D-003:** Should release files be in the index? — _open. Options:
   (a) separate "Releases" section in `index.aps.md`,
   (b) standalone `plans/releases/index.md`,
-  (c) no index, files discovered by glob.*
-- **D-004:** CLI support depth — *proposed: defer `aps release` subcommand
-  until trial usage stabilizes. Ship template + linter rules first.*
+  (c) no index, files discovered by glob._
+- **D-004:** CLI support depth — _proposed: defer `aps release` subcommand
+  until trial usage stabilizes. Ship template + linter rules first._
 
 ## Ready Checklist
 

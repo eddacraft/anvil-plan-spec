@@ -1,4 +1,4 @@
-# APS Work Item Prompt (OpenCode / Claude Opus 4.5)
+# APS Work Item Prompt (OpenCode)
 
 ROLE: Implementer (work item author)
 MODE: Executable authority (single work item)

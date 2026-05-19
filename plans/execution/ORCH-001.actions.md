@@ -1,11 +1,11 @@
 # Action Plan: ORCH-001
 
-| Field | Value |
-|-------|-------|
-| Source | [./modules/orchestrate.aps.md](../modules/orchestrate.aps.md) |
-| Work Item | ORCH-001 — Implement `aps next` command |
-| Created by | @aneki / AI |
-| Status | In Progress |
+| Field      | Value                                                         |
+| ---------- | ------------------------------------------------------------- |
+| Source     | [./modules/orchestrate.aps.md](../modules/orchestrate.aps.md) |
+| Work Item  | ORCH-001 — Implement `aps next` command                       |
+| Created by | @aneki / AI                                                   |
+| Status     | In Progress                                                   |
 
 ## Prerequisites
 
@@ -14,11 +14,11 @@
 
 ## Waves
 
-| Wave | Actions | Gate |
-|------|---------|------|
-| 1 | 1, 2 | Parser helpers in lib/orch.sh, unit-tested |
-| 2 | 3, 4 | `aps next` wired through bin/aps and lints clean |
-| 3 | 5, 6 | End-to-end test passes against this repo's plans/ |
+| Wave | Actions | Gate                                              |
+| ---- | ------- | ------------------------------------------------- |
+| 1    | 1, 2    | Parser helpers in lib/orch.sh, unit-tested        |
+| 2    | 3, 4    | `aps next` wired through bin/aps and lints clean  |
+| 3    | 5, 6    | End-to-end test passes against this repo's plans/ |
 
 ## Actions
 

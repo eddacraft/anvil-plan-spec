@@ -256,7 +256,7 @@ mode agents (users invoke them deliberately, not as the default primary agent).
 - **Results:** Automated format/content validation complete for all 5 harnesses.
   build.sh idempotent, all 14 files correct. Fixed stale OpenCode model IDs
   (→ claude-opus-4-6 / claude-sonnet-4-6) and added Codex vendor comments.
-  Manual end-to-end tests documented in docs/agent-testing.md — require
+  Manual end-to-end tests documented in docs/plans/2026-03-15-agent-cross-harness-test-plan.md — require
   respective tool installs. Claude Code agents validated live.
 
 ## Execution Strategy
