@@ -343,7 +343,7 @@ v2_install_plans() {
   local plans_dir="$target/plans"
 
   mkdir -p "$plans_dir/modules" "$plans_dir/execution" "$plans_dir/decisions" "$plans_dir/designs"
-  echo "0.2.0" > "$plans_dir/.aps-version"
+  echo "0.3.0" > "$plans_dir/.aps-version"
 
   for f in "${V2_PLAN_FILES[@]}"; do
     local rel="${f#scaffold/plans/}"
@@ -1213,8 +1213,8 @@ cmd_migrate() {
   fi
   download "scaffold/plans/aps-rules-v2.md" "$target/plans/aps-rules.md"
   info "Updated plans/aps-rules.md to v2"
-  echo "0.2.0" > "$target/plans/.aps-version"
-  info "Updated plans/.aps-version to 0.2.0"
+  echo "0.3.0" > "$target/plans/.aps-version"
+  info "Updated plans/.aps-version to 0.3.0"
 
   # Infer config.yml
   local inferred_tools=()

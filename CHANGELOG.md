@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-05-20
+
 ### Added
 
 - **Orchestration CLI** — `aps next` resolves the next ready work item across
@@ -24,7 +26,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   travel with the work item and surface as "Dependency Learnings" in downstream
   context packages.
 - **v2 layout migration** — `aps migrate` converts existing projects to the
-  `.aps/` consolidated tooling root.
+  `.aps/` consolidated tooling root, with shell-prompt wizard.
+- **TUI init wizard** — first Ratatui-based onboarding flow for `aps init`
+  (TUI-001).
+- **Multi-agent ports** — APS agents ported to Codex, GitHub Copilot, OpenCode,
+  and Gemini in addition to Claude Code; added APS planner, librarian, and
+  conductor agents.
+- **Global install** — `--global` flag for system-wide CLI installation.
+- **Designs folder** — `designs/` added as a standard APS artifact for design
+  documents alongside specs and plans.
+- **Wave-based execution** — action plans support wave-based parallel execution
+  guidance for concurrent agents.
 
 ### Changed
 
@@ -33,6 +45,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Skill install decoupled from `aps init` — install once globally, opt in per
   project.
 - `/plan` skill auto-bootstraps `aps init` and performs a version check.
+- Canonical primary branch promoted from `dev` to `main`; CI updated.
+- TUI framework decision: Rust + Ratatui (replacing earlier OpenTUI/Bun
+  exploration).
+
+### Fixed
+
+- Installer: only matching runtime files installed; legacy init runtime files
+  included; piped installs prompt correctly; APS orchestration library
+  installed; PowerShell variant includes orchestrate library.
+- PowerShell scripts write BOM-free session baseline files.
+- Module status row parsing skips the markdown separator row.
+- Scaffold backs up `aps-rules.md` and hook scripts during migration.
 
 ## [0.2.0] - 2026-02-20
 
