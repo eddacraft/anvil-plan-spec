@@ -87,10 +87,10 @@ The trigger for this module came from two converging patterns:
 
 ## Decisions
 
-- **D-001:** Naming — *proposed: "Conductor" as the type name. Alternatives
+- **D-001:** Naming — _proposed: "Conductor" as the type name. Alternatives
   considered: Crosscutting, Aspect, Coordinator. Conductor connects naturally
-  with the existing Conductor *agent* concept (ORCH-005) and is more
-  concrete than "Crosscutting".*
+  with the existing Conductor agent concept (ORCH-005) and is more
+  concrete than "Crosscutting"._
 - **D-002:** Should conductor modules own work items? — _proposed: yes,
   optionally. A release conductor may have its own work items (REL-001
   through REL-005) plus references to work items in other modules. Allowing
