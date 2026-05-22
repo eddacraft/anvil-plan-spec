@@ -27,6 +27,12 @@ get_file_type() {
     return
   fi
 
+  # Completed-work archive (parallel to index.aps.md)
+  if [[ "$basename" == "completed.aps.md" ]]; then
+    echo "archive"
+    return
+  fi
+
   # Issues tracker files
   if [[ "$basename" == "issues.md" ]]; then
     echo "issues"
@@ -95,6 +101,10 @@ lint_file() {
     actions)
       # Actions files have minimal validation for now
       # Could add checkpoint format validation later
+      return 0
+      ;;
+    archive)
+      # Completed-work archive — markdown-only, no module structure expected
       return 0
       ;;
     template)

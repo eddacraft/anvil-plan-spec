@@ -1,10 +1,10 @@
 # Compound Module
 
-| ID       | Owner  | Priority | Status |
-| -------- | ------ | -------- | ------ |
-| COMPOUND | @aneki | medium   | Ready  |
+| ID       | Owner  | Priority | Status   |
+| -------- | ------ | -------- | -------- |
+| COMPOUND | @aneki | medium   | Complete |
 
-**Last reviewed:** 2026-05-12
+**Last reviewed:** 2026-05-22
 
 ## Purpose
 
@@ -119,6 +119,9 @@ learnings into a navigable corpus.
 - **Dependencies:** COMPOUND-001
 - **Files:** templates/completed-index.template.md, scaffold/plans/,
   docs/workflow.md
+- **Status:** Complete: 2026-05-22 — template landed; `plans/completed.aps.md`
+  seeded from this repo's shipped work (v0.2 + v0.3 modules); workflow.md
+  "Completion and Archival" rewritten to reference the pattern.
 
 ### COMPOUND-003: Release narrative convention
 
@@ -135,6 +138,10 @@ learnings into a navigable corpus.
 - **Dependencies:** COMPOUND-001
 - **Files:** templates/release.template.md, plans/releases/,
   docs/workflow.md, CHANGELOG.md
+- **Status:** Complete: 2026-05-22 — release template landed; new
+  `docs/workflow.md` "Release Narrative" section explains when/how to use it;
+  `plans/releases/v0.3.0.md` authored as the proof-of-concept narrative;
+  CHANGELOG v0.3.0 entry now links to the narrative.
 
 ## Ready Checklist
 

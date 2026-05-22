@@ -204,18 +204,43 @@ You've finished all work items in a module. Now what?
    | [auth](./modules/auth.aps.md) | Login, logout, registration | Complete |
    ```
 
-4. **Decide on archival:**
+4. **Roll the task table into the completed archive.** Copy the module's work-item
+   table into `plans/completed.aps.md`, grouped under the release that shipped
+   it. This keeps the active index focused on in-flight work while preserving the
+   task-by-task record for traceability. Use
+   [`templates/completed-index.template.md`](../templates/completed-index.template.md)
+   if the file doesn't exist yet:
 
-   | Approach             | When to Use                           |
-   | -------------------- | ------------------------------------- |
-   | **Keep as-is**       | Ongoing reference, may need updates   |
-   | **Move to archive/** | Historical record, unlikely to change |
-   | **Delete**           | Ephemeral work, no long-term value    |
+   ```markdown
+   ## v0.4.0 — Authentication
+
+   ### Auth & Sessions
+
+   | Task     | Module  | Description     | Status   |
+   | -------- | ------- | --------------- | -------- |
+   | AUTH-001 | auth    | Login flow      | Complete |
+   | AUTH-002 | auth    | Session refresh | Complete |
+   ```
+
+   For long-form implementation notes — wave reports, post-mortems, deep dives —
+   write a sibling file at `plans/completed/<release>-<module>.md` and link to
+   it from the entry above. Skip the long-form file for ordinary modules; the
+   task table alone is often enough.
+
+5. **Decide on archival of the module spec itself:**
+
+   | Approach                            | When to Use                                |
+   | ----------------------------------- | ------------------------------------------ |
+   | **Keep in `plans/modules/`**        | Ongoing reference, may need updates        |
+   | **Move to `plans/archive/modules/`** | Historical record, unlikely to be revisited |
+   | **Delete**                          | Ephemeral work, no long-term value         |
 
    Most teams keep specs indefinitely — they're lightweight and provide context
-   for future work.
+   for future work. Move them to `plans/archive/modules/` only when the active
+   `modules/` directory starts to feel cluttered.
 
-5. **For completed initiatives.** When all modules are complete, update the Index:
+6. **For completed initiatives.** When all modules in an initiative are
+   complete, update the Index:
 
    ```markdown
    | Field     | Value      |
@@ -234,6 +259,10 @@ You've finished all work items in a module. Now what?
    - OAuth took longer than expected due to credential delays
    - Session module was simpler than anticipated — could merge into auth next time
    ```
+
+   For a release that bundles multiple modules, write a richer narrative in
+   `plans/releases/<version>.md` rather than burying the story in Notes — see
+   [Release Narrative](#release-narrative) below.
 
 ## Tips
 
@@ -459,6 +488,70 @@ rg "OAuth" docs/solutions/
 **Each solution documented makes future planning faster.** New team members
 ramp up faster. Recurring problems get solved in minutes. Plans start with
 known answers instead of research.
+
+---
+
+## Release Narrative
+
+`CHANGELOG.md` tells users _what_ changed. A release narrative tells future
+you _why_ this release exists — its theme, success criteria, risks, and how
+the shipped modules tie together. Keep CHANGELOG entries terse and have them
+link to the narrative for context.
+
+### Where it lives
+
+```text
+plans/
+├── releases/
+│   ├── v0.3.0.md
+│   ├── v0.4.0.md
+│   └── ...
+├── completed.aps.md           # task-table roll-up
+└── completed/                 # optional long-form notes
+    └── v0.3.0-orchestrate.md
+```
+
+`plans/releases/` is the standard location, parallel to `plans/index.aps.md`
+and `plans/completed.aps.md`.
+
+### When to write one
+
+Write a release doc when:
+
+- You're cutting a release that bundles work across multiple modules.
+- The release marks a strategic shift you want findable six months later
+  (framework swap, distribution change, breaking-change boundary).
+- You want a single place to capture risks and success criteria the team
+  agreed on before the cut.
+
+Skip it for tiny patch releases — the CHANGELOG entry is enough on its own.
+
+### How to write one
+
+Use [`templates/release.template.md`](../templates/release.template.md) for
+the canonical shape. The required spine is:
+
+- **Release Theme** — one paragraph capturing the strategic narrative.
+- **What Ships** — grouped tables of capabilities, with APS module IDs.
+- **Success Criteria** — observable signals that the release worked.
+- **Risks** — what's most likely to go wrong, with mitigations.
+- **Related** — links to CHANGELOG, completed.aps.md, and module specs.
+
+Add a **Retrospective** section after the release has been live long enough
+to learn from. Bullet points, not essays.
+
+### How it interacts with the other archives
+
+| Artifact                  | Question it answers                              |
+| ------------------------- | ------------------------------------------------ |
+| `CHANGELOG.md`            | What changed in this version? (terse, for users) |
+| `plans/releases/<v>.md`   | Why this release? Theme, criteria, risks         |
+| `plans/completed.aps.md`  | Which work items shipped, grouped by release     |
+| `plans/completed/<v>-<m>.md` | Wave-level implementation notes (optional)    |
+
+Cross-link liberally. The CHANGELOG entry should point to the release doc;
+the release doc should point back to the completed roll-up and the module
+specs it covers.
 
 ---
 
