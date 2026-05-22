@@ -5,7 +5,7 @@
 | Status  | Active     |
 | Owner   | @aneki     |
 | Created | 2025-12-31 |
-| Updated | 2026-04-26 |
+| Updated | 2026-05-22 |
 
 ## Problem
 
@@ -20,7 +20,7 @@ APS needs continued development to:
 - [x] New user can try APS in under 5 minutes
 - [x] CLI validates APS documents in CI pipelines
 - [x] Documentation covers common workflows with examples
-- [ ] Knowledge compounds across projects via solution library
+- [x] Knowledge compounds across projects via solution library
 
 ## Constraints
 
@@ -60,12 +60,20 @@ APS needs continued development to:
 | [conductor](./modules/conductor.aps.md)               | New module type for cross-module concerns (trial)              | Draft (Trialing) |
 | [release-planning](./modules/release-planning.aps.md) | Release plan template + scaffold + linter (trial in anvil-001) | Draft            |
 
+### Compound-Engineering (Complete)
+
+| Module                                | Purpose                                                          | Status   |
+| ------------------------------------- | ---------------------------------------------------------------- | -------- |
+| [compound](./modules/compound.aps.md) | Review/Learn phase tooling (solution library, completed archive) | Complete |
+
+Task-level history rolls up in [`plans/completed.aps.md`](./completed.aps.md);
+release narratives live in [`plans/releases/`](./releases/).
+
 ### Near Term
 
 | Module                                        | Purpose                                                          | Status |
 | --------------------------------------------- | ---------------------------------------------------------------- | ------ |
 | [spec](./modules/spec.aps.md)                 | Canonical vocabulary + schema (status reconciliation)            | Draft  |
-| [compound](./modules/compound.aps.md)         | Review/Learn phase tooling (solution library, completed archive) | Ready  |
 | [tasks](./modules/tasks.aps.md)               | Claude Code Tasks integration                                    | Draft  |
 | [examples](./modules/examples.aps.md)         | Additional worked examples                                       | Draft  |
 | [prompts](./modules/prompts.aps.md)           | Tool-specific prompt variants                                    | Draft  |

@@ -6,7 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **Compound-engineering archive patterns** (COMPOUND module — Complete) —
+  `templates/completed-index.template.md` and `templates/release.template.md`
+  ship the doc-only halves of the Learn phase. `plans/completed.aps.md`
+  seeded from this repo's shipped work, and `plans/releases/v0.3.0.md`
+  authored as the proof-of-concept release narrative.
+- **Workflow guide additions** — `docs/workflow.md` "Completion and Archival"
+  section rewritten to reference the completed roll-up and `plans/completed/`
+  long-form notes; new "Release Narrative" section explains when and how to
+  write a release doc.
+
 ## [0.3.0] - 2026-05-20
+
+**Release narrative:** [plans/releases/v0.3.0.md](./plans/releases/v0.3.0.md)
+for theme, success criteria, and risks.
 
 ### Added
 

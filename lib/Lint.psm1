@@ -17,6 +17,9 @@ function Get-ApsFileType {
     # Index files
     if ($name -eq "index.aps.md") { return "index" }
 
+    # Completed-work archive (parallel to index.aps.md)
+    if ($name -eq "completed.aps.md") { return "archive" }
+
     # Issues tracker
     if ($name -eq "issues.md") { return "issues" }
 
@@ -59,6 +62,7 @@ function Invoke-ApsFileLint {
         "issues"   { return (Invoke-ApsIssuesLint -File $File) }
         "design"   { return (Invoke-ApsDesignLint -File $File) }
         "actions"  { return $true }
+        "archive"  { return $true }
         "template" { return $true }
         default {
             Add-ApsResult -Path $File -Type "warning" -Code "W000" -Message "Unknown file type, skipping validation"
