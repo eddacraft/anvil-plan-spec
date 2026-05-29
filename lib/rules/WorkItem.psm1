@@ -12,6 +12,14 @@ function Test-E005RequiredFields {
     $content = Get-ApsWorkItemContent -FilePath $File -StartLine $ItemLine
     $contentText = $content -join "`n"
 
+    # Terminal (completed) work items are commonly compacted to Status + a short
+    # summary once shipped, with full Intent/Expected Outcome/Validation detail
+    # preserved in version history. Exempt them from the required-field checks.
+    # Active states (Proposed/Ready/In Progress/Blocked/Draft/Deferred) are still checked.
+    if ($contentText -match '(?im)^- \*\*Status:\*\*[ \t]*(done|complete|merged|released|shipped)\b') {
+        return $true
+    }
+
     if ($contentText -cnotmatch '(?m)^- \*\*Intent:\*\*') {
         Add-ApsResult -Path $File -Type "error" -Code "E005" -Message "$ItemHeader`: Missing **Intent:** field" -Line "$ItemLine"
         $hasErrors = $true

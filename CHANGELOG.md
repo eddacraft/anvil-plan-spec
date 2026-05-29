@@ -18,6 +18,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   long-form notes; new "Release Narrative" section explains when and how to
   write a release doc.
 
+### Changed
+
+- **E005 exempts terminal work items** — `aps lint` no longer requires the
+  `Intent` / `Expected Outcome` / `Validation` fields on work items whose
+  `Status` is a completed state (`Done`, `Complete`, `Merged`, `Released`,
+  `Shipped`). Completed items are commonly compacted to `Status` + a short
+  summary at closeout, with full detail preserved in version history; requiring
+  the fields reopened E005 on every shipped item. Active states
+  (`Proposed` / `Ready` / `In Progress` / `Blocked` / `Draft` / `Deferred`) are
+  still checked. Applies to both the bash (`lib/rules/workitem.sh`) and
+  PowerShell (`lib/rules/WorkItem.psm1`) rule engines.
+
 ## [0.3.0] - 2026-05-20
 
 **Release narrative:** [plans/releases/v0.3.0.md](./plans/releases/v0.3.0.md)
