@@ -18,6 +18,17 @@ check_e005_required_fields() {
     found { print }
   ' "$file")
 
+  # Terminal (completed) work items are commonly compacted to Status + a short
+  # summary once shipped, with their full Intent/Expected Outcome/Validation
+  # detail preserved in version history. Exempt them from the required-field
+  # checks so closeout compaction does not reopen E005. Active states
+  # (Proposed/Ready/In Progress/Blocked/Draft/Deferred) are still checked.
+  local status
+  status=$(echo "$content" | grep -m1 -E '^\- \*\*Status:\*\*' | sed -E 's/^- \*\*Status:\*\*[[:space:]]*//')
+  if echo "$status" | grep -qiE '^(done|complete|merged|released|shipped)\b'; then
+    return 0
+  fi
+
   # Check for required fields
   if ! echo "$content" | grep -qE '^\- \*\*Intent:\*\*'; then
     add_result "$file" "error" "E005" "$item_header: Missing **Intent:** field" "$item_line"
