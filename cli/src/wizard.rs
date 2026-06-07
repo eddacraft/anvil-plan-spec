@@ -1,13 +1,17 @@
 use eddacraft_tui::prelude::Action;
 use eddacraft_tui::prelude::{EddaCraftTheme, KeyHandler, Select, SelectItem, SelectState};
 use eddacraft_tui::prelude::{ShellBranding, render_shell};
+use eddacraft_tui::prelude::{TextInput, TextInputState};
 use ratatui::Frame;
 use ratatui::Terminal;
 use ratatui::backend::CrosstermBackend;
 use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::widgets::{Block, Borders, Paragraph, StatefulWidget, Widget};
 use std::io::{self, IsTerminal};
+use std::path::PathBuf;
 use std::time::Duration;
+
+use crate::scaffold::{self, ScaffoldRun, Selections, StepStatus};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Profile {
@@ -63,12 +67,41 @@ pub struct ToolConfig {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Template {
+    Quickstart,
+    Module,
+    Index,
+    MonorepoIndex,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Component {
+    LintRules,
+    ApsRules,
+    ProjectContext,
+    DesignsDir,
+    DecisionsDir,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PathField {
+    PlansDir,
+    DocsDir,
+    ToolingRoot,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum WizardStep {
     Profile,
     ProjectShape,
     AiTooling,
     ToolConfig,
-    Done,
+    Templates,
+    Paths,
+    Components,
+    Review,
+    Scaffold,
+    Summary,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -89,6 +122,21 @@ pub struct WizardState {
     selected_tools: Vec<AiTool>,
     tool_configs: Vec<ToolConfig>,
     tool_config_index: usize,
+    template_index: usize,
+    selected_templates: Vec<Template>,
+    templates_initialized: bool,
+    custom_template_enabled: bool,
+    editing_custom_template: bool,
+    custom_template: TextInputState,
+    path_field_index: usize,
+    plans_dir: TextInputState,
+    docs_dir: TextInputState,
+    tooling_root: TextInputState,
+    component_index: usize,
+    selected_components: Vec<Component>,
+    root: PathBuf,
+    scaffold_run: Option<ScaffoldRun>,
+    scaffold_error: Option<String>,
 }
 
 impl Default for WizardState {
@@ -103,8 +151,31 @@ impl Default for WizardState {
             selected_tools: Vec::new(),
             tool_configs: Vec::new(),
             tool_config_index: 0,
+            template_index: 0,
+            selected_templates: Vec::new(),
+            templates_initialized: false,
+            custom_template_enabled: false,
+            editing_custom_template: false,
+            custom_template: TextInputState::default(),
+            path_field_index: 0,
+            plans_dir: text_input_with(Self::DEFAULT_PLANS_DIR),
+            docs_dir: text_input_with(Self::DEFAULT_DOCS_DIR),
+            tooling_root: text_input_with(Self::DEFAULT_TOOLING_ROOT),
+            component_index: 0,
+            selected_components: Self::COMPONENTS.to_vec(),
+            root: PathBuf::from("."),
+            scaffold_run: None,
+            scaffold_error: None,
         }
     }
+}
+
+fn text_input_with(value: &str) -> TextInputState {
+    let mut state = TextInputState::default();
+    for c in value.chars() {
+        state.insert(c);
+    }
+    state
 }
 
 impl WizardState {
@@ -124,6 +195,27 @@ impl WizardState {
         AiTool::Gemini,
         AiTool::Generic,
     ];
+    const TEMPLATES: [Template; 4] = [
+        Template::Quickstart,
+        Template::Module,
+        Template::Index,
+        Template::MonorepoIndex,
+    ];
+    const COMPONENTS: [Component; 5] = [
+        Component::LintRules,
+        Component::ApsRules,
+        Component::ProjectContext,
+        Component::DesignsDir,
+        Component::DecisionsDir,
+    ];
+    const PATH_FIELDS: [PathField; 3] = [
+        PathField::PlansDir,
+        PathField::DocsDir,
+        PathField::ToolingRoot,
+    ];
+    const DEFAULT_PLANS_DIR: &'static str = "plans/";
+    const DEFAULT_DOCS_DIR: &'static str = "docs/";
+    const DEFAULT_TOOLING_ROOT: &'static str = ".aps/";
 
     pub fn step(&self) -> WizardStep {
         self.step
@@ -177,7 +269,26 @@ impl WizardState {
         &self.tool_configs
     }
 
+    /// True while the wizard is consuming raw character input (custom
+    /// template path editing or the Paths step). The event loop maps keys
+    /// in text mode instead of the vim-style navigation mode.
+    pub fn text_entry_active(&self) -> bool {
+        self.editing_custom_template || self.step == WizardStep::Paths
+    }
+
     pub fn handle(&mut self, action: Action) -> WizardEvent {
+        if self.text_entry_active() {
+            return self.handle_text(action);
+        }
+
+        // Scaffold execution is not interruptible except by quitting.
+        if self.step == WizardStep::Scaffold {
+            return match action {
+                Action::Quit => WizardEvent::Quit,
+                _ => WizardEvent::Continue,
+            };
+        }
+
         match action {
             Action::Quit => WizardEvent::Quit,
             Action::Up => {
@@ -217,15 +328,91 @@ impl WizardState {
         }
     }
 
+    fn handle_text(&mut self, action: Action) -> WizardEvent {
+        match action {
+            Action::Quit => return WizardEvent::Quit,
+            Action::Up => self.move_path_field(false),
+            Action::Down => self.move_path_field(true),
+            Action::Left => self.current_text_mut().move_left(),
+            Action::Right => self.current_text_mut().move_right(),
+            Action::Home => self.current_text_mut().home(),
+            Action::End => self.current_text_mut().end(),
+            Action::Backspace => self.current_text_mut().backspace(),
+            Action::Delete => self.current_text_mut().delete(),
+            Action::Character(c) => self.current_text_mut().insert(c),
+            Action::Back => {
+                if self.editing_custom_template {
+                    self.finish_custom_template_edit();
+                } else {
+                    self.back();
+                }
+            }
+            Action::Select => {
+                if self.editing_custom_template {
+                    self.finish_custom_template_edit();
+                } else if self.path_field_index + 1 < Self::PATH_FIELDS.len() {
+                    self.path_field_index += 1;
+                } else {
+                    return self.advance();
+                }
+            }
+            _ => {}
+        }
+
+        WizardEvent::Continue
+    }
+
+    fn current_text_mut(&mut self) -> &mut TextInputState {
+        if self.editing_custom_template {
+            return &mut self.custom_template;
+        }
+
+        match Self::PATH_FIELDS[self.path_field_index] {
+            PathField::PlansDir => &mut self.plans_dir,
+            PathField::DocsDir => &mut self.docs_dir,
+            PathField::ToolingRoot => &mut self.tooling_root,
+        }
+    }
+
+    fn move_path_field(&mut self, forward: bool) {
+        if self.step == WizardStep::Paths && !self.editing_custom_template {
+            self.path_field_index =
+                move_index(self.path_field_index, Self::PATH_FIELDS.len(), forward);
+        }
+    }
+
+    fn finish_custom_template_edit(&mut self) {
+        self.editing_custom_template = false;
+        if self.custom_template.value.trim().is_empty() {
+            self.custom_template_enabled = false;
+        }
+    }
+
     fn advance(&mut self) -> WizardEvent {
         self.step = match self.step {
             WizardStep::Profile => WizardStep::ProjectShape,
             WizardStep::ProjectShape => WizardStep::AiTooling,
-            WizardStep::AiTooling if self.selected_tools.is_empty() => WizardStep::Done,
+            WizardStep::AiTooling if self.selected_tools.is_empty() => WizardStep::Templates,
             WizardStep::AiTooling => WizardStep::ToolConfig,
-            WizardStep::ToolConfig => WizardStep::Done,
-            WizardStep::Done => return WizardEvent::Complete,
+            WizardStep::ToolConfig => WizardStep::Templates,
+            WizardStep::Templates => WizardStep::Paths,
+            WizardStep::Paths => {
+                self.restore_default_paths();
+                WizardStep::Components
+            }
+            WizardStep::Components => WizardStep::Review,
+            WizardStep::Review => {
+                self.start_scaffold();
+                WizardStep::Scaffold
+            }
+            WizardStep::Scaffold => WizardStep::Scaffold, // advanced by scaffold_tick
+            WizardStep::Summary => return WizardEvent::Complete,
         };
+
+        if self.step == WizardStep::Templates && !self.templates_initialized {
+            self.selected_templates = Self::default_templates(self.profile, self.project_shape);
+            self.templates_initialized = true;
+        }
 
         WizardEvent::Continue
     }
@@ -236,8 +423,111 @@ impl WizardState {
             WizardStep::ProjectShape => WizardStep::Profile,
             WizardStep::AiTooling => WizardStep::ProjectShape,
             WizardStep::ToolConfig => WizardStep::AiTooling,
-            WizardStep::Done => WizardStep::ToolConfig,
+            WizardStep::Templates if self.tool_configs.is_empty() => WizardStep::AiTooling,
+            WizardStep::Templates => WizardStep::ToolConfig,
+            WizardStep::Paths => WizardStep::Templates,
+            WizardStep::Components => WizardStep::Paths,
+            WizardStep::Review => WizardStep::Components,
+            // Scaffolding has side effects; there is no going back.
+            WizardStep::Scaffold => WizardStep::Scaffold,
+            WizardStep::Summary => WizardStep::Summary,
         };
+    }
+
+    /// Collect the wizard's selections for scaffold planning. Also the
+    /// hand-off point for the non-interactive path (TUI-005).
+    pub fn selections(&self) -> Selections {
+        Selections {
+            profile: self.profile,
+            shape: self.project_shape,
+            tools: self.tool_configs.clone(),
+            templates: self.selected_templates.clone(),
+            custom_template: self.custom_template_path().map(str::to_string),
+            plans_dir: self.plans_dir.value.clone(),
+            docs_dir: self.docs_dir.value.clone(),
+            tooling_root: self.tooling_root.value.clone(),
+            components: self.selected_components.clone(),
+        }
+    }
+
+    fn start_scaffold(&mut self) {
+        let selections = self.selections();
+        match scaffold::check_target(&self.root, &selections) {
+            Ok(()) => {
+                self.scaffold_run = Some(ScaffoldRun::new(self.root.clone(), &selections));
+            }
+            Err(message) => {
+                self.scaffold_error = Some(message);
+            }
+        }
+    }
+
+    /// Drive scaffold execution one step at a time so the event loop can
+    /// redraw between steps. No-op outside the Scaffold step.
+    pub fn scaffold_tick(&mut self) {
+        if self.step != WizardStep::Scaffold {
+            return;
+        }
+
+        match &mut self.scaffold_run {
+            Some(run) => {
+                if !run.run_next() {
+                    self.step = WizardStep::Summary;
+                }
+            }
+            // Target check failed; the summary screen shows the error.
+            None => self.step = WizardStep::Summary,
+        }
+    }
+
+    pub fn scaffold_run(&self) -> Option<&ScaffoldRun> {
+        self.scaffold_run.as_ref()
+    }
+
+    pub fn scaffold_error(&self) -> Option<&str> {
+        self.scaffold_error.as_deref()
+    }
+
+    #[cfg(test)]
+    pub fn with_root(root: PathBuf) -> Self {
+        Self {
+            root,
+            ..Self::default()
+        }
+    }
+
+    /// Empty path fields fall back to their defaults when leaving the step,
+    /// so the scaffold never receives a blank target directory.
+    fn restore_default_paths(&mut self) {
+        for (input, default) in [
+            (&mut self.plans_dir, Self::DEFAULT_PLANS_DIR),
+            (&mut self.docs_dir, Self::DEFAULT_DOCS_DIR),
+            (&mut self.tooling_root, Self::DEFAULT_TOOLING_ROOT),
+        ] {
+            if input.value.trim().is_empty() {
+                *input = text_input_with(default);
+            }
+        }
+    }
+
+    fn default_templates(profile: Profile, shape: ProjectShape) -> Vec<Template> {
+        let mut templates = vec![match shape {
+            ProjectShape::SingleProject => Template::Index,
+            ProjectShape::Monorepo => Template::MonorepoIndex,
+        }];
+        templates.push(match profile {
+            Profile::Solo => Template::Quickstart,
+            Profile::Team | Profile::AgentOperator => Template::Module,
+        });
+        templates.sort_by_key(|template| Self::template_order(*template));
+        templates
+    }
+
+    fn template_order(template: Template) -> usize {
+        Self::TEMPLATES
+            .iter()
+            .position(|candidate| *candidate == template)
+            .unwrap_or(Self::TEMPLATES.len())
     }
 
     fn move_selection(&mut self, forward: bool) {
@@ -261,14 +551,112 @@ impl WizardState {
                 self.tool_config_index =
                     move_index(self.tool_config_index, self.tool_configs.len(), forward);
             }
-            WizardStep::Done => {}
+            WizardStep::Templates => {
+                // +1 for the trailing "custom template path" entry.
+                self.template_index =
+                    move_index(self.template_index, Self::TEMPLATES.len() + 1, forward);
+            }
+            WizardStep::Components => {
+                self.component_index =
+                    move_index(self.component_index, Self::COMPONENTS.len(), forward);
+            }
+            WizardStep::Paths | WizardStep::Review | WizardStep::Scaffold | WizardStep::Summary => {
+            }
         }
     }
 
     fn toggle_current(&mut self) {
-        if self.step == WizardStep::AiTooling {
-            self.toggle_tool(Self::AI_TOOLS[self.ai_tool_index]);
+        match self.step {
+            WizardStep::AiTooling => self.toggle_tool(Self::AI_TOOLS[self.ai_tool_index]),
+            WizardStep::Templates => {
+                if self.template_index < Self::TEMPLATES.len() {
+                    self.toggle_template(Self::TEMPLATES[self.template_index]);
+                } else {
+                    self.custom_template_enabled = !self.custom_template_enabled;
+                    self.editing_custom_template = self.custom_template_enabled;
+                }
+            }
+            WizardStep::Components => {
+                self.toggle_component(Self::COMPONENTS[self.component_index]);
+            }
+            _ => {}
         }
+    }
+
+    pub fn toggle_template(&mut self, template: Template) {
+        if let Some(index) = self
+            .selected_templates
+            .iter()
+            .position(|selected| *selected == template)
+        {
+            self.selected_templates.remove(index);
+        } else {
+            self.selected_templates.push(template);
+            self.selected_templates
+                .sort_by_key(|template| Self::template_order(*template));
+        }
+    }
+
+    pub fn toggle_component(&mut self, component: Component) {
+        if let Some(index) = self
+            .selected_components
+            .iter()
+            .position(|selected| *selected == component)
+        {
+            self.selected_components.remove(index);
+        } else {
+            self.selected_components.push(component);
+            self.selected_components.sort_by_key(|component| {
+                Self::COMPONENTS
+                    .iter()
+                    .position(|candidate| candidate == component)
+                    .unwrap_or(Self::COMPONENTS.len())
+            });
+        }
+    }
+
+    pub fn selected_templates(&self) -> &[Template] {
+        &self.selected_templates
+    }
+
+    pub fn selected_components(&self) -> &[Component] {
+        &self.selected_components
+    }
+
+    pub fn custom_template_path(&self) -> Option<&str> {
+        let path = self.custom_template.value.trim();
+        (self.custom_template_enabled && !path.is_empty()).then_some(path)
+    }
+
+    pub fn plans_dir(&self) -> &str {
+        &self.plans_dir.value
+    }
+
+    pub fn docs_dir(&self) -> &str {
+        &self.docs_dir.value
+    }
+
+    pub fn tooling_root(&self) -> &str {
+        &self.tooling_root.value
+    }
+
+    /// Render the directory tree that the current path selections would
+    /// produce. Pure so the preview is unit-testable without a terminal.
+    pub fn directory_preview(&self) -> String {
+        let plans = display_dir(&self.plans_dir.value, Self::DEFAULT_PLANS_DIR);
+        let docs = display_dir(&self.docs_dir.value, Self::DEFAULT_DOCS_DIR);
+        let tooling = display_dir(&self.tooling_root.value, Self::DEFAULT_TOOLING_ROOT);
+
+        format!(
+            "<project>/\n\
+             ├── {plans}\n\
+             │   ├── index.aps.md\n\
+             │   ├── aps-rules.md\n\
+             │   ├── designs/\n\
+             │   └── decisions/\n\
+             ├── {docs}\n\
+             └── {tooling}"
+        )
     }
 
     fn current_tool_config_mut(&mut self) -> Option<&mut ToolConfig> {
@@ -306,7 +694,7 @@ impl WizardState {
 }
 
 impl ToolConfig {
-    fn default_for(tool: AiTool) -> Self {
+    pub fn default_for(tool: AiTool) -> Self {
         Self {
             tool,
             install_agents: tool.supports_agents(),
@@ -353,11 +741,32 @@ fn run_loop(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> io::Result
     loop {
         terminal.draw(|frame| render(frame, &theme, &mut state))?;
 
+        // Execute one scaffold step per frame so progress renders smoothly.
+        if state.step() == WizardStep::Scaffold {
+            state.scaffold_tick();
+            if crossterm::event::poll(Duration::from_millis(10))? {
+                let crossterm::event::Event::Key(key) = crossterm::event::read()? else {
+                    continue;
+                };
+                if state.handle(KeyHandler::map(key)) == WizardEvent::Quit {
+                    return Ok(());
+                }
+            }
+            continue;
+        }
+
         if crossterm::event::poll(Duration::from_millis(250))? {
             let crossterm::event::Event::Key(key) = crossterm::event::read()? else {
                 continue;
             };
-            match state.handle(KeyHandler::map(key)) {
+            // Text-entry steps need raw characters; the vim-style handler
+            // would swallow h/j/k/l/q as navigation.
+            let action = if state.text_entry_active() {
+                map_text_key(key)
+            } else {
+                KeyHandler::map(key)
+            };
+            match state.handle(action) {
                 WizardEvent::Continue => {}
                 WizardEvent::Complete | WizardEvent::Quit => return Ok(()),
             }
@@ -365,14 +774,45 @@ fn run_loop(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> io::Result
     }
 }
 
+fn map_text_key(event: crossterm::event::KeyEvent) -> Action {
+    use crossterm::event::{KeyCode, KeyModifiers};
+
+    if event.modifiers.contains(KeyModifiers::CONTROL) {
+        return match event.code {
+            KeyCode::Char('c') => Action::Quit,
+            _ => Action::None,
+        };
+    }
+
+    match event.code {
+        KeyCode::Up => Action::Up,
+        KeyCode::Down | KeyCode::Tab => Action::Down,
+        KeyCode::Left => Action::Left,
+        KeyCode::Right => Action::Right,
+        KeyCode::Enter => Action::Select,
+        KeyCode::Esc => Action::Back,
+        KeyCode::Backspace => Action::Backspace,
+        KeyCode::Delete => Action::Delete,
+        KeyCode::Home => Action::Home,
+        KeyCode::End => Action::End,
+        KeyCode::Char(c) => Action::Character(c),
+        _ => Action::None,
+    }
+}
+
 fn render(frame: &mut Frame<'_>, theme: &EddaCraftTheme, state: &mut WizardState) {
+    let hints = if state.text_entry_active() {
+        "type to edit  up/down field  enter next  esc back  ctrl+c quit"
+    } else {
+        "j/k navigate  space toggle  a agents  m model  h/l hooks  enter next  q quit"
+    };
     let content = render_shell(
         frame,
         frame.area(),
         ShellBranding::Anvil,
         "APS",
         "Init",
-        "j/k navigate  space toggle  a agents  m model  h/l hooks  enter next  q quit",
+        hints,
         theme,
         env!("CARGO_PKG_VERSION"),
     );
@@ -382,7 +822,12 @@ fn render(frame: &mut Frame<'_>, theme: &EddaCraftTheme, state: &mut WizardState
         WizardStep::ProjectShape => render_project_shape(frame, content, theme, state),
         WizardStep::AiTooling => render_ai_tooling(frame, content, theme, state),
         WizardStep::ToolConfig => render_tool_config(frame, content, theme, state),
-        WizardStep::Done => render_done(frame, content, state),
+        WizardStep::Templates => render_templates(frame, content, theme, state),
+        WizardStep::Paths => render_paths(frame, content, theme, state),
+        WizardStep::Components => render_components(frame, content, theme, state),
+        WizardStep::Review => render_review(frame, content, state),
+        WizardStep::Scaffold => render_scaffold(frame, content, state),
+        WizardStep::Summary => render_summary(frame, content, state),
     }
 }
 
@@ -503,7 +948,136 @@ fn render_tool_config(
     );
 }
 
-fn render_done(frame: &mut Frame<'_>, area: Rect, state: &WizardState) {
+fn render_templates(
+    frame: &mut Frame<'_>,
+    area: Rect,
+    theme: &EddaCraftTheme,
+    state: &mut WizardState,
+) {
+    let chunks = Layout::vertical([Constraint::Min(8), Constraint::Length(3)]).split(area);
+
+    let mut items: Vec<SelectItem> = WizardState::TEMPLATES
+        .iter()
+        .map(|template| {
+            let selected = state.selected_templates().contains(template);
+            SelectItem::new(
+                format!(
+                    "{} {}",
+                    if selected { "[x]" } else { "[ ]" },
+                    template.label()
+                ),
+                template.description(),
+            )
+        })
+        .collect();
+    let custom_label = match state.custom_template_path() {
+        Some(path) => format!("[x] Custom template path: {path}"),
+        None if state.custom_template_enabled => "[x] Custom template path: (typing…)".to_string(),
+        None => "[ ] Custom template path".to_string(),
+    };
+    items.push(SelectItem::new(
+        custom_label,
+        "Bring your own template directory",
+    ));
+
+    render_select(
+        frame,
+        chunks[0],
+        theme,
+        "Templates",
+        items,
+        state.template_index,
+    );
+
+    if state.editing_custom_template {
+        let input = TextInput::new(theme)
+            .placeholder("path/to/template.md")
+            .block(
+                Block::default()
+                    .title("Custom template path (enter to confirm, esc to cancel)")
+                    .borders(Borders::ALL),
+            );
+        input.render(chunks[1], frame.buffer_mut(), &mut state.custom_template);
+    } else {
+        Paragraph::new("Defaults follow your profile and project shape; space toggles.")
+            .block(Block::default().borders(Borders::ALL))
+            .render(chunks[1], frame.buffer_mut());
+    }
+}
+
+fn render_paths(
+    frame: &mut Frame<'_>,
+    area: Rect,
+    theme: &EddaCraftTheme,
+    state: &mut WizardState,
+) {
+    let chunks = Layout::vertical([
+        Constraint::Length(3),
+        Constraint::Length(3),
+        Constraint::Length(3),
+        Constraint::Min(9),
+    ])
+    .split(area);
+
+    let preview = state.directory_preview();
+    let focused = state.path_field_index;
+    let fields: [(&str, &mut TextInputState); 3] = [
+        ("Plans directory", &mut state.plans_dir),
+        ("Docs location", &mut state.docs_dir),
+        ("Tooling root", &mut state.tooling_root),
+    ];
+
+    for (index, (title, input_state)) in fields.into_iter().enumerate() {
+        let marker = if index == focused { "▸ " } else { "  " };
+        let input = TextInput::new(theme).block(
+            Block::default()
+                .title(format!("{marker}{title}"))
+                .borders(Borders::ALL),
+        );
+        input.render(chunks[index], frame.buffer_mut(), input_state);
+    }
+
+    Paragraph::new(preview)
+        .block(
+            Block::default()
+                .title("Resulting structure")
+                .borders(Borders::ALL),
+        )
+        .render(chunks[3], frame.buffer_mut());
+}
+
+fn render_components(
+    frame: &mut Frame<'_>,
+    area: Rect,
+    theme: &EddaCraftTheme,
+    state: &mut WizardState,
+) {
+    let items = WizardState::COMPONENTS
+        .iter()
+        .map(|component| {
+            let selected = state.selected_components().contains(component);
+            SelectItem::new(
+                format!(
+                    "{} {}",
+                    if selected { "[x]" } else { "[ ]" },
+                    component.label()
+                ),
+                component.description(),
+            )
+        })
+        .collect();
+
+    render_select(
+        frame,
+        area,
+        theme,
+        "Components",
+        items,
+        state.component_index,
+    );
+}
+
+fn render_review(frame: &mut Frame<'_>, area: Rect, state: &WizardState) {
     let tools = if state.selected_tools().is_empty() {
         "none".to_string()
     } else {
@@ -514,14 +1088,125 @@ fn render_done(frame: &mut Frame<'_>, area: Rect, state: &WizardState) {
             .collect::<Vec<_>>()
             .join(", ")
     };
+    let templates = state
+        .selected_templates()
+        .iter()
+        .map(|template| template.label())
+        .collect::<Vec<_>>()
+        .join(", ");
+    let templates = match state.custom_template_path() {
+        Some(path) => {
+            if templates.is_empty() {
+                format!("custom ({path})")
+            } else {
+                format!("{templates}, custom ({path})")
+            }
+        }
+        None if templates.is_empty() => "none".to_string(),
+        None => templates,
+    };
+    let components = if state.selected_components().is_empty() {
+        "none".to_string()
+    } else {
+        state
+            .selected_components()
+            .iter()
+            .map(|component| component.label())
+            .collect::<Vec<_>>()
+            .join(", ")
+    };
     let summary = format!(
-        "Profile: {}\nProject shape: {}\nAI tools: {}\n\nScaffold execution starts in TUI-004.",
+        "Profile: {}\nProject shape: {}\nAI tools: {}\nTemplates: {}\nPaths: plans={} docs={} tooling={}\nComponents: {}\n\nPress enter to scaffold, esc to go back.",
         state.profile().label(),
         state.project_shape.label(),
-        tools
+        tools,
+        templates,
+        state.plans_dir(),
+        state.docs_dir(),
+        state.tooling_root(),
+        components
     );
 
     Paragraph::new(summary)
+        .block(Block::default().title("Review").borders(Borders::ALL))
+        .render(area, frame.buffer_mut());
+}
+
+fn render_scaffold(frame: &mut Frame<'_>, area: Rect, state: &WizardState) {
+    let mut lines = Vec::new();
+    if let Some(run) = state.scaffold_run() {
+        let (done, total) = run.progress();
+        lines.push(format!("Scaffolding… {done}/{total}"));
+        lines.push(String::new());
+        for (label, status) in run.steps() {
+            let marker = match status {
+                StepStatus::Pending => "  …",
+                StepStatus::Done => "  ✓",
+                StepStatus::Failed(_) => "  ✗",
+            };
+            lines.push(format!("{marker} {label}"));
+            if let StepStatus::Failed(message) = status {
+                lines.push(format!("      {message}"));
+            }
+        }
+    } else if let Some(error) = state.scaffold_error() {
+        lines.push(format!("Cannot scaffold: {error}"));
+    }
+
+    Paragraph::new(lines.join("\n"))
+        .block(Block::default().title("Scaffold").borders(Borders::ALL))
+        .render(area, frame.buffer_mut());
+}
+
+fn render_summary(frame: &mut Frame<'_>, area: Rect, state: &WizardState) {
+    let mut lines = Vec::new();
+
+    if let Some(error) = state.scaffold_error() {
+        lines.push(format!("Scaffold aborted: {error}"));
+    } else if let Some(run) = state.scaffold_run() {
+        let failures = run.failures();
+        if failures.is_empty() {
+            lines.push("Scaffold complete.".to_string());
+        } else {
+            lines.push(format!(
+                "Scaffold finished with {} error(s):",
+                failures.len()
+            ));
+            for (label, message) in &failures {
+                lines.push(format!("  ✗ {label}: {message}"));
+            }
+        }
+        lines.push(String::new());
+        lines.push("Installed:".to_string());
+        for (label, status) in run.steps() {
+            if matches!(status, StepStatus::Done) {
+                lines.push(format!("  ✓ {label}"));
+            }
+        }
+    }
+
+    let notes: Vec<&str> = state
+        .tool_configs()
+        .iter()
+        .filter_map(|config| scaffold::post_install_note(config.tool))
+        .collect();
+    if !notes.is_empty() {
+        lines.push(String::new());
+        lines.push("Next steps:".to_string());
+        for note in notes {
+            lines.push(format!("  - {note}"));
+        }
+    }
+    lines.push(String::new());
+    lines.push(format!(
+        "  - Edit {}index.aps.md to define your plan",
+        state.plans_dir()
+    ));
+    lines.push("  - Docs: https://github.com/EddaCraft/anvil-plan-spec".to_string());
+    lines.push(String::new());
+    lines.push("Press enter to finish.".to_string());
+
+    Paragraph::new(lines.join("\n"))
         .block(Block::default().title("Summary").borders(Borders::ALL))
         .render(area, frame.buffer_mut());
 }
@@ -610,6 +1295,48 @@ impl AiTool {
     }
 }
 
+impl Template {
+    fn label(self) -> &'static str {
+        match self {
+            Self::Quickstart => "quickstart",
+            Self::Module => "module",
+            Self::Index => "index",
+            Self::MonorepoIndex => "monorepo-index",
+        }
+    }
+
+    fn description(self) -> &'static str {
+        match self {
+            Self::Quickstart => "single-file plan for small features",
+            Self::Module => "full module plan with work items",
+            Self::Index => "top-level plans/index.aps.md",
+            Self::MonorepoIndex => "index with per-package plan links",
+        }
+    }
+}
+
+impl Component {
+    fn label(self) -> &'static str {
+        match self {
+            Self::LintRules => "lint rules",
+            Self::ApsRules => "aps-rules.md",
+            Self::ProjectContext => "project-context.md",
+            Self::DesignsDir => "designs/ directory",
+            Self::DecisionsDir => "decisions/ directory",
+        }
+    }
+
+    fn description(self) -> &'static str {
+        match self {
+            Self::LintRules => "document validation via aps lint",
+            Self::ApsRules => "authoring conventions for plans",
+            Self::ProjectContext => "durable project background for agents",
+            Self::DesignsDir => "design documents alongside plans",
+            Self::DecisionsDir => "decision log directory",
+        }
+    }
+}
+
 impl HookVerbosity {
     fn next(self, forward: bool) -> Self {
         let index = match self {
@@ -648,6 +1375,15 @@ impl ModelPreference {
             Self::Opus => "opus",
             Self::Sonnet => "sonnet",
         }
+    }
+}
+
+fn display_dir(value: &str, default: &str) -> String {
+    let trimmed = value.trim().trim_end_matches('/');
+    if trimmed.is_empty() {
+        default.to_string()
+    } else {
+        format!("{trimmed}/")
     }
 }
 
@@ -796,15 +1532,251 @@ mod tests {
         );
     }
 
+    /// Drive a default state to the given step via repeated Select.
+    fn advance_to(state: &mut WizardState, step: WizardStep) {
+        for _ in 0..16 {
+            if state.step() == step {
+                return;
+            }
+            assert_eq!(state.handle(Action::Select), WizardEvent::Continue);
+        }
+        panic!("never reached {step:?}, stuck at {:?}", state.step());
+    }
+
+    fn temp_root(tag: &str) -> std::path::PathBuf {
+        let root =
+            std::env::temp_dir().join(format!("aps-wizard-test-{tag}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).unwrap();
+        root
+    }
+
     #[test]
-    fn done_screen_renders_before_completion() {
+    fn review_screen_renders_before_scaffold() {
+        let root = temp_root("review");
+        let mut state = WizardState::with_root(root.clone());
+
+        advance_to(&mut state, WizardStep::Review);
+
+        // Enter starts the scaffold; ticking drives it to the summary.
+        assert_eq!(state.handle(Action::Select), WizardEvent::Continue);
+        assert_eq!(state.step(), WizardStep::Scaffold);
+        while state.step() == WizardStep::Scaffold {
+            state.scaffold_tick();
+        }
+        assert_eq!(state.step(), WizardStep::Summary);
+        assert_eq!(state.handle(Action::Select), WizardEvent::Complete);
+
+        std::fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
+    fn full_flow_visits_template_path_and_component_steps() {
         let mut state = WizardState::default();
 
-        assert_eq!(state.handle(Action::Select), WizardEvent::Continue);
-        assert_eq!(state.handle(Action::Select), WizardEvent::Continue);
-        assert_eq!(state.handle(Action::Select), WizardEvent::Continue);
-        assert_eq!(state.step(), WizardStep::Done);
+        let mut visited = vec![state.step()];
+        while state.step() != WizardStep::Review {
+            state.handle(Action::Select);
+            if visited.last() != Some(&state.step()) {
+                visited.push(state.step());
+            }
+        }
 
-        assert_eq!(state.handle(Action::Select), WizardEvent::Complete);
+        assert_eq!(
+            visited,
+            vec![
+                WizardStep::Profile,
+                WizardStep::ProjectShape,
+                WizardStep::AiTooling,
+                WizardStep::Templates,
+                WizardStep::Paths,
+                WizardStep::Components,
+                WizardStep::Review,
+            ]
+        );
+    }
+
+    #[test]
+    fn scaffold_writes_selected_structure_to_root() {
+        let root = temp_root("scaffold");
+        let mut state = WizardState::with_root(root.clone());
+
+        advance_to(&mut state, WizardStep::Review);
+        state.handle(Action::Select);
+        while state.step() == WizardStep::Scaffold {
+            state.scaffold_tick();
+        }
+
+        let run = state.scaffold_run().expect("scaffold ran");
+        assert!(run.failures().is_empty(), "failures: {:?}", run.failures());
+        assert!(root.join("plans/index.aps.md").exists());
+        assert!(root.join(".aps/config.yml").exists());
+
+        std::fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
+    fn existing_plans_dir_surfaces_error_on_summary() {
+        let root = temp_root("collision");
+        std::fs::create_dir_all(root.join("plans")).unwrap();
+        let mut state = WizardState::with_root(root.clone());
+
+        advance_to(&mut state, WizardStep::Review);
+        state.handle(Action::Select);
+        while state.step() == WizardStep::Scaffold {
+            state.scaffold_tick();
+        }
+
+        assert_eq!(state.step(), WizardStep::Summary);
+        assert!(state.scaffold_error().is_some());
+        assert!(state.scaffold_run().is_none());
+
+        std::fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
+    fn templates_default_from_profile_and_shape() {
+        let mut state = WizardState::default();
+        advance_to(&mut state, WizardStep::Templates);
+
+        // Solo + single project → quickstart + index.
+        assert_eq!(
+            state.selected_templates(),
+            &[Template::Quickstart, Template::Index]
+        );
+
+        let mut monorepo = WizardState::default();
+        monorepo.handle(Action::Down); // profile: team
+        monorepo.handle(Action::Select);
+        monorepo.handle(Action::Down); // shape: monorepo
+        advance_to(&mut monorepo, WizardStep::Templates);
+
+        assert_eq!(
+            monorepo.selected_templates(),
+            &[Template::Module, Template::MonorepoIndex]
+        );
+    }
+
+    #[test]
+    fn space_toggles_template_under_cursor() {
+        let mut state = WizardState::default();
+        advance_to(&mut state, WizardStep::Templates);
+
+        assert!(state.selected_templates().contains(&Template::Quickstart));
+        state.handle(Action::Toggle); // cursor starts on quickstart
+        assert!(!state.selected_templates().contains(&Template::Quickstart));
+    }
+
+    #[test]
+    fn custom_template_entry_takes_typed_path() {
+        let mut state = WizardState::default();
+        advance_to(&mut state, WizardStep::Templates);
+
+        // Move to the trailing custom entry and enable it.
+        for _ in 0..WizardState::TEMPLATES.len() {
+            state.handle(Action::Down);
+        }
+        state.handle(Action::Toggle);
+        assert!(state.text_entry_active());
+
+        for c in "tpl.md".chars() {
+            state.handle(Action::Character(c));
+        }
+        state.handle(Action::Select);
+
+        assert!(!state.text_entry_active());
+        assert_eq!(state.custom_template_path(), Some("tpl.md"));
+        assert_eq!(state.step(), WizardStep::Templates);
+    }
+
+    #[test]
+    fn empty_custom_template_path_disables_custom_entry() {
+        let mut state = WizardState::default();
+        advance_to(&mut state, WizardStep::Templates);
+
+        for _ in 0..WizardState::TEMPLATES.len() {
+            state.handle(Action::Down);
+        }
+        state.handle(Action::Toggle);
+        state.handle(Action::Back); // esc with empty value
+
+        assert_eq!(state.custom_template_path(), None);
+        assert_eq!(state.step(), WizardStep::Templates);
+    }
+
+    #[test]
+    fn paths_have_defaults_and_accept_edits() {
+        let mut state = WizardState::default();
+        advance_to(&mut state, WizardStep::Paths);
+
+        assert_eq!(state.plans_dir(), "plans/");
+        assert_eq!(state.docs_dir(), "docs/");
+        assert_eq!(state.tooling_root(), ".aps/");
+
+        // Clear plans dir and type a custom path; q must insert, not quit.
+        for _ in 0.."plans/".len() {
+            state.handle(Action::Backspace);
+        }
+        for c in "quarters/".chars() {
+            assert_eq!(state.handle(Action::Character(c)), WizardEvent::Continue);
+        }
+
+        assert_eq!(state.plans_dir(), "quarters/");
+        assert!(state.directory_preview().contains("quarters/"));
+    }
+
+    #[test]
+    fn empty_path_restores_default_on_advance() {
+        let mut state = WizardState::default();
+        advance_to(&mut state, WizardStep::Paths);
+
+        for _ in 0.."plans/".len() {
+            state.handle(Action::Backspace);
+        }
+        assert_eq!(state.plans_dir(), "");
+
+        advance_to(&mut state, WizardStep::Components);
+
+        assert_eq!(state.plans_dir(), "plans/");
+    }
+
+    #[test]
+    fn enter_walks_path_fields_then_advances() {
+        let mut state = WizardState::default();
+        advance_to(&mut state, WizardStep::Paths);
+
+        assert_eq!(state.handle(Action::Select), WizardEvent::Continue);
+        assert_eq!(state.step(), WizardStep::Paths); // docs field
+        assert_eq!(state.handle(Action::Select), WizardEvent::Continue);
+        assert_eq!(state.step(), WizardStep::Paths); // tooling field
+        assert_eq!(state.handle(Action::Select), WizardEvent::Continue);
+        assert_eq!(state.step(), WizardStep::Components);
+    }
+
+    #[test]
+    fn components_default_on_and_toggle_off() {
+        let mut state = WizardState::default();
+        advance_to(&mut state, WizardStep::Components);
+
+        assert_eq!(state.selected_components(), &WizardState::COMPONENTS);
+
+        state.handle(Action::Toggle); // cursor on lint rules
+        assert!(!state.selected_components().contains(&Component::LintRules));
+    }
+
+    #[test]
+    fn escape_steps_back_through_new_sections() {
+        let mut state = WizardState::default();
+        advance_to(&mut state, WizardStep::Review);
+
+        state.handle(Action::Back);
+        assert_eq!(state.step(), WizardStep::Components);
+        state.handle(Action::Back);
+        assert_eq!(state.step(), WizardStep::Paths);
+        state.handle(Action::Back);
+        assert_eq!(state.step(), WizardStep::Templates);
+        state.handle(Action::Back);
+        // No tools selected → skips ToolConfig on the way back too.
+        assert_eq!(state.step(), WizardStep::AiTooling);
     }
 }

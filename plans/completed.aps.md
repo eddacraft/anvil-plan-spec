@@ -55,6 +55,20 @@ the active roadmap._
 | ORCH-005 | orchestrate | Conductor agent (multi-harness)              | Complete: 2026-05-12 |
 | ORCH-006 | orchestrate | MCP server (`mcp/`)                          | Complete: 2026-06-08 |
 
+### TUI Onboarding
+
+| Task    | Module | Description                                       | Status               |
+| ------- | ------ | ------------------------------------------------- | -------------------- |
+| TUI-001 | tui    | Project setup + eddacraft-tui integration         | Complete: 2026-04-26 |
+| TUI-002 | tui    | Core wizard sections (profile, shape, AI tooling) | Complete: 2026-05-16 |
+| TUI-003 | tui    | Template, path, and component sections            | Complete: 2026-06-08 |
+| TUI-004 | tui    | Native scaffold execution + summary               | Complete: 2026-06-08 |
+| TUI-005 | tui    | Non-interactive flags + config replay             | Complete: 2026-06-08 |
+| TUI-006 | tui    | Cross-compilation release pipeline                | Complete: 2026-06-08 |
+| TUI-007 | tui    | `aps setup` mode picker + shortcuts               | Complete: 2026-06-08 |
+| TUI-008 | tui    | Agent bootstrap flow (`--agent`)                  | Complete: 2026-06-08 |
+| TUI-009 | tui    | Rust parser + native `lint`/`next` parity         | Complete: 2026-06-08 |
+
 ---
 
 ## v0.3.0 — Orchestration & Multi-Agent Reach
