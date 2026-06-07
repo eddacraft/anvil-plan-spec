@@ -1,6 +1,6 @@
 use eddacraft_tui::prelude::Action;
-use eddacraft_tui::prelude::TextInputState;
 use eddacraft_tui::prelude::{EddaCraftTheme, KeyHandler, Select, SelectItem, SelectState};
+use eddacraft_tui::prelude::{TextInput, TextInputState};
 use eddacraft_tui::prelude::{ShellBranding, render_shell};
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::Frame;
@@ -660,7 +660,7 @@ fn render(frame: &mut Frame<'_>, theme: &EddaCraftTheme, state: &mut WizardState
         ShellBranding::Anvil,
         "APS",
         "Init",
-        "j/k navigate  space toggle  a agents  m model  h/l hooks  enter next  q quit",
+        help_line(state),
         theme,
         env!("CARGO_PKG_VERSION"),
     );
@@ -670,11 +670,23 @@ fn render(frame: &mut Frame<'_>, theme: &EddaCraftTheme, state: &mut WizardState
         WizardStep::ProjectShape => render_project_shape(frame, content, theme, state),
         WizardStep::AiTooling => render_ai_tooling(frame, content, theme, state),
         WizardStep::ToolConfig => render_tool_config(frame, content, theme, state),
-        // Placeholder panes until rendering lands in TUI-003 Task 5.
-        WizardStep::Templates => render_placeholder(frame, content, "Templates"),
-        WizardStep::Paths => render_placeholder(frame, content, "Paths"),
-        WizardStep::Components => render_placeholder(frame, content, "Components"),
+        WizardStep::Templates => render_templates(frame, content, theme, state),
+        WizardStep::Paths => render_paths(frame, content, theme, state),
+        WizardStep::Components => render_components(frame, content, theme, state),
         WizardStep::Done => render_done(frame, content, state),
+    }
+}
+
+fn help_line(state: &WizardState) -> &'static str {
+    match state.step() {
+        WizardStep::Paths => "type to edit  up/down field  enter next  esc back  ctrl+c quit",
+        WizardStep::Templates if state.is_editing() => {
+            "type path  enter confirm  esc cancel  ctrl+c quit"
+        }
+        WizardStep::Templates | WizardStep::Components => {
+            "j/k navigate  space toggle  enter next  esc back  q quit"
+        }
+        _ => "j/k navigate  space toggle  a agents  m model  h/l hooks  enter next  q quit",
     }
 }
 
@@ -806,11 +818,36 @@ fn render_done(frame: &mut Frame<'_>, area: Rect, state: &WizardState) {
             .collect::<Vec<_>>()
             .join(", ")
     };
+    let templates = if state.selected_templates().is_empty() {
+        "none".to_string()
+    } else {
+        state
+            .selected_templates()
+            .iter()
+            .map(|template| template.label())
+            .collect::<Vec<_>>()
+            .join(", ")
+    };
+    let components = if state.selected_components().is_empty() {
+        "none".to_string()
+    } else {
+        state
+            .selected_components()
+            .iter()
+            .map(|component| component.label())
+            .collect::<Vec<_>>()
+            .join(", ")
+    };
     let summary = format!(
-        "Profile: {}\nProject shape: {}\nAI tools: {}\n\nScaffold execution starts in TUI-004.",
+        "Profile: {}\nProject shape: {}\nAI tools: {}\nTemplates: {}\nPaths: plans {} | docs {} | tooling {}\nComponents: {}\n\nScaffold execution starts in TUI-004.",
         state.profile().label(),
         state.project_shape.label(),
-        tools
+        tools,
+        templates,
+        state.plans_dir(),
+        state.docs_dir(),
+        state.tooling_root(),
+        components
     );
 
     Paragraph::new(summary)
@@ -818,10 +855,124 @@ fn render_done(frame: &mut Frame<'_>, area: Rect, state: &WizardState) {
         .render(area, frame.buffer_mut());
 }
 
-fn render_placeholder(frame: &mut Frame<'_>, area: Rect, title: &'static str) {
-    Paragraph::new("Section under construction — Enter to continue, Esc to go back")
-        .block(Block::default().title(title).borders(Borders::ALL))
-        .render(area, frame.buffer_mut());
+fn render_templates(
+    frame: &mut Frame<'_>,
+    area: Rect,
+    theme: &EddaCraftTheme,
+    state: &mut WizardState,
+) {
+    let chunks = Layout::vertical([Constraint::Min(7), Constraint::Length(3)]).split(area);
+
+    let items = WizardState::TEMPLATES
+        .iter()
+        .map(|template| {
+            let selected = state.selected_templates().contains(template);
+            SelectItem::new(
+                format!(
+                    "{} {}",
+                    if selected { "[x]" } else { "[ ]" },
+                    template.label()
+                ),
+                template.description(),
+            )
+        })
+        .collect();
+    render_select(
+        frame,
+        chunks[0],
+        theme,
+        "Templates",
+        items,
+        state.template_index,
+    );
+
+    let title = if state.is_editing() {
+        "Custom template path (editing)"
+    } else {
+        "Custom template path"
+    };
+    let input = TextInput::new(theme)
+        .placeholder("path/to/template.md")
+        .block(Block::default().title(title).borders(Borders::ALL));
+    input.render(
+        chunks[1],
+        frame.buffer_mut(),
+        &mut state.custom_template_path,
+    );
+}
+
+fn render_paths(
+    frame: &mut Frame<'_>,
+    area: Rect,
+    theme: &EddaCraftTheme,
+    state: &mut WizardState,
+) {
+    let columns =
+        Layout::horizontal([Constraint::Percentage(55), Constraint::Percentage(45)]).split(area);
+    let fields = Layout::vertical([
+        Constraint::Length(3),
+        Constraint::Length(3),
+        Constraint::Length(3),
+        Constraint::Min(0),
+    ])
+    .split(columns[0]);
+
+    const LABELS: [&str; 3] = ["Plans directory", "Docs location", "Tooling root"];
+    for (index, label) in LABELS.iter().enumerate() {
+        let title = if state.path_focus() == index {
+            format!("▸ {label}")
+        } else {
+            format!("  {label}")
+        };
+        let input = TextInput::new(theme)
+            .block(Block::default().title(title).borders(Borders::ALL));
+        input.render(
+            fields[index],
+            frame.buffer_mut(),
+            &mut state.path_inputs[index],
+        );
+    }
+
+    Paragraph::new(state.directory_preview())
+        .block(Block::default().title("Preview").borders(Borders::ALL))
+        .render(columns[1], frame.buffer_mut());
+}
+
+fn render_components(
+    frame: &mut Frame<'_>,
+    area: Rect,
+    theme: &EddaCraftTheme,
+    state: &mut WizardState,
+) {
+    let columns =
+        Layout::horizontal([Constraint::Percentage(55), Constraint::Percentage(45)]).split(area);
+
+    let items = WizardState::COMPONENTS
+        .iter()
+        .map(|component| {
+            let selected = state.selected_components().contains(component);
+            SelectItem::new(
+                format!(
+                    "{} {}",
+                    if selected { "[x]" } else { "[ ]" },
+                    component.label()
+                ),
+                component.description(),
+            )
+        })
+        .collect();
+    render_select(
+        frame,
+        columns[0],
+        theme,
+        "Components",
+        items,
+        state.component_index,
+    );
+
+    Paragraph::new(state.directory_preview())
+        .block(Block::default().title("Preview").borders(Borders::ALL))
+        .render(columns[1], frame.buffer_mut());
 }
 
 fn render_select(
@@ -856,6 +1007,50 @@ impl ProjectShape {
         match self {
             Self::SingleProject => "single project",
             Self::Monorepo => "monorepo",
+        }
+    }
+}
+
+impl Template {
+    fn label(self) -> &'static str {
+        match self {
+            Self::Quickstart => "quickstart",
+            Self::Module => "module",
+            Self::Index => "index",
+            Self::MonorepoIndex => "monorepo-index",
+            Self::Custom => "custom path",
+        }
+    }
+
+    fn description(self) -> &'static str {
+        match self {
+            Self::Quickstart => "minimal single-file plan to try APS fast",
+            Self::Module => "bounded module with work items",
+            Self::Index => "roadmap index for a new initiative",
+            Self::MonorepoIndex => "index variant for multi-package repos",
+            Self::Custom => "bring your own template file or directory",
+        }
+    }
+}
+
+impl Component {
+    fn label(self) -> &'static str {
+        match self {
+            Self::LintRules => "lint rules",
+            Self::ApsRules => "aps-rules.md",
+            Self::ProjectContext => "project-context.md",
+            Self::DesignsDir => "designs/ directory",
+            Self::DecisionsDir => "decisions/ directory",
+        }
+    }
+
+    fn description(self) -> &'static str {
+        match self {
+            Self::LintRules => "document linting under the tooling root",
+            Self::ApsRules => "portable agent guide (APS-managed)",
+            Self::ProjectContext => "project intent and constraints (user-owned)",
+            Self::DesignsDir => "technical design documents",
+            Self::DecisionsDir => "decision records",
         }
     }
 }
