@@ -7,7 +7,7 @@
 | ------- | ---------- |
 | Scope   | ALL        |
 | Status  | Active     |
-| Updated | 2026-05-22 |
+| Updated | 2026-06-08 |
 
 ## Purpose
 
@@ -35,6 +35,17 @@ the active roadmap._
 | COMPOUND-001 | compound | Solution library workflow                  | Complete: 2026-05-15  |
 | COMPOUND-002 | compound | Completed-work archive pattern             | Complete: 2026-05-22  |
 | COMPOUND-003 | compound | Release narrative convention               | Complete: 2026-05-22  |
+
+### Orchestration
+
+| Task     | Module      | Description                                  | Status               |
+| -------- | ----------- | -------------------------------------------- | -------------------- |
+| ORCH-001 | orchestrate | `aps next` — dependency resolution           | Complete: 2026-04-26 |
+| ORCH-002 | orchestrate | `aps start` / `aps complete` — state machine | Complete             |
+| ORCH-003 | orchestrate | Context packaging (`.aps/context/`)          | Complete             |
+| ORCH-004 | orchestrate | `aps graph` — dependency visualization       | Complete             |
+| ORCH-005 | orchestrate | Conductor agent (multi-harness)              | Complete: 2026-05-12 |
+| ORCH-006 | orchestrate | MCP server (`mcp/`)                          | Complete: 2026-06-08 |
 
 ---
 

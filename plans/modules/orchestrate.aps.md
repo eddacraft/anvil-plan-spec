@@ -1,8 +1,8 @@
 # Orchestrate Module
 
-| ID   | Owner  | Status      |
-| ---- | ------ | ----------- |
-| ORCH | @aneki | In Progress |
+| ID   | Owner  | Status   |
+| ---- | ------ | -------- |
+| ORCH | @aneki | Complete |
 
 > **Note:** This is an exploratory "or" spec — an alternative to the TASKS
 > module for providing programmatic plan navigation. TASKS focuses on Claude
@@ -23,25 +23,9 @@ portable-markdown philosophy.
 APS specs already contain everything needed for orchestration: work items with
 dependencies, status fields, modules with scope boundaries. What's missing is
 a programmatic interface for agents to navigate the plan without manually
-scanning markdown.
-
-Research into BMAD Method and Overseer (see
-[docs/research/orchestration-patterns.md](../../docs/research/orchestration-patterns.md))
-identified a synthesis: use BMAD's pattern (LLM as orchestrator, files as
-truth) with Overseer's pattern (programmatic `nextReady()`, state enforcement)
-by building CLI tools that read from and write back to markdown.
-
-### Key Design Principles
-
-1. **Markdown is the database** — no SQLite, no separate state store. The CLI
-   parses `.aps.md` files directly and writes changes back to them.
-2. **Progressive enhancement** — the CLI is optional. Agents and humans can
-   always work directly with markdown. The CLI just makes it faster and less
-   error-prone.
-3. **Tool-agnostic** — the CLI works in any shell. An optional MCP server wraps
-   it for agents that support MCP. A Conductor agent wraps it in prompts for
-   agents that don't.
-4. **No drift** — there is no second source of truth that can get out of sync.
+scanning markdown. Research into BMAD Method and Overseer informed the
+approach — see [Research](#research) and the
+[design doc](../designs/2026-06-08-orchestrate.design.md).
 
 ## In Scope
 
@@ -73,130 +57,30 @@ by building CLI tools that read from and write back to markdown.
 
 **Exposes:**
 
-- `aps next [module]` — resolve next-ready work item (DFS through deps)
-- `aps start <ID>` — mark In Progress, optionally create VCS branch, assemble
-  context package
+- `aps next [module]` — resolve the next-ready work item
+- `aps start <ID>` — mark In Progress, suggest VCS branch, assemble context
+  package
 - `aps complete <ID>` — validate state transition, mark Complete, prompt for
   learnings
 - `aps complete <ID> --learning "insight"` — attach learning to work item
   inline (per D-002; no standalone `aps learn` command shipped)
 - `aps graph [module]` — show dependency graph with status coloring
-- Optional: MCP server with codemode (single `execute` tool, natural language
-  routing à la Overseer)
+- Optional: MCP server exposing the CLI command surface to MCP-capable agents
 - Optional: Conductor agent (`.claude/agents/aps-conductor.md` etc.)
 - Optional: Context package generator
 
-## Concept Design
+## Designs
 
-### CLI Operations
-
-```
-$ aps next
-→ AUTH-003: Implement token refresh
-  Module: auth | Dependencies: AUTH-001 ✓, AUTH-002 ✓ | Status: Ready
-
-$ aps start AUTH-003
-→ Marked AUTH-003 as In Progress
-→ Context package: .aps/context/AUTH-003.md (assembled from module scope,
-  parent decisions, dependency learnings)
-→ Branch: work/AUTH-003 (created, checked out)
-
-$ aps complete AUTH-003
-→ Validated: AUTH-003 was In Progress → Complete ✓
-→ Learning? (optional): "Token refresh needs retry logic for network failures"
-→ Marked AUTH-003 as Complete
-→ Learning attached and propagated to auth module
-
-$ aps graph auth
-→ AUTH-001 [Complete] ──→ AUTH-003 [Complete]
-  AUTH-002 [Complete] ──┘
-  AUTH-004 [Ready] ←── AUTH-003
-  AUTH-005 [Draft] (blocked by AUTH-004)
-```
-
-### Context Packaging
-
-When `aps start` is called, it assembles a context package:
-
-```markdown
-# Context: AUTH-003 — Implement token refresh
-
-## Work Item
-
-[Pulled from auth.aps.md — intent, outcome, validation, files]
-
-## Module Scope
-
-[Pulled from auth.aps.md — purpose, in-scope, interfaces]
-
-## Decisions
-
-[Pulled from auth.aps.md — relevant decisions]
-
-## Dependency Learnings
-
-- AUTH-001: "JWT library requires explicit algorithm whitelist"
-- AUTH-002: "Session store must handle concurrent access"
-
-## Related Files
-
-[From work item Files field, expanded to actual paths]
-```
-
-This is analogous to BMAD's story files — a self-contained context that lets
-an agent start fresh with everything it needs.
-
-### State Machine
-
-```
-Work Item States:
-  Draft ──→ Ready ──→ In Progress ──→ Complete
-                 ↑         │
-                 └─────────┘ (reset if blocked)
-
-Module States:
-  Draft ──→ Ready ──→ In Progress ──→ Complete
-```
-
-The CLI enforces valid transitions. `aps complete` rejects items not In
-Progress. `aps start` rejects items whose dependencies aren't Complete.
-
-### MCP Server (Optional)
-
-Wraps CLI operations as a single MCP codemode tool:
-
-```json
-{
-  "name": "aps",
-  "description": "APS plan orchestration",
-  "inputSchema": {
-    "type": "object",
-    "properties": {
-      "command": { "type": "string" }
-    }
-  }
-}
-```
-
-Agent sends: `"What's the next ready work item in the auth module?"`
-Server parses intent, runs `aps next auth`, returns structured result.
-
-### Conductor Agent (Optional)
-
-A rich agent definition (like BMAD's BMad Master) that:
-
-- Knows the full APS lifecycle and rules
-- Has a decision tree: assess plan → pick next item → dispatch to agent →
-  validate checkpoint → capture learnings
-- Uses CLI commands internally when available, falls back to direct markdown
-  reading when not
-- Works on any platform as a prompt file
+- [Orchestration CLI Design](../designs/2026-06-08-orchestrate.design.md) —
+  as-built design: CLI operations, context packaging, state machine, MCP
+  server, Conductor agent
 
 ## Ready Checklist
 
 - [x] Purpose and scope are clear
 - [x] Dependencies identified
-- [x] Decisions resolved (D-001 through D-005)
+- [x] Decisions resolved (D-001 through D-007; D-006 ratified 2026-06-08
+      jointly with tui D-031)
 - [x] Work items defined (ORCH-001 through ORCH-006)
 
 ## Work Items
@@ -277,14 +161,27 @@ A rich agent definition (like BMAD's BMad Master) that:
 ### ORCH-006: Create MCP server
 
 - **Intent:** Expose orchestration to MCP-capable agents
-- **Expected Outcome:** TypeScript MCP server (using MCP SDK) wrapping CLI
-  operations. Single codemode tool with natural language routing. Agents
-  send requests like "next ready item in auth" and get structured results.
+- **Expected Outcome:** MCP server (technology per D-004) wrapping the CLI
+  command surface behind a single tool. Agents send direct commands or
+  requests like "next ready item in auth" and get structured results.
 - **Validation:** MCP tool discovery succeeds; agent can call `aps next`
   through MCP; server handles malformed input gracefully
+- **Learning:** "Node >=22.18 runs the TS server directly (no build step);
+  TypeScript 6 no longer auto-includes @types — declare types:[node]
+  explicitly"
 - **Confidence:** low
 - **Dependencies:** ORCH-001, ORCH-002
-- **Status:** Draft
+- **Status:** Complete: 2026-06-08
+- **Action plan:** [execution/ORCH-006.actions.md](../execution/ORCH-006.actions.md)
+- **Results:** Implemented as `mcp/` package — `src/index.ts` (server, MCP
+  SDK per D-004) + `src/route.ts` (allowlisted command routing with
+  natural-language fallback; shell metacharacters rejected, execution via
+  `execFile` without a shell). Validated end-to-end with an MCP client
+  against the orchestrate fixture: tool discovery, NL-routed `next`, direct
+  `graph`, malformed-input error, and CLI-failure resilience. 14 tests
+  (9 routing + 5 e2e) wired into `test/run.sh` as test 21 (skips when Node
+  unavailable). Docs: `mcp/README.md` + MCP Server section in
+  `docs/usage.md`.
 
 ## Decisions
 
@@ -306,23 +203,21 @@ A rich agent definition (like BMAD's BMad Master) that:
   (gitignored). Context packages are assembled fresh on `aps start` from
   versioned source data (work items, modules, decisions). No need to version
   the assembled output — it would just be clutter._
-
-## Execution Strategy
-
-### Phase 1: CLI Foundation
-
-- ORCH-001: `aps next` (dependency resolution)
-- ORCH-002: `aps start` / `aps complete` (state machine)
-
-### Phase 2: Context and Visualization
-
-- ORCH-003: Context packaging
-- ORCH-004: `aps graph`
-
-### Phase 3: Agent Integration
-
-- ORCH-005: Conductor agent
-- ORCH-006: MCP server
+- **D-006:** Bash-only CLI vs Rust migration — _decided 2026-06-08: amend
+  D-004's "CLI stays pure bash". Bash remains the zero-dependency reference
+  implementation; ORCH commands are ported to the Rust binary on the shared
+  parser (parser + `lint` + `next` first, via tui TUI-009; `start`,
+  `complete`, `graph` follow once parity is proven), with the fixtures under
+  `test/fixtures/orchestrate/` reused as the parity suite so the two
+  implementations cannot drift. The bash version is feature-frozen after
+  parity is reached. Revisit if a fallback CLI (plain-prompt mode) lands in
+  `eddacraft/eddacraft-tui` — that could change the fallback story and the
+  bash freeze. See tui D-031 for the TUI-side counterpart._
+- **D-007:** ORCH-006 (MCP server) disposition — _decided 2026-06-08:
+  implement now. The server wraps the `aps` command surface (it shells out to
+  whichever binary provides it), so it is agnostic to D-006's bash-vs-Rust
+  outcome and need not wait for it. Owner call: ship ORCH-006 and complete
+  the module with all six items._
 
 ## Relationship to Other Modules
 
@@ -334,22 +229,6 @@ A rich agent definition (like BMAD's BMad Master) that:
 | **COMPOUND** | ORCH's learning capture feeds into COMPOUND's solution docs                                            |
 | **INSTALL**  | ORCH CLI commands and MCP server need installation support                                             |
 
-## Notes
-
-- This module is explicitly exploratory. It captures patterns from BMAD Method
-  (prompt-based orchestration, step-file architecture, context packaging) and
-  Overseer (programmatic `nextReady()`, state enforcement, learning
-  propagation) and synthesizes them for APS.
-- The core bet: **markdown can be both human-readable AND machine-queryable**
-  if you build a thin CLI layer that parses it. No database needed.
-- The CLI should be implementable as an extension of the existing `./bin/aps`
-  script, reusing the VAL module's parser.
-- Phase 1 (CLI foundation) is achievable quickly — it's essentially `grep +
-parse + sed` on structured markdown.
-- Phases 2-3 are progressive enhancements that add value but aren't required
-  for basic use.
-
 ## Research
 
-- [Orchestration Patterns: BMAD, Overseer, and APS](../../docs/research/orchestration-patterns.md)
-- [BMAD Plugin Feasibility](../../docs/research/bmad-plugin-feasibility.md)
+- [Orchestration Patterns: BMAD, Overseer, and APS](../research/orchestration-patterns.md)
