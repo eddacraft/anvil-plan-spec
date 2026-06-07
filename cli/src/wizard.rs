@@ -129,6 +129,7 @@ pub struct WizardState {
     editing_custom_template: bool,
     custom_template: TextInputState,
     path_field_index: usize,
+    path_error: Option<&'static str>,
     plans_dir: TextInputState,
     docs_dir: TextInputState,
     tooling_root: TextInputState,
@@ -158,6 +159,7 @@ impl Default for WizardState {
             editing_custom_template: false,
             custom_template: TextInputState::default(),
             path_field_index: 0,
+            path_error: None,
             plans_dir: text_input_with(Self::DEFAULT_PLANS_DIR),
             docs_dir: text_input_with(Self::DEFAULT_DOCS_DIR),
             tooling_root: text_input_with(Self::DEFAULT_TOOLING_ROOT),
@@ -337,9 +339,22 @@ impl WizardState {
             Action::Right => self.current_text_mut().move_right(),
             Action::Home => self.current_text_mut().home(),
             Action::End => self.current_text_mut().end(),
-            Action::Backspace => self.current_text_mut().backspace(),
-            Action::Delete => self.current_text_mut().delete(),
-            Action::Character(c) => self.current_text_mut().insert(c),
+            Action::Backspace => {
+                self.path_error = None;
+                self.current_text_mut().backspace();
+            }
+            Action::Delete => {
+                self.path_error = None;
+                self.current_text_mut().delete();
+            }
+            Action::Character(c) if is_text_char(c) => {
+                self.path_error = None;
+                self.current_text_mut().insert(c);
+            }
+            // Control, bidi-override, and zero-width characters are dropped:
+            // they corrupt stored paths and enable filename spoofing once the
+            // scaffold writes to disk.
+            Action::Character(_) => {}
             Action::Back => {
                 if self.editing_custom_template {
                     self.finish_custom_template_edit();
@@ -352,6 +367,8 @@ impl WizardState {
                     self.finish_custom_template_edit();
                 } else if self.path_field_index + 1 < Self::PATH_FIELDS.len() {
                     self.path_field_index += 1;
+                } else if let Some(reason) = self.first_invalid_path() {
+                    self.path_error = Some(reason);
                 } else {
                     return self.advance();
                 }
@@ -360,6 +377,16 @@ impl WizardState {
         }
 
         WizardEvent::Continue
+    }
+
+    /// Check the three target directories before leaving the Paths step.
+    /// Empty values are fine (the scaffold substitutes defaults); absolute
+    /// and parent-traversing paths would let the scaffold write outside the
+    /// project root.
+    fn first_invalid_path(&self) -> Option<&'static str> {
+        [&self.plans_dir, &self.docs_dir, &self.tooling_root]
+            .into_iter()
+            .find_map(|input| invalid_path_reason(&input.value))
     }
 
     fn current_text_mut(&mut self) -> &mut TextInputState {
@@ -708,6 +735,54 @@ impl ToolConfig {
     }
 }
 
+/// Characters allowed into path/template text fields. Control codes, bidi
+/// overrides, and zero-width characters are rejected — they corrupt stored
+/// paths and enable filename spoofing when the scaffold writes to disk.
+fn is_text_char(c: char) -> bool {
+    !c.is_control()
+        && !matches!(
+            c,
+            '\u{200B}'..='\u{200F}' | '\u{202A}'..='\u{202E}' | '\u{2066}'..='\u{2069}' | '\u{FEFF}'
+        )
+}
+
+/// Why a target directory value is unusable, or None if it is fine.
+/// Mirrors the defense-in-depth check in scaffold::normalize_dir.
+fn invalid_path_reason(value: &str) -> Option<&'static str> {
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        return None; // empty means "use the default"
+    }
+    let path = std::path::Path::new(trimmed);
+    if path.is_absolute() {
+        return Some("Paths must be relative to the project root");
+    }
+    if path
+        .components()
+        .any(|component| matches!(component, std::path::Component::ParentDir))
+    {
+        return Some("Paths may not contain ..");
+    }
+    None
+}
+
+/// Restores the terminal on drop — including on panic or early error — so a
+/// wizard crash never leaves the user's shell in raw mode inside the
+/// alternate screen. Cleanup is best-effort: a failing step must not prevent
+/// the remaining ones.
+struct TerminalGuard;
+
+impl Drop for TerminalGuard {
+    fn drop(&mut self) {
+        let _ = crossterm::execute!(
+            io::stdout(),
+            crossterm::terminal::LeaveAlternateScreen,
+            crossterm::cursor::Show
+        );
+        let _ = crossterm::terminal::disable_raw_mode();
+    }
+}
+
 pub fn run() -> io::Result<()> {
     if !io::stdin().is_terminal() || !io::stdout().is_terminal() {
         return Err(io::Error::new(
@@ -717,21 +792,12 @@ pub fn run() -> io::Result<()> {
     }
 
     crossterm::terminal::enable_raw_mode()?;
-    let mut stdout = io::stdout();
-    crossterm::execute!(stdout, crossterm::terminal::EnterAlternateScreen)?;
+    let _guard = TerminalGuard;
+    crossterm::execute!(io::stdout(), crossterm::terminal::EnterAlternateScreen)?;
 
-    let backend = CrosstermBackend::new(stdout);
+    let backend = CrosstermBackend::new(io::stdout());
     let mut terminal = Terminal::new(backend)?;
-    let result = run_loop(&mut terminal);
-
-    crossterm::terminal::disable_raw_mode()?;
-    crossterm::execute!(
-        terminal.backend_mut(),
-        crossterm::terminal::LeaveAlternateScreen
-    )?;
-    terminal.show_cursor()?;
-
-    result
+    run_loop(&mut terminal)
 }
 
 fn run_loop(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> io::Result<()> {
@@ -780,6 +846,8 @@ fn map_text_key(event: crossterm::event::KeyEvent) -> Action {
     if event.modifiers.contains(KeyModifiers::CONTROL) {
         return match event.code {
             KeyCode::Char('c') => Action::Quit,
+            KeyCode::Char('a') => Action::Home,
+            KeyCode::Char('e') => Action::End,
             _ => Action::None,
         };
     }
@@ -1019,7 +1087,10 @@ fn render_paths(
     ])
     .split(area);
 
-    let preview = state.directory_preview();
+    let preview = match state.path_error {
+        Some(error) => format!("⚠ {error}\n\n{}", state.directory_preview()),
+        None => state.directory_preview(),
+    };
     let focused = state.path_field_index;
     let fields: [(&str, &mut TextInputState); 3] = [
         ("Plans directory", &mut state.plans_dir),
@@ -1778,5 +1849,85 @@ mod tests {
         state.handle(Action::Back);
         // No tools selected → skips ToolConfig on the way back too.
         assert_eq!(state.step(), WizardStep::AiTooling);
+    }
+
+    #[test]
+    fn control_and_bidi_characters_are_rejected_in_text_entry() {
+        let mut state = WizardState::default();
+        advance_to(&mut state, WizardStep::Paths);
+
+        state.handle(Action::Character('\u{1b}')); // escape
+        state.handle(Action::Character('\u{202E}')); // bidi override
+        state.handle(Action::Character('\u{200B}')); // zero-width space
+
+        assert_eq!(state.plans_dir.value, "plans/");
+    }
+
+    #[test]
+    fn map_text_key_supports_ctrl_a_and_ctrl_e() {
+        use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+        let ctrl = |c| KeyEvent::new(KeyCode::Char(c), KeyModifiers::CONTROL);
+
+        assert_eq!(map_text_key(ctrl('a')), Action::Home);
+        assert_eq!(map_text_key(ctrl('e')), Action::End);
+        assert_eq!(map_text_key(ctrl('c')), Action::Quit);
+    }
+
+    #[test]
+    fn unsafe_paths_block_advance_with_error() {
+        let mut state = WizardState::default();
+        advance_to(&mut state, WizardStep::Paths);
+
+        // Overwrite the plans dir with a traversal path.
+        for _ in 0.."plans/".len() {
+            state.handle(Action::Backspace);
+        }
+        for c in "../evil".chars() {
+            state.handle(Action::Character(c));
+        }
+
+        // Enter walks the remaining fields, then attempts to advance.
+        state.handle(Action::Select);
+        state.handle(Action::Select);
+        state.handle(Action::Select);
+
+        assert_eq!(state.step(), WizardStep::Paths);
+        assert!(state.path_error.is_some());
+
+        // Fix the offending field: focus back to plans dir, retype.
+        state.handle(Action::Up);
+        state.handle(Action::Up);
+        for _ in 0.."../evil".len() {
+            state.handle(Action::Backspace);
+        }
+        assert!(state.path_error.is_none());
+        for c in "plans/".chars() {
+            state.handle(Action::Character(c));
+        }
+
+        state.handle(Action::Select);
+        state.handle(Action::Select);
+        state.handle(Action::Select);
+        assert_eq!(state.step(), WizardStep::Components);
+    }
+
+    #[test]
+    fn absolute_paths_block_advance_with_error() {
+        let mut state = WizardState::default();
+        advance_to(&mut state, WizardStep::Paths);
+
+        for _ in 0.."plans/".len() {
+            state.handle(Action::Backspace);
+        }
+        for c in "/etc/aps".chars() {
+            state.handle(Action::Character(c));
+        }
+
+        state.handle(Action::Select);
+        state.handle(Action::Select);
+        state.handle(Action::Select);
+
+        assert_eq!(state.step(), WizardStep::Paths);
+        assert!(state.path_error.is_some());
     }
 }
