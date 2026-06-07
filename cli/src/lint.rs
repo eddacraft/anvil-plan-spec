@@ -6,8 +6,10 @@
 //! unescaped JSON strings) are preserved deliberately — the parity
 //! contract is byte-identical output on the same input.
 
+use std::collections::HashSet;
 use std::io::IsTerminal;
 use std::path::Path;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::parser::{self, FileType, PlanFile};
 
@@ -89,14 +91,76 @@ pub fn lint_target(target: &str) -> Result<LintReport, String> {
         return Err(format!("No APS files found in: {target}"));
     }
 
+    // Cross-file ID index (`build_id_index`). For a single-file target,
+    // widen the index to the surrounding plan tree so cross-module
+    // dependencies still resolve.
+    let mut index_files = files.clone();
+    if target_path.is_file() {
+        if let Some(parent) = target_path.parent() {
+            let tdir = std::fs::canonicalize(if parent.as_os_str().is_empty() {
+                Path::new(".")
+            } else {
+                parent
+            })
+            .unwrap_or_else(|_| parent.to_path_buf());
+            let tdir_str = tdir.to_string_lossy().into_owned();
+            // Climb out of modules/ (including nested subdirectories).
+            let troot = match tdir_str.find("/modules") {
+                Some(at)
+                    if tdir_str[at..] == *"/modules"
+                        || tdir_str[at + "/modules".len()..].starts_with('/') =>
+                {
+                    tdir_str[..at].to_string()
+                }
+                _ => tdir_str,
+            };
+            index_files.extend(parser::find_aps_files(Path::new(&troot)));
+        }
+    }
+    let tree_ids = build_id_index(&index_files);
+
     let mut report = LintReport::default();
     for file in &files {
-        lint_file(&mut report, file);
+        lint_file(&mut report, file, &tree_ids);
     }
     Ok(report)
 }
 
-fn lint_file(report: &mut LintReport, path: &str) {
+/// Work item and decision IDs from the plan tree (`build_id_index`).
+/// Fence-aware: IDs inside ``` / ~~~ code blocks are examples, not
+/// definitions.
+fn build_id_index(files: &[String]) -> HashSet<String> {
+    let mut ids = HashSet::new();
+    for file in files {
+        let Ok(plan) = PlanFile::load(file) else {
+            continue;
+        };
+        let mut fence = false;
+        for line in &plan.lines {
+            if line.starts_with("```") || line.starts_with("~~~") {
+                fence = !fence;
+                continue;
+            }
+            if fence {
+                continue;
+            }
+            // Work item headers: ### AUTH-001: title
+            if let Some(id) = parser::parse_work_item_id(line) {
+                ids.insert(id.to_string());
+            }
+            // Decision entries: - **D-026:** text
+            if let Some(rest) = line.strip_prefix("- **D-") {
+                let digits: String = rest.chars().take_while(|c| c.is_ascii_digit()).collect();
+                if !digits.is_empty() && rest[digits.len()..].starts_with(':') {
+                    ids.insert(format!("D-{digits}"));
+                }
+            }
+        }
+    }
+    ids
+}
+
+fn lint_file(report: &mut LintReport, path: &str, tree_ids: &HashSet<String>) {
     let kind = parser::file_type(path);
     report.files.push((path.to_string(), kind));
 
@@ -107,7 +171,7 @@ fn lint_file(report: &mut LintReport, path: &str) {
 
     match kind {
         FileType::Index => lint_index(report, &plan),
-        FileType::Module | FileType::Simple => lint_module(report, &plan),
+        FileType::Module | FileType::Simple => lint_module(report, &plan, tree_ids),
         FileType::Issues => lint_issues(report, &plan),
         FileType::Design => lint_design(report, &plan),
         FileType::Actions | FileType::Archive | FileType::Template => {}
@@ -135,9 +199,92 @@ fn lint_index(report: &mut LintReport, plan: &PlanFile) {
             None,
         );
     }
+    check_w019_module_links(report, plan);
     for section in ["## Overview", "## Problem & Success Criteria", "## Modules"] {
         check_empty_section(report, plan, section);
     }
+}
+
+/// W019: link in ## Modules points to a non-existent file. Warning, not
+/// error — the scaffold seed index intentionally links a placeholder.
+fn check_w019_module_links(report: &mut LintReport, plan: &PlanFile) {
+    let dir = Path::new(&plan.path)
+        .parent()
+        .map(|p| p.to_path_buf())
+        .unwrap_or_else(|| Path::new(".").to_path_buf());
+
+    let mut in_modules = false;
+    for (index, line) in plan.lines.iter().enumerate() {
+        if line.starts_with("## Modules") {
+            in_modules = true;
+            continue;
+        }
+        if in_modules && line.starts_with("## ") {
+            in_modules = false;
+        }
+        if !in_modules {
+            continue;
+        }
+
+        // Every `](target)` on the line.
+        let mut rest = line.as_str();
+        while let Some(open) = rest.find("](") {
+            let after = &rest[open + 2..];
+            let Some(close) = after.find(')') else {
+                break;
+            };
+            let mut target = after[..close].to_string();
+            rest = &after[close + 1..];
+
+            // Strip markdown link titles: ` "title"` / ` 'title'`.
+            if let Some(at) = target.find(|c| c == ' ' || c == '\t') {
+                let tail = target[at..].trim_start();
+                if tail.starts_with('"') || tail.starts_with('\'') {
+                    target.truncate(at);
+                }
+            }
+
+            // Skip pure anchors and any URI scheme.
+            if target.starts_with('#') || has_uri_scheme(&target) {
+                continue;
+            }
+            // Strip anchor fragment.
+            let target = target.split('#').next().unwrap_or("");
+            if target.is_empty() {
+                continue;
+            }
+
+            if !dir.join(target).exists() {
+                report.add(
+                    &plan.path,
+                    Severity::Warning,
+                    "W019",
+                    format!("Module link target not found: {target}"),
+                    Some(index + 1),
+                );
+            }
+        }
+    }
+}
+
+/// `^[A-Za-z][A-Za-z0-9+.-]*:`
+fn has_uri_scheme(target: &str) -> bool {
+    let mut chars = target.chars();
+    let Some(first) = chars.next() else {
+        return false;
+    };
+    if !first.is_ascii_alphabetic() {
+        return false;
+    }
+    for c in chars {
+        if c == ':' {
+            return true;
+        }
+        if !(c.is_ascii_alphanumeric() || matches!(c, '+' | '.' | '-')) {
+            return false;
+        }
+    }
+    false
 }
 
 fn check_empty_section(report: &mut LintReport, plan: &PlanFile, section: &str) {
@@ -154,7 +301,7 @@ fn check_empty_section(report: &mut LintReport, plan: &PlanFile, section: &str) 
 
 // --- Module / simple rules -------------------------------------------------------
 
-fn lint_module(report: &mut LintReport, plan: &PlanFile) {
+fn lint_module(report: &mut LintReport, plan: &PlanFile, tree_ids: &HashSet<String>) {
     if !plan.has_section("## Purpose") {
         report.add(
             &plan.path,
@@ -197,12 +344,105 @@ fn lint_module(report: &mut LintReport, plan: &PlanFile) {
         );
     }
 
+    check_w017_last_reviewed(report, plan);
+
     if plan.has_section("## Work Items") {
-        lint_work_items(report, plan);
+        lint_work_items(report, plan, tree_ids);
     }
 }
 
-fn lint_work_items(report: &mut LintReport, plan: &PlanFile) {
+/// W017: active module missing or stale `**Last reviewed:**` field.
+/// Threshold configurable via APS_STALE_DAYS (default 60).
+fn check_w017_last_reviewed(report: &mut LintReport, plan: &PlanFile) {
+    let status = plan.status().unwrap_or_default().to_lowercase();
+    if !(status.starts_with("ready") || status.starts_with("in progress")) {
+        return;
+    }
+
+    let reviewed = plan.lines.iter().find_map(|line| {
+        let rest = line.strip_prefix("**Last reviewed:**")?;
+        let date = rest.trim_start_matches(' ');
+        let date = date.get(..10)?;
+        parse_civil_date(date).map(|epoch_days| (date.to_string(), epoch_days))
+    });
+
+    let Some((date, reviewed_days)) = reviewed else {
+        report.add(
+            &plan.path,
+            Severity::Warning,
+            "W017",
+            "Active module has no **Last reviewed:** field",
+            None,
+        );
+        return;
+    };
+
+    let stale_days: i64 = std::env::var("APS_STALE_DAYS")
+        .ok()
+        .filter(|v| !v.is_empty() && v.chars().all(|c| c.is_ascii_digit()))
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(60);
+
+    let age_days = today_civil_days() - reviewed_days;
+    if age_days > stale_days {
+        let line = plan
+            .lines
+            .iter()
+            .position(|l| l.starts_with("**Last reviewed:**"))
+            .map(|index| index + 1);
+        report.add(
+            &plan.path,
+            Severity::Warning,
+            "W017",
+            format!("Last reviewed {date} is {age_days} days old (threshold: {stale_days})"),
+            line,
+        );
+    }
+}
+
+/// Today as civil days since the epoch, in the *local* timezone — bash's
+/// `date -d "$reviewed" +%s` anchors at local midnight, so its W017 age is
+/// the local civil-day difference. std has no timezone access, so ask
+/// `date` like bash does; fall back to UTC when unavailable.
+fn today_civil_days() -> i64 {
+    let local = std::process::Command::new("date")
+        .arg("+%Y-%m-%d")
+        .output()
+        .ok()
+        .filter(|out| out.status.success())
+        .and_then(|out| parse_civil_date(String::from_utf8_lossy(&out.stdout).trim()));
+
+    local.unwrap_or_else(|| {
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|d| (d.as_secs() / 86_400) as i64)
+            .unwrap_or(0)
+    })
+}
+
+/// Days since the Unix epoch for a `YYYY-MM-DD` date (Howard Hinnant's
+/// civil-date algorithm). Returns None for malformed dates.
+fn parse_civil_date(date: &str) -> Option<i64> {
+    let bytes = date.as_bytes();
+    if bytes.len() != 10 || bytes[4] != b'-' || bytes[7] != b'-' {
+        return None;
+    }
+    let y: i64 = date[..4].parse().ok()?;
+    let m: i64 = date[5..7].parse().ok()?;
+    let d: i64 = date[8..10].parse().ok()?;
+    if !(1..=12).contains(&m) || !(1..=31).contains(&d) {
+        return None;
+    }
+    let y = if m <= 2 { y - 1 } else { y };
+    let era = if y >= 0 { y } else { y - 399 } / 400;
+    let yoe = y - era * 400;
+    let mp = (m + 9) % 12;
+    let doy = (153 * mp + 2) / 5 + d - 1;
+    let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+    Some(era * 146_097 + doe - 719_468)
+}
+
+fn lint_work_items(report: &mut LintReport, plan: &PlanFile, tree_ids: &HashSet<String>) {
     // Uppercase-only IDs for the dependency known-set, matching
     // `grep -oE '^### [A-Z]+-[0-9]+:'`.
     let all_ids: Vec<String> = plan
@@ -216,10 +456,89 @@ fn lint_work_items(report: &mut LintReport, plan: &PlanFile) {
         })
         .collect();
 
+    // Module status gates W018 (terminal modules are exempt archives).
+    let module_status = plan.status().unwrap_or_default();
+
     for item in plan.work_items() {
         check_w001_id_format(report, plan, &item.header, item.line);
         check_e005_required_fields(report, plan, &item.header, item.line);
-        check_w003_dependencies(report, plan, item.line, &all_ids);
+        check_w003_dependencies(report, plan, item.line, &all_ids, tree_ids);
+        check_w018_terminal_validation(report, plan, &item.header, item.line, &module_status);
+    }
+}
+
+/// W018: terminal work item missing Validation in an active module —
+/// completion that the audit cannot verify. Warning only.
+fn check_w018_terminal_validation(
+    report: &mut LintReport,
+    plan: &PlanFile,
+    header: &str,
+    line: usize,
+    module_status: &str,
+) {
+    // Skip when the whole module is terminal (archive compaction is sanctioned).
+    let module_lower = module_status.to_lowercase();
+    if [
+        "done", "complete", "merged", "released", "shipped", "archived",
+    ]
+    .iter()
+    .any(|word| module_lower.starts_with(word))
+    {
+        return;
+    }
+
+    let content = plan.item_content(line);
+
+    // An explicit Status field is authoritative; the header suffix only
+    // counts when no field is present.
+    let status = content
+        .iter()
+        .find_map(|l| l.strip_prefix("- **Status:**"))
+        .map(str::trim_start);
+    let terminal = match status {
+        Some(value) if !value.is_empty() => is_terminal_status(value),
+        _ => header_has_terminal_suffix(header),
+    };
+    if !terminal {
+        return;
+    }
+
+    if !content.iter().any(|l| l.starts_with("- **Validation")) {
+        report.add(
+            &plan.path,
+            Severity::Warning,
+            "W018",
+            format!("{header}: Complete item has no Validation — completion cannot be audited"),
+            Some(line),
+        );
+    }
+}
+
+/// `(—|--) *(done|complete|merged|released|shipped)\b` (case-insensitive).
+fn header_has_terminal_suffix(header: &str) -> bool {
+    let lower = header.to_lowercase();
+    let mut search = lower.as_str();
+    loop {
+        let (at, dash_len) = match (search.find('—'), search.find("--")) {
+            (Some(em), Some(da)) if em <= da => (em, '—'.len_utf8()),
+            (Some(em), None) => (em, '—'.len_utf8()),
+            (_, Some(da)) => (da, 2),
+            (None, None) => return false,
+        };
+        let rest = search[at + dash_len..].trim_start_matches(' ');
+        if ["done", "complete", "merged", "released", "shipped"]
+            .iter()
+            .any(|word| {
+                rest.starts_with(word)
+                    && !rest[word.len()..]
+                        .chars()
+                        .next()
+                        .is_some_and(|c| c.is_ascii_alphanumeric() || c == '_')
+            })
+        {
+            return true;
+        }
+        search = &search[at + dash_len..];
     }
 }
 
@@ -296,6 +615,7 @@ fn check_w003_dependencies(
     plan: &PlanFile,
     item_line: usize,
     all_ids: &[String],
+    tree_ids: &HashSet<String>,
 ) {
     // First `- **Dependencies:**` line after the header, before the next heading.
     let deps_line = plan.lines[item_line..]
@@ -306,9 +626,11 @@ fn check_w003_dependencies(
         return;
     };
 
-    // `grep -oE '[A-Z]+-[0-9]{3}'` over the single line.
+    // `grep -oE '[A-Z]+-[0-9]{3}'` over the single line. Resolve in-file
+    // first, then against the plan-tree index (cross-module dependencies
+    // and decision references are legitimate).
     for dep_id in extract_dep_ids(deps_line) {
-        if !all_ids.iter().any(|id| id == &dep_id) {
+        if !all_ids.iter().any(|id| id == &dep_id) && !tree_ids.contains(&dep_id) {
             // Line of the first `Dependencies:.*<id>` match in the whole file.
             let line_num = plan
                 .lines
@@ -322,7 +644,7 @@ fn check_w003_dependencies(
                 &plan.path,
                 Severity::Warning,
                 "W003",
-                format!("Dependency '{dep_id}' not found in this file"),
+                format!("Dependency '{dep_id}' not found in plan"),
                 line_num,
             );
         }
@@ -745,11 +1067,12 @@ mod tests {
         report
             .files
             .push((path.to_string(), parser::file_type(path)));
+        let tree_ids = HashSet::new();
         match parser::file_type(path) {
             FileType::Index => lint_index(&mut report, &plan),
             FileType::Issues => lint_issues(&mut report, &plan),
             FileType::Design => lint_design(&mut report, &plan),
-            _ => lint_module(&mut report, &plan),
+            _ => lint_module(&mut report, &plan, &tree_ids),
         }
         report
     }
@@ -825,9 +1148,10 @@ mod tests {
             "## Modules\n\n| [a](x) | d | Ready |\n",
         );
         let json = render_json(&report);
+        // W019 fires because the link target `x` does not exist on disk.
         assert_eq!(
             json,
-            "{\"files\":[{\"path\":\"plans/index.aps.md\",\"type\":\"index\",\"errors\":[],\"warnings\":[]}],\"summary\":{\"files\":1,\"errors\":0,\"warnings\":0}}"
+            "{\"files\":[{\"path\":\"plans/index.aps.md\",\"type\":\"index\",\"errors\":[],\"warnings\":[{\"code\":\"W019\",\"message\":\"Module link target not found: x\",\"line\":3}]}],\"summary\":{\"files\":1,\"errors\":0,\"warnings\":1}}"
         );
     }
 }

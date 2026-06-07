@@ -8,6 +8,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- **`aps audit` command** (DOGFOOD-002) — formalizes the anvil-001 completion
+  audit: executes Complete items' Validation commands (PASS/FAIL/PARTIAL),
+  flags understated Drafts whose Files already exist (A002), stale Ready
+  items (A003), and broken index links (A004). `--json`, `--no-run`, and
+  `--stale-days` supported; non-zero exit on findings for CI gating.
+- **Plan hygiene lint checks** (DOGFOOD-002) — W017 (active module missing
+  or stale `**Last reviewed:**`, threshold `APS_STALE_DAYS`), W018 (Complete
+  item without Validation in a still-active module), W019 (index `## Modules`
+  link to a non-existent file). Bash and PowerShell rule engines.
 - **MCP server** (ORCH-006 — orchestrate module now Complete) — optional
   `mcp/` package exposing the `aps` CLI command surface to MCP-capable agents
   as a single codemode tool. Direct commands and natural-language requests
@@ -29,6 +38,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed
 
+- **W003 resolves across the plan tree** (DOGFOOD-002) — dependency
+  references to work items and decisions in *other* module files (and the
+  index) no longer warn; only IDs missing from the entire plan are flagged.
+  Message changed from "not found in this file" to "not found in plan".
 - **E005 exempts terminal work items** — `aps lint` no longer requires the
   `Intent` / `Expected Outcome` / `Validation` fields on work items whose
   `Status` is a completed state (`Done`, `Complete`, `Merged`, `Released`,

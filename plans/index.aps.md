@@ -52,7 +52,7 @@ APS needs continued development to:
 | ------------------------------------------- | ------------------------------------------------------- | ----------- |
 | [orchestrate](./modules/orchestrate.aps.md) | CLI orchestration, dependency resolution, state machine | Complete    |
 | [tui](./modules/tui.aps.md)                 | Ratatui TUI customization wizard for project setup      | Complete    |
-| [dogfood](./modules/dogfood.aps.md)         | Keep this repo's own APS plans accurate and validated   | In Progress |
+| [dogfood](./modules/dogfood.aps.md)         | Keep this repo's own APS plans accurate and validated   | Complete    |
 
 ### Conductor / Crosscutting (Trialing)
 
@@ -79,6 +79,7 @@ release narratives live in [`plans/releases/`](./releases/).
 | [examples](./modules/examples.aps.md)         | Additional worked examples                                       | Draft  |
 | [prompts](./modules/prompts.aps.md)           | Tool-specific prompt variants                                    | Draft  |
 | [integrations](./modules/integrations.aps.md) | JSON export, GitHub sync                                         | Draft  |
+| [monorepo](./modules/monorepo.aps.md)         | Nested index.aps.md plans, federated lint + orchestration        | Draft  |
 
 ### Long Term
 
@@ -132,3 +133,4 @@ These are explicitly out of scope:
 - **D-027:** Promote `compound` from Draft to Ready — _decided: yes, anvil-001 surveyed prior art (completed/ archive, releases/ narrative, completed-index roll-up) makes the work concrete; see [compound.aps.md](./modules/compound.aps.md)_
 - **D-028:** Add release planning as an APS addon — _decided: yes, extract pattern from anvil-001 trial (`plans/releases/v0.3.0-beta.md`); see `release-planning.aps.md`_
 - **D-029:** Introduce conductor / crosscutting module type — _trialing. Release planning is the first use case; revisit after trial_
+- **D-030:** Deeper monorepo support via nested indexes — _decided: yes, as a new Draft module. Tagged modules (docs/monorepo.md) stay the default tier; nested `index.aps.md` plans are the federated tier for packages with independent owners/lifecycles. See [monorepo.aps.md](./modules/monorepo.aps.md) — its D-001..D-004 (child location, ID namespacing, child autonomy, coexistence) must resolve before Ready_
