@@ -188,7 +188,7 @@ shared theme, keyboard conventions). APS consumes this as a crate dependency.
   unit coverage for navigation, conditional monorepo options, selected-tool
   config, q/Ctrl+C exit handling, and summary-before-completion behavior.
 
-### TUI-003: Implement template and path customization sections
+### TUI-003: Implement template and path customization sections — Complete 2026-06-08
 
 - **Intent:** Let users control what templates get installed and where files go
 - **Expected Outcome:** Two additional wizard sections:
@@ -203,9 +203,20 @@ shared theme, keyboard conventions). APS consumes this as a crate dependency.
      aps-rules.md, project-context.md, designs/ directory, decisions/ directory
 - **Validation:** Custom paths produce valid scaffold at specified locations;
   template selection matches scaffolded output; component toggles respected
+- **Learning:** "eddacraft-tui KeyHandler maps j/k/q to navigation — text entry needs a literal key mapping while editing or typed characters get swallowed"
 - **Confidence:** medium
 - **Dependencies:** TUI-001
 - **Files:** cli/src/wizard.rs, cli/src/main.rs
+- **Status:** Complete: 2026-06-08
+- **Results:** Three wizard steps added between ToolConfig and Done:
+  Templates (multi-select with profile/shape-informed defaults + custom
+  template path), Paths (three editable fields with live directory-structure
+  preview), Components (five toggles, decisions/ off by default). Text
+  editing uses a literal key mapping so q/j/k type instead of navigating;
+  empty path commits restore defaults; custom template without a path is
+  dropped on advance. 10 new state-machine tests (19 total), clippy clean.
+  Scaffold-output validation (custom paths produce a valid scaffold) lands
+  with TUI-004, which wires the scaffold execution these selections feed.
 
 ### TUI-004: Implement scaffold and summary steps
 
