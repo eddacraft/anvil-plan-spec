@@ -15,6 +15,41 @@ function Test-E004Modules {
     return $true
 }
 
+# W019: Link in ## Modules points to a non-existent file
+#
+# Warning (not error) because the scaffold seed index intentionally links a
+# placeholder module that the user creates later. `aps audit` reports the
+# same condition as finding A004 with a non-zero exit for hard gating.
+function Test-W019ModuleLinks {
+    param([string]$File)
+    $dir = Split-Path $File -Parent
+    if (-not $dir) { $dir = "." }
+
+    $lines = Get-Content -LiteralPath $File -ErrorAction SilentlyContinue
+    $inModules = $false
+    $lineNum = 0
+    foreach ($line in $lines) {
+        $lineNum++
+        if ($line -match '^## Modules') { $inModules = $true; continue }
+        if ($inModules -and $line -match '^## ') { $inModules = $false }
+        if (-not $inModules) { continue }
+
+        foreach ($m in [regex]::Matches($line, '\]\(([^)]+)\)')) {
+            $target = $m.Groups[1].Value
+            # Strip markdown link titles: ](path "title")
+            $target = $target -replace '\s+["''].*$', ''
+            # Skip pure anchors and any URI scheme (http, mailto, file, ...)
+            if ($target -match '^(#|[A-Za-z][A-Za-z0-9+.-]*:)') { continue }
+            $target = ($target -split '#')[0]
+            if (-not $target) { continue }
+            if (-not (Test-Path -LiteralPath (Join-Path $dir $target))) {
+                Add-ApsResult -Path $File -Type "warning" -Code "W019" `
+                    -Message "Module link target not found: $target" -Line "$lineNum"
+            }
+        }
+    }
+}
+
 # W004: Empty section check (index-specific sections)
 function Test-W004EmptySectionsIndex {
     param([string]$File)
@@ -34,6 +69,7 @@ function Invoke-ApsIndexLint {
     $hasErrors = $false
 
     if (-not (Test-E004Modules -File $File)) { $hasErrors = $true }
+    Test-W019ModuleLinks -File $File
     Test-W004EmptySectionsIndex -File $File
 
     return (-not $hasErrors)

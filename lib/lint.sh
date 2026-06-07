@@ -75,6 +75,33 @@ find_aps_files() {
   find "$dir" -type f \( -name "*.aps.md" -o -name "*.actions.md" -o -name "*.design.md" -o -name "issues.md" \) ! -name ".*" 2>/dev/null | sort
 }
 
+# Cross-file ID index: work item and decision IDs from the whole plan tree.
+# W003 resolves dependencies against this when the in-file check misses.
+APS_TREE_IDS=""
+
+# Usage: build_id_index file1 [file2 ...]
+build_id_index() {
+  # Fence-aware: IDs inside ``` / ~~~ code blocks are examples, not
+  # definitions — indexing them would let a fake ID in a snippet vouch for
+  # a genuinely missing dependency.
+  APS_TREE_IDS=$(awk '
+    FNR == 1 { fence = 0 }
+    /^(```|~~~)/ { fence = !fence; next }
+    fence { next }
+    # Work item headers: ### AUTH-001: title
+    match($0, /^### [A-Za-z]+-[0-9]+:/) {
+      id = substr($0, 5, RLENGTH - 5)
+      print id
+    }
+    # Decision entries: - **D-026:** text
+    match($0, /^- \*\*D-[0-9]+:/) {
+      id = substr($0, 5, RLENGTH - 5)
+      print id
+    }
+  ' "$@" 2>/dev/null | sort -u | tr '\n' ' ')
+  return 0
+}
+
 # Lint a single file
 # Usage: lint_file "path/to/file.aps.md"
 lint_file() {
@@ -196,6 +223,23 @@ EOF
     error "No APS files found in: $target"
     return 1
   fi
+
+  # Build the cross-file ID index. For a single-file target, widen the index
+  # to the surrounding plan tree so cross-module dependencies still resolve.
+  local index_files=("${files[@]}")
+  if [[ -f "$target" ]]; then
+    local tdir troot
+    tdir=$(cd "$(dirname "$target")" && pwd)
+    # Climb out of modules/ (including nested subdirectories) to the plan root
+    case "$tdir" in
+      */modules|*/modules/*) troot="${tdir%/modules*}" ;;
+      *) troot="$tdir" ;;
+    esac
+    while IFS= read -r file; do
+      index_files+=("$file")
+    done < <(find_aps_files "$troot")
+  fi
+  build_id_index "${index_files[@]}"
 
   # Lint each file
   for file in "${files[@]}"; do

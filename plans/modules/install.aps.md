@@ -4,6 +4,8 @@
 | ------- | ------ | -------- | ----------------------- |
 | INSTALL | @aneki | high     | In Progress (follow-up) |
 
+**Last reviewed:** 2026-06-08
+
 ## Purpose
 
 Overhaul how APS gets distributed to user projects. Replace the current

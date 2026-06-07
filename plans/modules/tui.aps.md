@@ -4,6 +4,8 @@
 | --- | ------ | ----------- |
 | TUI | @aneki | In Progress |
 
+**Last reviewed:** 2026-06-08
+
 ## Purpose
 
 Provide a customization frontend for APS project setup. The shell-prompt wizard
@@ -147,7 +149,8 @@ shared theme, keyboard conventions). APS consumes this as a crate dependency.
 - **Expected Outcome:** `cli/` directory (or separate repo per D-026) with
   `Cargo.toml` depending on `eddacraft-tui`, clap for CLI parsing, and a
   minimal `aps --version` command that compiles and runs
-- **Validation:** `cargo build --release` produces a static binary; binary
+- **Validation:** `cargo build --release --manifest-path cli/Cargo.toml`
+  produces a static binary; binary
   prints version; `eddacraft-tui` widgets render in a test harness
 - **Confidence:** high
 - **Dependencies:** D-026, D-027
