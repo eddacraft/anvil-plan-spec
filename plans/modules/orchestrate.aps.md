@@ -78,8 +78,8 @@ by building CLI tools that read from and write back to markdown.
   context package
 - `aps complete <ID>` — validate state transition, mark Complete, prompt for
   learnings
-- `aps learn <ID> "insight"` — attach learning to work item, propagate to
-  module
+- `aps complete <ID> --learning "insight"` — attach learning to work item
+  inline (per D-002; no standalone `aps learn` command shipped)
 - `aps graph [module]` — show dependency graph with status coloring
 - Optional: MCP server with codemode (single `execute` tool, natural language
   routing à la Overseer)
@@ -213,8 +213,8 @@ A rich agent definition (like BMAD's BMad Master) that:
 - **Dependencies:** VAL (parser)
 - **Status:** Complete
 - **Action plan:** [execution/ORCH-001.actions.md](../execution/ORCH-001.actions.md)
-- **Results:** Implemented as `lib/orch.sh` (extract + collect + resolve_next
-  helpers) plus `cmd_next` in `bin/aps`. Status detection handles both
+- **Results:** Implemented as `lib/orchestrate.sh` (extract + collect +
+  resolve_next helpers) plus `cmd_next` in `bin/aps`. Status detection handles both
   header-suffix (`— Complete <date>`) and explicit `- **Status:**` markers.
   Cross-module dependency resolution verified end-to-end via fixture and
   against this repo's plans/. JSON output for tooling. 5 new tests added
@@ -284,6 +284,7 @@ A rich agent definition (like BMAD's BMad Master) that:
   through MCP; server handles malformed input gracefully
 - **Confidence:** low
 - **Dependencies:** ORCH-001, ORCH-002
+- **Status:** Draft
 
 ## Decisions
 

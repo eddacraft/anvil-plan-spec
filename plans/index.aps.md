@@ -5,7 +5,7 @@
 | Status  | Active     |
 | Owner   | @aneki     |
 | Created | 2025-12-31 |
-| Updated | 2026-05-22 |
+| Updated | 2026-06-07 |
 
 ## Problem
 
@@ -52,6 +52,7 @@ APS needs continued development to:
 | ------------------------------------------- | ------------------------------------------------------- | ----------- |
 | [orchestrate](./modules/orchestrate.aps.md) | CLI orchestration, dependency resolution, state machine | In Progress |
 | [tui](./modules/tui.aps.md)                 | Ratatui TUI customization wizard for project setup      | In Progress |
+| [dogfood](./modules/dogfood.aps.md)         | Keep this repo's own APS plans accurate and validated   | In Progress |
 
 ### Conductor / Crosscutting (Trialing)
 

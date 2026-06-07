@@ -72,7 +72,7 @@ The trigger for this module came from two converging patterns:
 **Depends on:**
 
 - VAL (Complete) — needs new linter rules for `Type: Conductor` modules
-- ORCH (Ready) — dependency parser must handle cross-module references
+- ORCH (In Progress) — dependency parser must handle cross-module references
   cleanly, since conductor modules are essentially graphs of cross-module
   references
 - REL (Draft) — release planning is the trial use case for the conductor

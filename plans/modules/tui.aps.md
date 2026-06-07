@@ -86,8 +86,8 @@ shared theme, keyboard conventions). APS consumes this as a crate dependency.
 
 **Depends on:**
 
-- INSTALL (Complete) — defines what gets scaffolded; TUI replaces the
-  shell-prompt frontend while reusing scaffold logic
+- INSTALL (In Progress, follow-up) — defines what gets scaffolded; TUI
+  replaces the shell-prompt frontend while reusing scaffold logic
 - `eddacraft/eddacraft-tui` (external) — shared Ratatui widgets and theme
 
 **Exposes:**

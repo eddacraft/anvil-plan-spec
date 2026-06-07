@@ -67,8 +67,9 @@ The pattern is generic enough to extract.
 **Depends on:**
 
 - VAL (Complete) — extend linter with release file rules
-- ORCH (Ready) — `aps release notes` reuses dependency/work-item parser
-- INSTALL (Complete) — installer wires up `plans/releases/` and template
+- ORCH (In Progress) — `aps release notes` reuses dependency/work-item parser
+- INSTALL (In Progress, follow-up) — installer wires up `plans/releases/` and
+  template
 
 **Exposes:**
 
@@ -117,6 +118,10 @@ The pattern is generic enough to extract.
   project; matches anvil-001 trial structure
 - **Confidence:** high
 - **Dependencies:** —
+- **Status:** Complete: 2026-05-22 — landed via COMPOUND-003 (commit
+  `3bb2c76`). `templates/release.template.md` ships with Release Theme,
+  What Ships, Success Criteria, Risks, Rollout, Related, and Retrospective
+  sections; `plans/releases/v0.3.0.md` is the in-repo proof.
 
 ### REL-002: Add `plans/releases/` to scaffold
 
@@ -152,6 +157,10 @@ The pattern is generic enough to extract.
 - **Validation:** Doc reviewed; example matches actual anvil-001 release
 - **Confidence:** high
 - **Dependencies:** REL-001
+- **Notes:** Partially covered already — `docs/workflow.md` "Release
+  Narrative" section (landed with COMPOUND-003) explains when/how to write a
+  release narrative. Remaining scope: dedicated doc with status flow and
+  tooling hand-off.
 
 ### REL-005: `aps release` CLI subcommand (optional, deferred)
 

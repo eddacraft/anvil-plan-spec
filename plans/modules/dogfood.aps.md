@@ -4,7 +4,7 @@
 | ------- | ------ | -------- | ----------- |
 | DOGFOOD | @aneki | high     | In Progress |
 
-**Last reviewed:** 2026-05-12
+**Last reviewed:** 2026-06-07
 
 ## Purpose
 
@@ -52,7 +52,7 @@ repo and see the same discipline we recommend elsewhere.
 
 ## Work Items
 
-### DOGFOOD-001: Reconcile roadmap module links — In Progress
+### DOGFOOD-001: Reconcile roadmap module links — Complete 2026-06-07
 
 - **Intent:** Remove broken plan references from the public roadmap
 - **Expected Outcome:** Every markdown link in the Modules tables points to an
@@ -60,6 +60,11 @@ repo and see the same discipline we recommend elsewhere.
 - **Validation:** `./bin/aps lint plans && npx markdownlint-cli "plans/**/*.md"`
 - **Files:** plans/index.aps.md, plans/modules/\*.aps.md
 - **Confidence:** high
+- **Results:** Full code-vs-plan reconciliation 2026-06-07: all index links
+  resolve; dogfood module added to the index (was the only unlisted module);
+  REL-001 marked Complete (landed via COMPOUND-003); ORCH-006 given explicit
+  Draft status; ORCH interface/file-name drift fixed; stale cross-module
+  status references refreshed. Validation passes (22 files, 0 errors).
 
 ### DOGFOOD-002: Plan hygiene + completion audit — Ready
 
