@@ -8,6 +8,7 @@ use eddacraft_tui as _;
 
 mod config;
 mod scaffold;
+mod setup;
 mod wizard;
 
 #[derive(Parser)]
@@ -70,6 +71,15 @@ enum Command {
         #[arg(long)]
         no_agents: bool,
     },
+    /// Add optional APS pieces: picker without arguments, shortcuts otherwise
+    Setup {
+        /// What to set up: cli, init, agent, hooks, upgrade, all, or a tool
+        /// name (claude-code, copilot, codex, opencode, gemini, generic)
+        target: Option<String>,
+        /// Skip confirmation for bulky/destructive flows (all, upgrade)
+        #[arg(long, short = 'y')]
+        yes: bool,
+    },
     /// Validate APS documents under plans/
     Lint,
     /// Resolve the next ready work item
@@ -127,6 +137,16 @@ fn main() {
 
             if let Err(err) = run_non_interactive_init(from.as_deref(), &flags) {
                 eprintln!("aps init failed: {err}");
+                std::process::exit(1);
+            }
+        }
+        Some(Command::Setup { target, yes }) => {
+            let result = match target {
+                None => setup::run_picker().map_err(|err| err.to_string()),
+                Some(key) => setup::run_shortcut(Path::new("."), &key, yes),
+            };
+            if let Err(err) = result {
+                eprintln!("aps setup failed: {err}");
                 std::process::exit(1);
             }
         }

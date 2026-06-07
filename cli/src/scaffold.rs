@@ -250,6 +250,12 @@ pub enum FileOp {
     },
     /// Mark a previously written script executable (no-op on non-unix).
     MarkExecutable(PathBuf),
+    /// Refresh generated content in place (upgrade flows only — never
+    /// used for user-authored files).
+    Overwrite {
+        path: PathBuf,
+        content: &'static str,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -370,77 +376,18 @@ pub fn plan_steps(selections: &Selections) -> Vec<ScaffoldStep> {
 
     // Planning skill + per-tool agents.
     if !selections.tools.is_empty() {
-        let mut skill = vec![
-            FileOp::Write {
-                path: PathBuf::from("aps-planning/SKILL.md"),
-                content: SKILL_MD,
-            },
-            FileOp::Write {
-                path: PathBuf::from("aps-planning/reference.md"),
-                content: SKILL_REFERENCE,
-            },
-            FileOp::Write {
-                path: PathBuf::from("aps-planning/examples.md"),
-                content: SKILL_EXAMPLES,
-            },
-            FileOp::Write {
-                path: PathBuf::from("aps-planning/hooks.md"),
-                content: SKILL_HOOKS,
-            },
-        ];
-        if selections
-            .tools
-            .iter()
-            .any(|c| c.tool == AiTool::ClaudeCode)
-        {
-            for (path, content) in CLAUDE_COMMANDS {
-                skill.push(FileOp::Write {
-                    path: PathBuf::from(path),
-                    content,
-                });
-            }
-        }
-        steps.push(ScaffoldStep {
-            label: "Install planning skill".to_string(),
-            ops: skill,
-        });
+        steps.push(skill_step(&selections.tools));
     }
 
-    if selections.agents_requested() {
-        let mut agents = Vec::new();
-        for config in &selections.tools {
-            if !config.install_agents {
-                continue;
-            }
-            for (path, content) in agent_files(config.tool) {
-                agents.push(FileOp::Write {
-                    path: PathBuf::from(path),
-                    content,
-                });
-            }
-        }
-        if !agents.is_empty() {
-            steps.push(ScaffoldStep {
-                label: "Install agents".to_string(),
-                ops: agents,
-            });
-        }
+    if selections.agents_requested()
+        && let Some(step) = agents_step(&selections.tools)
+    {
+        steps.push(step);
     }
 
     // Hook scripts (actual hook wiring is tool-specific; see summary notes).
     if selections.hooks_requested() {
-        let mut hooks = Vec::new();
-        for (path, content) in HOOK_SCRIPTS {
-            hooks.push(FileOp::Write {
-                path: PathBuf::from(path),
-                content,
-            });
-            hooks.push(FileOp::MarkExecutable(PathBuf::from(path)));
-        }
-        steps.push(ScaffoldStep {
-            label: "Configure hooks".to_string(),
-            ops: hooks,
-        });
+        steps.push(hooks_step());
     }
 
     // Replayable configuration (consumed by `aps init --from`, TUI-005).
@@ -453,6 +400,76 @@ pub fn plan_steps(selections: &Selections) -> Vec<ScaffoldStep> {
     });
 
     steps
+}
+
+/// Planning skill files, plus Claude commands when Claude Code is selected.
+pub fn skill_step(tools: &[ToolConfig]) -> ScaffoldStep {
+    let mut skill = vec![
+        FileOp::Write {
+            path: PathBuf::from("aps-planning/SKILL.md"),
+            content: SKILL_MD,
+        },
+        FileOp::Write {
+            path: PathBuf::from("aps-planning/reference.md"),
+            content: SKILL_REFERENCE,
+        },
+        FileOp::Write {
+            path: PathBuf::from("aps-planning/examples.md"),
+            content: SKILL_EXAMPLES,
+        },
+        FileOp::Write {
+            path: PathBuf::from("aps-planning/hooks.md"),
+            content: SKILL_HOOKS,
+        },
+    ];
+    if tools.iter().any(|c| c.tool == AiTool::ClaudeCode) {
+        for (path, content) in CLAUDE_COMMANDS {
+            skill.push(FileOp::Write {
+                path: PathBuf::from(path),
+                content,
+            });
+        }
+    }
+    ScaffoldStep {
+        label: "Install planning skill".to_string(),
+        ops: skill,
+    }
+}
+
+/// Agent files for every tool with agents enabled; None when nothing to do.
+pub fn agents_step(tools: &[ToolConfig]) -> Option<ScaffoldStep> {
+    let mut agents = Vec::new();
+    for config in tools {
+        if !config.install_agents {
+            continue;
+        }
+        for (path, content) in agent_files(config.tool) {
+            agents.push(FileOp::Write {
+                path: PathBuf::from(path),
+                content,
+            });
+        }
+    }
+    (!agents.is_empty()).then(|| ScaffoldStep {
+        label: "Install agents".to_string(),
+        ops: agents,
+    })
+}
+
+/// Hook scripts under aps-planning/scripts/, marked executable.
+pub fn hooks_step() -> ScaffoldStep {
+    let mut hooks = Vec::new();
+    for (path, content) in HOOK_SCRIPTS {
+        hooks.push(FileOp::Write {
+            path: PathBuf::from(path),
+            content,
+        });
+        hooks.push(FileOp::MarkExecutable(PathBuf::from(path)));
+    }
+    ScaffoldStep {
+        label: "Configure hooks".to_string(),
+        ops: hooks,
+    }
 }
 
 /// Serialize selections as the replayable `config.yml`. Hand-rolled — the
@@ -598,6 +615,19 @@ impl ScaffoldRun {
         }
     }
 
+    /// Execute a custom step list (setup flows) instead of the full init
+    /// plan. No implicit verify step is appended.
+    pub fn from_steps(root: PathBuf, steps: Vec<ScaffoldStep>) -> Self {
+        let statuses = vec![StepStatus::Pending; steps.len()];
+        Self {
+            root,
+            steps,
+            statuses,
+            next: 0,
+            verify_lint: false,
+        }
+    }
+
     pub fn steps(&self) -> impl Iterator<Item = (&str, &StepStatus)> {
         self.steps
             .iter()
@@ -667,6 +697,13 @@ impl ScaffoldRun {
                 fs::copy(from, dest).map(|_| ())
             }
             FileOp::MarkExecutable(path) => mark_executable(&self.root.join(path)),
+            FileOp::Overwrite { path, content } => {
+                let dest = self.root.join(path);
+                if let Some(parent) = dest.parent() {
+                    fs::create_dir_all(parent)?;
+                }
+                fs::write(dest, content)
+            }
         }
     }
 
@@ -694,6 +731,7 @@ impl ScaffoldRun {
                     FileOp::Write { path, .. } | FileOp::WriteOwned { path, .. } => path,
                     FileOp::CopyUser { to, .. } => to,
                     FileOp::MarkExecutable(_) => continue,
+                    FileOp::Overwrite { path, .. } => path,
                 };
                 if !self.root.join(path).exists() {
                     missing.push(path.display().to_string());
