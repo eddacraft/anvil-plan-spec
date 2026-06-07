@@ -134,5 +134,13 @@ grep -qF '"lib/rules/issues.sh"' "$PROJECT_ROOT/scaffold/init.sh" || fail "init 
 grep -qF 'enforce-plan-update.sh' "$PROJECT_ROOT/scaffold/init.sh" || fail "init omits enforce-plan-update.sh"
 pass
 
+# Test 21: MCP server (ORCH-006) — skipped when Node or its deps are unavailable
+echo -n "Test: MCP server (ORCH-006)... "
+if command -v node > /dev/null 2>&1 && [[ -d "$PROJECT_ROOT/mcp/node_modules" ]]; then
+  (cd "$PROJECT_ROOT/mcp" && node --test > /dev/null 2>&1) && pass || fail "MCP server tests failed"
+else
+  echo "SKIP (node or mcp/node_modules unavailable)"
+fi
+
 echo ""
 echo -e "${GREEN}All tests passed!${NC}"

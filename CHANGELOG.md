@@ -8,6 +8,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- **MCP server** (ORCH-006 — orchestrate module now Complete) — optional
+  `mcp/` package exposing the `aps` CLI command surface to MCP-capable agents
+  as a single codemode tool. Direct commands and natural-language requests
+  ("what's the next ready work item in auth?") route to allowlisted CLI
+  invocations; malformed input returns help instead of failing the transport.
+  TypeScript on the MCP SDK (D-004), runs directly on Node >= 22.18 — no
+  build step. See `mcp/README.md` and the "MCP Server" section in
+  `docs/usage.md`.
+
 - **Compound-engineering archive patterns** (COMPOUND module — Complete) —
   `templates/completed-index.template.md` and `templates/release.template.md`
   ship the doc-only halves of the Learn phase. `plans/completed.aps.md`

@@ -208,6 +208,37 @@ That loop is the intended day-to-day flow for solo and AI-driven work. For
 team workflows where multiple people might race on the same plan, treat the
 markdown rewrites as commits — push and pull to coordinate.
 
+## MCP Server
+
+For agents that speak MCP, an optional server in [`mcp/`](../mcp/) exposes
+the orchestration commands as a single `aps` tool over stdio. The agent sends
+either a direct command (`"next auth"`) or a natural-language request
+(`"what's the next ready work item in the auth module?"`); the server routes
+it to an allowlisted CLI invocation and returns the result.
+
+```bash
+cd mcp && pnpm install      # one-time setup (Node >= 22.18)
+```
+
+Register it with your MCP-capable tool, e.g. for Claude Code:
+
+```json
+{
+  "mcpServers": {
+    "aps": {
+      "command": "node",
+      "args": ["/path/to/anvil-plan-spec/mcp/src/index.ts"],
+      "env": { "APS_PLANS": "/path/to/your/project/plans" }
+    }
+  }
+}
+```
+
+Environment variables: `APS_BIN` overrides the `aps` executable (defaults to
+the sibling `bin/aps`, then `$PATH`); `APS_PLANS` sets the plan root passed
+to every command. The server is optional — everything it does is also
+available via the CLI or by editing markdown directly.
+
 ## Windows (PowerShell)
 
 The PowerShell port currently mirrors the lint/init/update surface:
