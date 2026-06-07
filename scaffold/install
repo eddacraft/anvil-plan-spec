@@ -17,6 +17,7 @@ set -euo pipefail
 VERSION="${VERSION:-main}"
 GLOBAL_INSTALL=false
 USE_BINARY=false
+AGENT_INSTALL=false
 TARGET="."
 
 # Parse flags
@@ -24,6 +25,7 @@ for arg in "$@"; do
   case "$arg" in
     --global|-g) GLOBAL_INSTALL=true ;;
     --binary|-b) USE_BINARY=true ;;
+    --agent)     AGENT_INSTALL=true ;;
     *) TARGET="$arg" ;;
   esac
 done
@@ -276,9 +278,60 @@ install_global() {
   echo ""
 }
 
+# Agent bootstrap: minimal planning files plus agent-readable next steps.
+# Mirrors `aps setup agent` (TUI-008) — no hooks, agents, CLI runtime, or
+# tool integrations.
+install_agent() {
+  echo ""
+  echo -e "${BOLD}Anvil Plan Spec (APS)${NC}"
+  echo "Agent bootstrap"
+  echo ""
+
+  if [[ -d "$PLANS_DIR" ]]; then
+    error "plans/ directory already exists at $TARGET"
+    exit 1
+  fi
+
+  step "Creating minimal planning layer"
+  mkdir -p "$PLANS_DIR/modules"
+  mkdir -p "$PLANS_DIR/execution"
+  download "plans/index.aps.md" "$PLANS_DIR/index.aps.md"
+  download "plans/aps-rules.md" "$PLANS_DIR/aps-rules.md"
+  download "plans/project-context.md" "$PLANS_DIR/project-context.md"
+  info "index.aps.md, aps-rules.md, project-context.md"
+
+  step "Writing agent next steps"
+  cat > "$PLANS_DIR/agent-next-steps.md" <<'EOF'
+# APS Agent Bootstrap — Next Steps
+
+This repository was just initialized with a minimal APS planning layer
+for an AI agent. Before implementing anything:
+
+1. Read `plans/aps-rules.md` for the planning conventions.
+2. Ask the operator for the project intent — what is being built and why.
+3. Populate `plans/project-context.md` with that durable background.
+4. Draft `plans/index.aps.md` (problem, outcomes, scope, modules).
+5. Wait for an approved work item before writing any implementation code.
+
+No hooks, agents, or tool integrations were installed. Run `aps setup`
+to add them when needed.
+EOF
+  info "plans/agent-next-steps.md"
+
+  echo ""
+  step "Agent bootstrap complete"
+  cat "$PLANS_DIR/agent-next-steps.md"
+}
+
 # Branch: global install exits early
 if [[ "$GLOBAL_INSTALL" == true ]]; then
   install_global
+  exit 0
+fi
+
+# Branch: agent bootstrap exits early
+if [[ "$AGENT_INSTALL" == true ]]; then
+  install_agent
   exit 0
 fi
 
