@@ -7,6 +7,9 @@ use clap::{Parser, Subcommand};
 use eddacraft_tui as _;
 
 mod config;
+mod lint;
+mod next;
+mod parser;
 mod scaffold;
 mod setup;
 mod wizard;
@@ -81,11 +84,20 @@ enum Command {
         yes: bool,
     },
     /// Validate APS documents under plans/
-    Lint,
+    Lint {
+        /// File or directory to lint (default: plans/)
+        target: Option<String>,
+        /// Output results in JSON format
+        #[arg(long)]
+        json: bool,
+    },
     /// Resolve the next ready work item
     Next {
         /// Optional module filter (e.g. orch, tui)
         module: Option<String>,
+        /// Plan root directory (default: plans)
+        #[arg(long, value_name = "DIR")]
+        plans: Option<String>,
     },
 }
 
@@ -150,14 +162,16 @@ fn main() {
                 std::process::exit(1);
             }
         }
-        Some(Command::Lint) => {
-            eprintln!("`aps lint` native port pending (TUI-009 / D-028)");
-            std::process::exit(2);
+        Some(Command::Lint { target, json }) => {
+            let code = lint::cmd_lint(target.as_deref().unwrap_or("plans"), json);
+            std::process::exit(code);
         }
-        Some(Command::Next { module }) => {
-            let scope = module.as_deref().unwrap_or("(all modules)");
-            eprintln!("`aps next {scope}` is implemented in the bash CLI; native port pending");
-            std::process::exit(2);
+        Some(Command::Next { module, plans }) => {
+            let code = next::cmd_next(
+                plans.as_deref().unwrap_or("plans"),
+                module.as_deref().unwrap_or(""),
+            );
+            std::process::exit(code);
         }
     }
 }
