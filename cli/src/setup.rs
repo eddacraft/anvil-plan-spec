@@ -516,10 +516,11 @@ fn flow_steps(mode: SetupMode, tools: &[AiTool], root: &Path) -> Result<FlowPlan
 pub fn run_shortcut(root: &Path, key: &str, assume_yes: bool) -> Result<(), String> {
     let (mode, tool) = mode_from_key(key)?;
 
-    if mode.needs_confirmation() && !assume_yes {
-        if !confirm_on_terminal(&format!("{} — proceed? [y/N] ", mode.label()))? {
-            return Err("aborted".to_string());
-        }
+    if mode.needs_confirmation()
+        && !assume_yes
+        && !confirm_on_terminal(&format!("{} — proceed? [y/N] ", mode.label()))?
+    {
+        return Err("aborted".to_string());
     }
 
     let tools: Vec<AiTool> = tool.into_iter().collect();

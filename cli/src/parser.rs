@@ -7,7 +7,7 @@
 
 use std::fs;
 use std::io;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 /// File classification by path, mirroring `get_file_type` in lib/lint.sh.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -127,6 +127,8 @@ impl PlanFile {
         })
     }
 
+    /// Test helper — build a document from inline text.
+    #[cfg(test)]
     pub fn from_text(path: &str, text: &str) -> Self {
         Self {
             path: path.to_string(),
