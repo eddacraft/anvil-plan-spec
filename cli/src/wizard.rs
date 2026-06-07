@@ -66,8 +66,11 @@ pub struct ToolConfig {
 pub enum WizardStep {
     Profile,
     ProjectShape,
+    Templates,
     AiTooling,
     ToolConfig,
+    Paths,
+    Components,
     Done,
 }
 
@@ -220,10 +223,13 @@ impl WizardState {
     fn advance(&mut self) -> WizardEvent {
         self.step = match self.step {
             WizardStep::Profile => WizardStep::ProjectShape,
-            WizardStep::ProjectShape => WizardStep::AiTooling,
-            WizardStep::AiTooling if self.selected_tools.is_empty() => WizardStep::Done,
+            WizardStep::ProjectShape => WizardStep::Templates,
+            WizardStep::Templates => WizardStep::AiTooling,
+            WizardStep::AiTooling if self.selected_tools.is_empty() => WizardStep::Paths,
             WizardStep::AiTooling => WizardStep::ToolConfig,
-            WizardStep::ToolConfig => WizardStep::Done,
+            WizardStep::ToolConfig => WizardStep::Paths,
+            WizardStep::Paths => WizardStep::Components,
+            WizardStep::Components => WizardStep::Done,
             WizardStep::Done => return WizardEvent::Complete,
         };
 
@@ -234,9 +240,13 @@ impl WizardState {
         self.step = match self.step {
             WizardStep::Profile => WizardStep::Profile,
             WizardStep::ProjectShape => WizardStep::Profile,
-            WizardStep::AiTooling => WizardStep::ProjectShape,
+            WizardStep::Templates => WizardStep::ProjectShape,
+            WizardStep::AiTooling => WizardStep::Templates,
             WizardStep::ToolConfig => WizardStep::AiTooling,
-            WizardStep::Done => WizardStep::ToolConfig,
+            WizardStep::Paths if self.selected_tools.is_empty() => WizardStep::AiTooling,
+            WizardStep::Paths => WizardStep::ToolConfig,
+            WizardStep::Components => WizardStep::Paths,
+            WizardStep::Done => WizardStep::Components,
         };
     }
 
@@ -261,6 +271,9 @@ impl WizardState {
                 self.tool_config_index =
                     move_index(self.tool_config_index, self.tool_configs.len(), forward);
             }
+            // Selection state for these steps lands with their sections
+            // (TUI-003 Tasks 2-4).
+            WizardStep::Templates | WizardStep::Paths | WizardStep::Components => {}
             WizardStep::Done => {}
         }
     }
@@ -382,6 +395,10 @@ fn render(frame: &mut Frame<'_>, theme: &EddaCraftTheme, state: &mut WizardState
         WizardStep::ProjectShape => render_project_shape(frame, content, theme, state),
         WizardStep::AiTooling => render_ai_tooling(frame, content, theme, state),
         WizardStep::ToolConfig => render_tool_config(frame, content, theme, state),
+        // Placeholder panes until rendering lands in TUI-003 Task 5.
+        WizardStep::Templates => render_placeholder(frame, content, "Templates"),
+        WizardStep::Paths => render_placeholder(frame, content, "Paths"),
+        WizardStep::Components => render_placeholder(frame, content, "Components"),
         WizardStep::Done => render_done(frame, content, state),
     }
 }
@@ -523,6 +540,12 @@ fn render_done(frame: &mut Frame<'_>, area: Rect, state: &WizardState) {
 
     Paragraph::new(summary)
         .block(Block::default().title("Summary").borders(Borders::ALL))
+        .render(area, frame.buffer_mut());
+}
+
+fn render_placeholder(frame: &mut Frame<'_>, area: Rect, title: &'static str) {
+    Paragraph::new("Section under construction — Enter to continue, Esc to go back")
+        .block(Block::default().title(title).borders(Borders::ALL))
         .render(area, frame.buffer_mut());
 }
 
@@ -735,6 +758,7 @@ mod tests {
         let mut state = WizardState::default();
         state.handle(Action::Select);
         state.handle(Action::Select);
+        state.handle(Action::Select);
 
         assert_eq!(state.step(), WizardStep::AiTooling);
         assert_eq!(state.selected_tools(), &[]);
@@ -778,6 +802,7 @@ mod tests {
         state.handle(Action::Select);
         state.handle(Action::Select);
         state.handle(Action::Select);
+        state.handle(Action::Select);
 
         assert_eq!(state.step(), WizardStep::ToolConfig);
 
@@ -800,11 +825,90 @@ mod tests {
     fn done_screen_renders_before_completion() {
         let mut state = WizardState::default();
 
-        assert_eq!(state.handle(Action::Select), WizardEvent::Continue);
-        assert_eq!(state.handle(Action::Select), WizardEvent::Continue);
-        assert_eq!(state.handle(Action::Select), WizardEvent::Continue);
+        for _ in 0..6 {
+            assert_eq!(state.handle(Action::Select), WizardEvent::Continue);
+        }
         assert_eq!(state.step(), WizardStep::Done);
 
         assert_eq!(state.handle(Action::Select), WizardEvent::Complete);
+    }
+
+    #[test]
+    fn templates_step_sits_between_project_shape_and_ai_tooling() {
+        let mut state = WizardState::default();
+
+        state.handle(Action::Select);
+        state.handle(Action::Select);
+
+        assert_eq!(state.step(), WizardStep::Templates);
+
+        state.handle(Action::Select);
+
+        assert_eq!(state.step(), WizardStep::AiTooling);
+    }
+
+    #[test]
+    fn paths_and_components_follow_tool_config() {
+        let mut state = WizardState::default();
+        state.toggle_tool(AiTool::ClaudeCode);
+
+        for _ in 0..4 {
+            state.handle(Action::Select);
+        }
+        assert_eq!(state.step(), WizardStep::ToolConfig);
+
+        state.handle(Action::Select);
+        assert_eq!(state.step(), WizardStep::Paths);
+
+        state.handle(Action::Select);
+        assert_eq!(state.step(), WizardStep::Components);
+
+        state.handle(Action::Select);
+        assert_eq!(state.step(), WizardStep::Done);
+    }
+
+    #[test]
+    fn empty_tool_selection_skips_tool_config_but_not_paths() {
+        let mut state = WizardState::default();
+
+        for _ in 0..4 {
+            state.handle(Action::Select);
+        }
+
+        assert_eq!(state.step(), WizardStep::Paths);
+    }
+
+    #[test]
+    fn back_navigation_reverses_the_new_step_order() {
+        let mut state = WizardState::default();
+        state.toggle_tool(AiTool::ClaudeCode);
+
+        for _ in 0..7 {
+            state.handle(Action::Select);
+        }
+        assert_eq!(state.step(), WizardStep::Done);
+
+        state.handle(Action::Back);
+        assert_eq!(state.step(), WizardStep::Components);
+
+        state.handle(Action::Back);
+        assert_eq!(state.step(), WizardStep::Paths);
+
+        state.handle(Action::Back);
+        assert_eq!(state.step(), WizardStep::ToolConfig);
+    }
+
+    #[test]
+    fn back_from_paths_skips_tool_config_when_no_tools_selected() {
+        let mut state = WizardState::default();
+
+        for _ in 0..4 {
+            state.handle(Action::Select);
+        }
+        assert_eq!(state.step(), WizardStep::Paths);
+
+        state.handle(Action::Back);
+
+        assert_eq!(state.step(), WizardStep::AiTooling);
     }
 }
