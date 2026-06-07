@@ -1,8 +1,8 @@
 # TUI Onboarding Module
 
-| ID  | Owner  | Status      |
-| --- | ------ | ----------- |
-| TUI | @aneki | In Progress |
+| ID  | Owner  | Status   |
+| --- | ------ | -------- |
+| TUI | @aneki | Complete |
 
 ## Purpose
 
@@ -185,7 +185,7 @@ shared theme, keyboard conventions). APS consumes this as a crate dependency.
   unit coverage for navigation, conditional monorepo options, selected-tool
   config, q/Ctrl+C exit handling, and summary-before-completion behavior.
 
-### TUI-003: Implement template and path customization sections
+### TUI-003: Implement template and path customization sections — Complete 2026-06-08
 
 - **Intent:** Let users control what templates get installed and where files go
 - **Expected Outcome:** Two additional wizard sections:
@@ -203,8 +203,15 @@ shared theme, keyboard conventions). APS consumes this as a crate dependency.
 - **Confidence:** medium
 - **Dependencies:** TUI-001
 - **Files:** cli/src/wizard.rs, cli/src/main.rs
+- **Results:** Templates (multi-select with profile/shape-derived defaults +
+  custom path entry), Paths (three text inputs with live directory preview;
+  empty fields restore defaults), and Components (checkbox, all on by
+  default) sections added after tool config. Text-entry steps switch the
+  event loop to a raw character mapper so typing q/h/j/k/l edits instead of
+  navigating; Ctrl+C still quits. Unit coverage for defaults, toggling,
+  custom-path editing, and back-navigation.
 
-### TUI-004: Implement scaffold and summary steps
+### TUI-004: Implement scaffold and summary steps — Complete 2026-06-08
 
 - **Intent:** Execute scaffold with visual progress and show results
 - **Expected Outcome:** Two final wizard steps:
@@ -221,8 +228,17 @@ shared theme, keyboard conventions). APS consumes this as a crate dependency.
 - **Confidence:** medium
 - **Dependencies:** TUI-002, TUI-003
 - **Files:** cli/src/wizard.rs, cli/src/scaffold.rs, cli/src/main.rs
+- **Results:** Review → Scaffold → Summary steps wired into the wizard.
+  `plan_steps()` maps selections to a deterministic step list (pure,
+  per-combination tests); `ScaffoldRun` executes one step per frame so
+  progress renders without flicker; failures show inline and never halt the
+  run; existing files are never overwritten. Content embedded at compile
+  time from scaffold/ and templates/, so the binary scaffolds offline.
+  Summary lists installed steps, errors, and per-tool post-install notes.
+  The lint-rules component gates a structural verify step that was replaced
+  by native lint in TUI-009.
 
-### TUI-005: Non-interactive fallback and config-driven init
+### TUI-005: Non-interactive fallback and config-driven init — Complete 2026-06-08
 
 - **Intent:** Support CI, piped environments, and repeatable setups
 - **Expected Outcome:** Two non-interactive paths:
@@ -238,8 +254,15 @@ shared theme, keyboard conventions). APS consumes this as a crate dependency.
 - **Confidence:** high
 - **Dependencies:** TUI-004
 - **Files:** cli/src/main.rs, cli/src/wizard.rs, cli/src/config.rs
+- **Results:** Full wizard surface exposed as flags (--profile, --shape,
+  --tools, --templates, --custom-template, --plans-dir, --docs-dir,
+  --tooling-root, --components, plus --hooks/--model/--no-agents
+  overrides). `aps init --from .aps/config.yml` replays the config the
+  scaffold writes; flags override replayed values. Non-TTY auto-falls back
+  to flag mode with wizard defaults. Verified: flag-driven and replayed
+  scaffolds are byte-identical; collisions and invalid flags exit 1.
 
-### TUI-006: Cross-compilation and release
+### TUI-006: Cross-compilation and release — Complete 2026-06-08
 
 - **Intent:** Distribute as pre-built binaries via GitHub releases
 - **Expected Outcome:** CI workflow (GitHub Actions) that cross-compiles for 5
@@ -251,8 +274,16 @@ shared theme, keyboard conventions). APS consumes this as a crate dependency.
 - **Confidence:** medium
 - **Dependencies:** TUI-005
 - **Files:** .github/workflows/release.yml, scaffold/install, cli/Cargo.toml
+- **Results:** release.yml builds all 5 targets (linux x64/arm64 on native
+  runners, darwin x64/arm64 on macOS, windows x64 via mingw-w64 — native
+  runners replaced `cross`/`cargo-zigbuild` since GitHub now provides arm64
+  runners), smoke-tests native builds, and publishes tar.gz/zip assets with
+  SHA256SUMS on v* tags. Release profile (lto, strip) yields ~1.3 MB
+  binaries. `scaffold/install --binary` downloads the matching release
+  asset and falls back to the bash CLI on any failure. First release tag
+  after merge will exercise the workflow end-to-end.
 
-### TUI-007: Add setup mode picker
+### TUI-007: Add setup mode picker — Complete 2026-06-08
 
 - **Intent:** Make setup choices obvious before APS writes bulky files.
 - **Expected Outcome:** `aps setup` opens an `eddacraft-tui` picker with these
@@ -270,8 +301,15 @@ shared theme, keyboard conventions). APS consumes this as a crate dependency.
 - **Related:** INSTALL-010 and INSTALL-012 define the shell and CLI command
   contracts that the TUI implements; listed as dependencies because this
   item's validation criteria are defined by those contracts.
+- **Results:** `aps setup` opens a picker with all six flows plus a full-
+  footprint option; `aps setup <thing>` shortcuts (cli, init, agent, hooks,
+  upgrade, all, or a tool name) bypass it. Bulky/destructive flows gate
+  behind Confirm in the picker and a TTY prompt or --yes in shortcuts.
+  Upgrade refreshes only generated files that already exist. The bash-side
+  picker (`bin/aps setup`) remains INSTALL-012's deliverable; the Rust
+  binary implements the full command contract.
 
-### TUI-008: Add agent bootstrap flow
+### TUI-008: Add agent bootstrap flow — Complete 2026-06-08
 
 - **Intent:** Support the common remote-planning workflow where a user pastes a
   curl command to an agent before they are at their computer.
@@ -289,8 +327,13 @@ shared theme, keyboard conventions). APS consumes this as a crate dependency.
 - **Files:** cli/src/setup.rs, scaffold/install
 - **Related:** INSTALL-010 defines the public installer flag and shell fallback
   for this flow.
+- **Results:** `aps setup agent` and `scaffold/install --agent` both create
+  the minimal footprint (plans/ with index, rules, project-context) plus
+  `plans/agent-next-steps.md` carrying the read-rules → ask-intent →
+  populate-context → draft-index → wait-for-approval workflow. Verified the
+  two paths produce identical file trees.
 
-### TUI-009: Port `aps lint` and shared parser to Rust
+### TUI-009: Port `aps lint` and shared parser to Rust — Complete 2026-06-08
 
 - **Intent:** Implement D-028/D-031 — one Rust markdown parser serving lint,
   `next`, and the wizard, replacing the `lint`/`next` stubs shipped in TUI-001
@@ -310,6 +353,15 @@ shared theme, keyboard conventions). APS consumes this as a crate dependency.
 - **Confidence:** medium
 - **Dependencies:** TUI-001, D-028, D-031
 - **Files:** cli/src/parser.rs, cli/src/lint.rs, cli/src/main.rs
+- **Results:** Shared parser in cli/src/parser.rs (file typing, metadata
+  tables, sections, work items, field continuations, status normalization,
+  dependency tokens) serving cli/src/lint.rs and cli/src/next.rs. Parity
+  verified byte-for-byte against `./bin/aps` on this repo's plans/, both
+  fixture sets (text + --json), and orchestrate fixtures (default, module
+  filter, no-match, single file, missing target) including exit codes.
+  Bash quirks preserved deliberately (section-relative W010/W011 line
+  numbers, single-line JSON). Bash lint/next are now feature-frozen per
+  orchestrate D-006.
 
 ## Execution Strategy
 
