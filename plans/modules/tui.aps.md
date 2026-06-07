@@ -206,6 +206,17 @@ shared theme, keyboard conventions). APS consumes this as a crate dependency.
 - **Confidence:** medium
 - **Dependencies:** TUI-001
 - **Files:** cli/src/wizard.rs, cli/src/main.rs
+- **Status:** In Progress
+- **Action plan:** [execution/TUI-003.actions.md](../execution/TUI-003.actions.md)
+- **Results:** Templates, Paths, and Components sections implemented in the
+  `aps init` wizard with profile/shape-aware template defaults, a custom
+  template path input, three path fields (plans/docs/tooling root) with a
+  live directory-structure preview, and five component toggles. Edit-mode
+  key mapping (`map_key`) bypasses the vim aliases so `j`/`q`/space are
+  typable in path fields — without it those keys navigated or quit. 14 new
+  unit tests (28 total). Scaffold-output validation defers to TUI-004, which
+  executes the scaffold; the summary screen now reports templates, paths,
+  and components alongside the TUI-002 selections.
 
 ### TUI-004: Implement scaffold and summary steps
 
