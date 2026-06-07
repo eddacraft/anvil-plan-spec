@@ -5,7 +5,7 @@
 | Source     | [./modules/orchestrate.aps.md](../modules/orchestrate.aps.md) |
 | Work Item  | ORCH-001 — Implement `aps next` command                       |
 | Created by | @aneki / AI                                                   |
-| Status     | In Progress                                                   |
+| Status     | Complete                                                      |
 
 ## Prerequisites
 
@@ -139,7 +139,7 @@ Module spec reflects completion; `aps lint` clean.
 
 ## Completion
 
-- [ ] All checkpoints validated
-- [ ] Work item marked complete in `orchestrate.aps.md`
+- [x] All checkpoints validated
+- [x] Work item marked complete in `orchestrate.aps.md`
 
-**Completed by:** TBD
+**Completed by:** @aneki / AI — 2026-04-26 (action plan reconciled 2026-06-08)

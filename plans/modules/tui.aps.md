@@ -119,6 +119,13 @@ shared theme, keyboard conventions). APS consumes this as a crate dependency.
 - **D-030:** Picker implementation — _decided: use `eddacraft/eddacraft-tui`
   Select, MultiSelect, Confirm, Spinner, and ResultsDashboard widgets for the
   Rust path. Shell fallback mirrors the same choices with numbered prompts._
+- **D-031:** Rust binary vs `bin/aps` coexistence — _decided 2026-06-08: the
+  Rust binary becomes primary once TUI-006 ships; `bin/aps` remains the
+  zero-dependency fallback with identical command surface. The shared Rust
+  parser, native `lint`, and `next` parity are tracked by TUI-009; remaining
+  ORCH commands follow once parity is proven (orchestrate D-006). Revisit if
+  a fallback CLI (plain-prompt mode) lands in `eddacraft/eddacraft-tui` —
+  that could replace the bash fallback and shell-prompt wizard entirely._
 
 ## Ready Checklist
 
@@ -127,6 +134,8 @@ shared theme, keyboard conventions). APS consumes this as a crate dependency.
 - [x] D-026 resolved (in this repo under `cli/`)
 - [x] D-027 resolved (git dependency)
 - [x] D-028 resolved (yes, port lint to Rust)
+- [x] D-031 resolved (Rust primary post-TUI-006, bash fallback; revisit on
+      eddacraft-tui fallback CLI)
 - [x] Work items defined with validation
 
 ## Work Items
@@ -151,7 +160,7 @@ shared theme, keyboard conventions). APS consumes this as a crate dependency.
   intended CLI shape from day one. Live widget render harness deferred to
   TUI-002, which is the natural place to introduce actual TUI sections.
 
-### TUI-002: Implement core wizard sections (Profile, Project Shape, AI Tooling)
+### TUI-002: Implement core wizard sections (Profile, Project Shape, AI Tooling) — Complete 2026-05-16
 
 - **Intent:** Build the primary selection screens that determine what gets
   scaffolded
@@ -193,6 +202,7 @@ shared theme, keyboard conventions). APS consumes this as a crate dependency.
   template selection matches scaffolded output; component toggles respected
 - **Confidence:** medium
 - **Dependencies:** TUI-001
+- **Files:** cli/src/wizard.rs, cli/src/main.rs
 
 ### TUI-004: Implement scaffold and summary steps
 
@@ -210,6 +220,7 @@ shared theme, keyboard conventions). APS consumes this as a crate dependency.
   renders without flicker
 - **Confidence:** medium
 - **Dependencies:** TUI-002, TUI-003
+- **Files:** cli/src/wizard.rs, cli/src/scaffold.rs, cli/src/main.rs
 
 ### TUI-005: Non-interactive fallback and config-driven init
 
@@ -226,6 +237,7 @@ shared theme, keyboard conventions). APS consumes this as a crate dependency.
   TUI-driven init for same selections; exit code 0/non-zero
 - **Confidence:** high
 - **Dependencies:** TUI-004
+- **Files:** cli/src/main.rs, cli/src/wizard.rs, cli/src/config.rs
 
 ### TUI-006: Cross-compilation and release
 
@@ -238,6 +250,7 @@ shared theme, keyboard conventions). APS consumes this as a crate dependency.
   5 assets; `curl` installer can fetch and install the binary
 - **Confidence:** medium
 - **Dependencies:** TUI-005
+- **Files:** .github/workflows/release.yml, scaffold/install, cli/Cargo.toml
 
 ### TUI-007: Add setup mode picker
 
@@ -252,9 +265,11 @@ shared theme, keyboard conventions). APS consumes this as a crate dependency.
   picker and install only the requested component. Shell fallback presents the
   same choices when the Rust TUI is unavailable.
 - **Confidence:** high
-- **Dependencies:** TUI-002, TUI-004
+- **Dependencies:** TUI-002, TUI-004, INSTALL-010, INSTALL-012
+- **Files:** cli/src/main.rs, cli/src/setup.rs, bin/aps, scaffold/install
 - **Related:** INSTALL-010 and INSTALL-012 define the shell and CLI command
-  contracts that the TUI implements.
+  contracts that the TUI implements; listed as dependencies because this
+  item's validation criteria are defined by those contracts.
 
 ### TUI-008: Add agent bootstrap flow
 
@@ -270,9 +285,31 @@ shared theme, keyboard conventions). APS consumes this as a crate dependency.
 - **Validation:** `curl | bash -s -- --agent` and the picker path produce the
   same minimal agent-ready repo footprint.
 - **Confidence:** high
-- **Dependencies:** TUI-007
+- **Dependencies:** TUI-007, INSTALL-010
+- **Files:** cli/src/setup.rs, scaffold/install
 - **Related:** INSTALL-010 defines the public installer flag and shell fallback
   for this flow.
+
+### TUI-009: Port `aps lint` and shared parser to Rust
+
+- **Intent:** Implement D-028/D-031 — one Rust markdown parser serving lint,
+  `next`, and the wizard, replacing the `lint`/`next` stubs shipped in TUI-001
+- **Expected Outcome:** A parser module in `cli/` that reads `.aps.md` files
+  (modules, work items, dependencies, decisions; status via both the
+  `— Complete <date>` header suffix and explicit `- **Status:**` markers, per
+  ORCH-001's conventions). On top of it: native `aps lint` implementing the
+  bash rule set (same E/W codes and exit behavior) and native `aps next` with
+  matching output including `--json`. Bash implementations stay untouched and
+  are feature-frozen once parity is reached (orchestrate D-006). `start`,
+  `complete`, and `graph` are explicitly out of scope here — they follow in a
+  later item once parity is proven.
+- **Validation:** Rust `aps lint` output matches `./bin/aps lint` on this
+  repo's plans/ and on `test/fixtures/valid` + `test/fixtures/invalid`; Rust
+  `aps next` matches bash output on `test/fixtures/orchestrate/`; parser unit
+  tests pass via `cargo test`
+- **Confidence:** medium
+- **Dependencies:** TUI-001, D-028, D-031
+- **Files:** cli/src/parser.rs, cli/src/lint.rs, cli/src/main.rs
 
 ## Execution Strategy
 
@@ -298,6 +335,10 @@ shared theme, keyboard conventions). APS consumes this as a crate dependency.
 
 - TUI-007: Setup mode picker
 - TUI-008: Agent bootstrap flow
+
+### Wave 6: Native parser and lint port (depends on Wave 1; parallel with 2–5)
+
+- TUI-009: Shared Rust parser + `aps lint` + `aps next` parity
 
 ## Relationship to Other Modules
 
