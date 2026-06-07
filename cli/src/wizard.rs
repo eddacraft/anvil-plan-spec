@@ -1,4 +1,5 @@
 use eddacraft_tui::prelude::Action;
+use eddacraft_tui::prelude::TextInputState;
 use eddacraft_tui::prelude::{EddaCraftTheme, KeyHandler, Select, SelectItem, SelectState};
 use eddacraft_tui::prelude::{ShellBranding, render_shell};
 use ratatui::Frame;
@@ -63,6 +64,15 @@ pub struct ToolConfig {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Template {
+    Quickstart,
+    Module,
+    Index,
+    MonorepoIndex,
+    Custom,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum WizardStep {
     Profile,
     ProjectShape,
@@ -92,6 +102,11 @@ pub struct WizardState {
     selected_tools: Vec<AiTool>,
     tool_configs: Vec<ToolConfig>,
     tool_config_index: usize,
+    selected_templates: Vec<Template>,
+    template_index: usize,
+    templates_touched: bool,
+    custom_template_path: TextInputState,
+    editing_custom_template: bool,
 }
 
 impl Default for WizardState {
@@ -106,6 +121,11 @@ impl Default for WizardState {
             selected_tools: Vec::new(),
             tool_configs: Vec::new(),
             tool_config_index: 0,
+            selected_templates: Vec::new(),
+            template_index: 0,
+            templates_touched: false,
+            custom_template_path: TextInputState::default(),
+            editing_custom_template: false,
         }
     }
 }
@@ -118,6 +138,13 @@ impl WizardState {
         WorkspaceTool::Turbo,
         WorkspaceTool::Nx,
         WorkspaceTool::Lerna,
+    ];
+    const TEMPLATES: [Template; 5] = [
+        Template::Quickstart,
+        Template::Module,
+        Template::Index,
+        Template::MonorepoIndex,
+        Template::Custom,
     ];
     const AI_TOOLS: [AiTool; 6] = [
         AiTool::ClaudeCode,
@@ -180,7 +207,76 @@ impl WizardState {
         &self.tool_configs
     }
 
+    pub fn selected_templates(&self) -> &[Template] {
+        &self.selected_templates
+    }
+
+    pub fn custom_template_path(&self) -> &str {
+        &self.custom_template_path.value
+    }
+
+    pub fn is_editing(&self) -> bool {
+        self.step == WizardStep::Templates && self.editing_custom_template
+    }
+
+    pub fn toggle_template(&mut self, template: Template) {
+        self.templates_touched = true;
+        if let Some(index) = self
+            .selected_templates
+            .iter()
+            .position(|selected| *selected == template)
+        {
+            self.selected_templates.remove(index);
+            if template == Template::Custom {
+                self.editing_custom_template = false;
+            }
+        } else {
+            self.selected_templates.push(template);
+            self.selected_templates
+                .sort_by_key(|template| Self::template_order(*template));
+            if template == Template::Custom {
+                self.editing_custom_template = true;
+            }
+        }
+    }
+
+    fn default_templates(profile: Profile, shape: ProjectShape) -> Vec<Template> {
+        match (profile, shape) {
+            (_, ProjectShape::Monorepo) => vec![Template::Module, Template::MonorepoIndex],
+            (Profile::Solo, ProjectShape::SingleProject) => vec![Template::Quickstart],
+            (_, ProjectShape::SingleProject) => vec![Template::Module, Template::Index],
+        }
+    }
+
+    fn handle_editing(&mut self, action: Action) -> WizardEvent {
+        match action {
+            Action::Quit => return WizardEvent::Quit,
+            Action::Character(c) => self.custom_template_path.insert(c),
+            Action::Backspace => self.custom_template_path.backspace(),
+            Action::Delete => self.custom_template_path.delete(),
+            Action::Left => self.custom_template_path.move_left(),
+            Action::Right => self.custom_template_path.move_right(),
+            Action::Home => self.custom_template_path.home(),
+            Action::End => self.custom_template_path.end(),
+            Action::Select => self.editing_custom_template = false,
+            Action::Back => {
+                self.editing_custom_template = false;
+                if self.custom_template_path.value.is_empty() {
+                    self.selected_templates
+                        .retain(|template| *template != Template::Custom);
+                }
+            }
+            _ => {}
+        }
+
+        WizardEvent::Continue
+    }
+
     pub fn handle(&mut self, action: Action) -> WizardEvent {
+        if self.is_editing() {
+            return self.handle_editing(action);
+        }
+
         match action {
             Action::Quit => WizardEvent::Quit,
             Action::Up => {
@@ -233,6 +329,10 @@ impl WizardState {
             WizardStep::Done => return WizardEvent::Complete,
         };
 
+        if self.step == WizardStep::Templates && !self.templates_touched {
+            self.selected_templates = Self::default_templates(self.profile, self.project_shape);
+        }
+
         WizardEvent::Continue
     }
 
@@ -271,16 +371,22 @@ impl WizardState {
                 self.tool_config_index =
                     move_index(self.tool_config_index, self.tool_configs.len(), forward);
             }
+            WizardStep::Templates => {
+                self.template_index =
+                    move_index(self.template_index, Self::TEMPLATES.len(), forward);
+            }
             // Selection state for these steps lands with their sections
-            // (TUI-003 Tasks 2-4).
-            WizardStep::Templates | WizardStep::Paths | WizardStep::Components => {}
+            // (TUI-003 Tasks 3-4).
+            WizardStep::Paths | WizardStep::Components => {}
             WizardStep::Done => {}
         }
     }
 
     fn toggle_current(&mut self) {
-        if self.step == WizardStep::AiTooling {
-            self.toggle_tool(Self::AI_TOOLS[self.ai_tool_index]);
+        match self.step {
+            WizardStep::AiTooling => self.toggle_tool(Self::AI_TOOLS[self.ai_tool_index]),
+            WizardStep::Templates => self.toggle_template(Self::TEMPLATES[self.template_index]),
+            _ => {}
         }
     }
 
@@ -315,6 +421,13 @@ impl WizardState {
             .iter()
             .position(|candidate| *candidate == tool)
             .unwrap_or(Self::AI_TOOLS.len())
+    }
+
+    fn template_order(template: Template) -> usize {
+        Self::TEMPLATES
+            .iter()
+            .position(|candidate| *candidate == template)
+            .unwrap_or(Self::TEMPLATES.len())
     }
 }
 
@@ -896,6 +1009,108 @@ mod tests {
 
         state.handle(Action::Back);
         assert_eq!(state.step(), WizardStep::ToolConfig);
+    }
+
+    fn at_templates(state: &mut WizardState) {
+        state.handle(Action::Select);
+        state.handle(Action::Select);
+        assert_eq!(state.step(), WizardStep::Templates);
+    }
+
+    #[test]
+    fn template_defaults_follow_profile_and_shape() {
+        // single + solo -> quickstart
+        let mut solo = WizardState::default();
+        at_templates(&mut solo);
+        assert_eq!(solo.selected_templates(), &[Template::Quickstart]);
+
+        // single + team -> index + module
+        let mut team = WizardState::default();
+        team.handle(Action::Down);
+        at_templates(&mut team);
+        assert_eq!(
+            team.selected_templates(),
+            &[Template::Module, Template::Index]
+        );
+
+        // monorepo -> module + monorepo-index
+        let mut mono = WizardState::default();
+        mono.handle(Action::Select);
+        mono.handle(Action::Down);
+        mono.handle(Action::Select);
+        assert_eq!(mono.step(), WizardStep::Templates);
+        assert_eq!(
+            mono.selected_templates(),
+            &[Template::Module, Template::MonorepoIndex]
+        );
+    }
+
+    #[test]
+    fn template_defaults_recompute_until_first_toggle() {
+        let mut state = WizardState::default();
+        at_templates(&mut state);
+        assert_eq!(state.selected_templates(), &[Template::Quickstart]);
+
+        state.handle(Action::Back);
+        state.handle(Action::Down); // switch to monorepo
+        state.handle(Action::Select);
+
+        assert_eq!(
+            state.selected_templates(),
+            &[Template::Module, Template::MonorepoIndex]
+        );
+    }
+
+    #[test]
+    fn first_toggle_freezes_template_defaults() {
+        let mut state = WizardState::default();
+        at_templates(&mut state);
+
+        state.handle(Action::Toggle); // deselect highlighted quickstart
+        assert_eq!(state.selected_templates(), &[]);
+
+        state.handle(Action::Back);
+        state.handle(Action::Down); // switch to monorepo
+        state.handle(Action::Select);
+
+        assert_eq!(state.selected_templates(), &[]);
+    }
+
+    #[test]
+    fn custom_template_row_activates_text_input() {
+        let mut state = WizardState::default();
+        at_templates(&mut state);
+
+        assert!(!state.is_editing());
+        state.handle(Action::Up); // wrap to last row: custom
+        state.handle(Action::Toggle);
+        assert!(state.is_editing());
+
+        state.handle(Action::Character('t'));
+        state.handle(Action::Character('p'));
+        state.handle(Action::Backspace);
+        assert_eq!(state.custom_template_path(), "t");
+
+        state.handle(Action::Select); // confirm input
+        assert!(!state.is_editing());
+        assert!(state.selected_templates().contains(&Template::Custom));
+        assert_eq!(state.step(), WizardStep::Templates);
+    }
+
+    #[test]
+    fn escape_with_empty_custom_path_deselects_custom() {
+        let mut state = WizardState::default();
+        at_templates(&mut state);
+
+        state.handle(Action::Up);
+        state.handle(Action::Toggle);
+        assert!(state.is_editing());
+
+        state.handle(Action::Back);
+
+        assert!(!state.is_editing());
+        assert!(!state.selected_templates().contains(&Template::Custom));
+        assert_eq!(state.step(), WizardStep::Templates);
     }
 
     #[test]
