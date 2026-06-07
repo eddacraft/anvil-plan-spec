@@ -36,6 +36,14 @@ the active roadmap._
 | COMPOUND-002 | compound | Completed-work archive pattern             | Complete: 2026-05-22  |
 | COMPOUND-003 | compound | Release narrative convention               | Complete: 2026-05-22  |
 
+### Dogfood (plan hygiene)
+
+| Task        | Module  | Description                                  | Status               |
+| ----------- | ------- | -------------------------------------------- | -------------------- |
+| DOGFOOD-001 | dogfood | Reconcile roadmap module links               | Complete: 2026-06-07 |
+| DOGFOOD-002 | dogfood | Plan hygiene lint checks + `aps audit`       | Complete: 2026-06-08 |
+| DOGFOOD-003 | dogfood | Contribution guidance for APS plan updates   | Complete: 2026-06-08 |
+
 ### Orchestration
 
 | Task     | Module      | Description                                  | Status               |

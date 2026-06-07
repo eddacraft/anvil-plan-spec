@@ -1,8 +1,8 @@
 # Dogfood Module
 
-| ID      | Owner  | Priority | Status      |
-| ------- | ------ | -------- | ----------- |
-| DOGFOOD | @aneki | high     | In Progress |
+| ID      | Owner  | Priority | Status   |
+| ------- | ------ | -------- | -------- |
+| DOGFOOD | @aneki | high     | Complete |
 
 **Last reviewed:** 2026-06-08
 
@@ -121,15 +121,23 @@ repo and see the same discipline we recommend elsewhere.
   zero warnings (was 13). 7 new suite tests (22–28); fixtures under
   `test/fixtures/audit/` and `test/fixtures/crossdep/`.
 
-### DOGFOOD-003: Add contribution guidance for APS plan updates — Ready
+### DOGFOOD-003: Add contribution guidance for APS plan updates — Complete 2026-06-08
 
 - **Intent:** Make plan updates part of normal repo contribution hygiene
 - **Expected Outcome:** `AGENTS.md` and contributor docs say when APS plan files
   must be updated, how to mark work item status, and what validation to run.
 - **Validation:** `npx markdownlint-cli "AGENTS.md" "CONTRIBUTING.md" "docs/**/*.md"`
+- **Learning:** "Contribution docs should point at the CLI for status
+  changes — hand-edit instructions invite state-machine drift"
 - **Files:** AGENTS.md, CONTRIBUTING.md, docs/workflow.md
 - **Confidence:** high
 - **Dependencies:** DOGFOOD-001
+- **Status:** Complete: 2026-06-08
+- **Results:** AGENTS.md gains a "Keeping the plans honest" section (when
+  plan updates are required, CLI-first status marking, validation commands);
+  CONTRIBUTING.md gains a "Plan Updates" section wired into the PR process;
+  workflow.md's "Review specs in PRs" tip expanded into a concrete PR
+  checklist. Validation passes; plans lint clean.
 
 ## Decisions
 

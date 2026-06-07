@@ -28,6 +28,52 @@ When modifying templates, prompts, or documentation:
 - **Run markdownlint** before committing (`npx markdownlint-cli "**/*.md"`)
   - CI automatically runs markdown linting on all PRs
 
+## Keeping the plans honest
+
+This repo plans itself with APS ([plans/index.aps.md](plans/index.aps.md)).
+Plan updates are part of the change, not an afterthought — include them in
+the same commit/PR as the work they describe.
+
+### When a plan update is required
+
+Update the matching plan whenever a change affects **templates, prompts,
+examples, installer behaviour, or validation behaviour** (the dogfood
+module's scope). Concretely:
+
+- Executing a work item → its status, and `Results:` for non-trivial items
+- Discovering new work → add a `Draft` work item to the owning module
+- Making a judgment call → record it in the module's `## Decisions`
+- Hitting a bug or open question → log it in
+  [plans/issues.md](plans/issues.md) (`ISS-NNN` / `Q-NNN`)
+- Finishing a module's last item → mark the module Complete, update the
+  index table, roll the task table into `plans/completed.aps.md`
+
+### How to mark work item status
+
+Prefer the CLI — it enforces the state machine and stamps dates:
+
+```bash
+./bin/aps next                      # what's ready
+./bin/aps start DOGFOOD-003         # Ready → In Progress
+./bin/aps complete DOGFOOD-003 --learning "optional insight"
+```
+
+Hand-editing `- **Status:**` is fine too (Draft → Ready → In Progress →
+Complete; terminal states carry a date, e.g. `Complete: 2026-06-08`).
+Module status in the metadata table is always hand-edited.
+
+### What validation to run
+
+```bash
+./bin/aps lint plans                # plan structure (errors fail CI-style)
+./test/run.sh                       # full CLI test suite
+npx markdownlint-cli "**/*.md"      # markdown style (CI-enforced)
+./bin/aps audit --no-run            # optional: status-vs-reality drift
+```
+
+`aps lint plans` must pass with no errors before committing plan changes;
+keep it warning-free where practical — warnings are drift signals.
+
 ## Execution layer
 
 - **Work items** define outcomes (what to achieve)
