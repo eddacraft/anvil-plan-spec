@@ -48,6 +48,27 @@ disclosure in shared CI logs.
 
 ---
 
+### ISS-003: TUI wizard lacks panic-time terminal restore
+
+| Field      | Value   |
+| ---------- | ------- |
+| Status     | Open    |
+| Severity   | Low     |
+| Discovered | TUI-003 |
+| Module     | TUI     |
+
+**Context:** `wizard::run()` restores raw mode / alternate screen / bracketed
+paste on normal exit (best-effort since TUI-003), but a panic inside
+`run_loop` leaves the terminal in raw mode. Council review (session
+council-b2bd78ac) found no panic paths in the current code; the exposure is
+future regressions. Fix is a panic hook or Drop guard — natural to land with
+TUI-004, which raises the stakes by writing to disk.
+
+**Impact:** A future panic would leave the user's terminal unusable until
+`reset`.
+
+---
+
 ## Questions
 
 _None yet._

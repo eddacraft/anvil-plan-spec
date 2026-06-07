@@ -82,6 +82,10 @@ pub enum Component {
     DecisionsDir,
 }
 
+/// Raw user input, trimmed but NOT validated or canonicalized. The scaffold
+/// step (TUI-004) owns path policy: it must reject or confine absolute paths
+/// and `..` components and decide `~` expansion before writing to disk. The
+/// wizard's preview flags those shapes but does not block them.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PathsConfig {
     pub plans_dir: String,
@@ -257,6 +261,16 @@ impl WizardState {
         {
             self.selected_templates.remove(index);
         } else {
+            // Index and MonorepoIndex scaffold the same file — mutually exclusive
+            match template {
+                PlanTemplate::Index => self
+                    .selected_templates
+                    .retain(|selected| *selected != PlanTemplate::MonorepoIndex),
+                PlanTemplate::MonorepoIndex => self
+                    .selected_templates
+                    .retain(|selected| *selected != PlanTemplate::Index),
+                _ => {}
+            }
             self.selected_templates.push(template);
             self.selected_templates
                 .sort_by_key(|template| Self::template_order(*template));
@@ -299,6 +313,11 @@ impl WizardState {
     }
 
     pub fn set_project_shape(&mut self, project_shape: ProjectShape) {
+        // Template overrides stick while the context is unchanged; an actual
+        // shape change invalidates that context, so defaults re-derive
+        if self.project_shape != project_shape {
+            self.templates_touched = false;
+        }
         self.project_shape = project_shape;
         self.project_shape_index = Self::PROJECT_SHAPES
             .iter()
@@ -414,23 +433,39 @@ impl WizardState {
     }
 
     fn back(&mut self) {
+        // Navigating away always discards any open edit, even when back() is
+        // called directly rather than routed through handle_edit()
+        self.edit = None;
         self.step = match self.step {
             WizardStep::Profile => WizardStep::Profile,
             WizardStep::ProjectShape => WizardStep::Profile,
             WizardStep::AiTooling => WizardStep::ProjectShape,
-            WizardStep::ToolConfig => WizardStep::AiTooling,
+            // Routing derives from selected_tools because the Templates step
+            // never mutates it; if a future action arm changes tools while on
+            // Templates, switch to recording the arrival step instead
             WizardStep::Templates if self.selected_tools.is_empty() => WizardStep::AiTooling,
             WizardStep::Templates => WizardStep::ToolConfig,
+            WizardStep::ToolConfig => WizardStep::AiTooling,
             WizardStep::Paths => WizardStep::Templates,
             WizardStep::Components => WizardStep::Paths,
             WizardStep::Done => WizardStep::Components,
         };
+
+        // Defaults refresh on backward entry too (still gated on touched)
+        if self.step == WizardStep::Templates {
+            self.apply_template_defaults();
+        }
     }
 
     fn move_selection(&mut self, forward: bool) {
         match self.step {
             WizardStep::Profile => {
                 self.profile_index = move_index(self.profile_index, Self::PROFILES.len(), forward);
+                // A profile change invalidates template overrides (see
+                // set_project_shape for the same rule)
+                if self.profile != Self::PROFILES[self.profile_index] {
+                    self.templates_touched = false;
+                }
                 self.profile = Self::PROFILES[self.profile_index];
             }
             WizardStep::ProjectShape => {
@@ -481,7 +516,11 @@ impl WizardState {
         }
     }
 
+    /// Longest accepted input — PATH_MAX on Linux; nothing legitimate is close.
+    const MAX_INPUT_LEN: usize = 4096;
+
     fn start_edit(&mut self, target: EditTarget) {
+        debug_assert!(self.edit.is_none(), "nested edit sessions are a bug");
         let value = match target {
             EditTarget::CustomTemplate => self.custom_template_path.clone(),
             EditTarget::PathField(index) => self.path_field(index).to_string(),
@@ -493,7 +532,9 @@ impl WizardState {
     fn handle_edit(&mut self, action: Action) -> WizardEvent {
         match action {
             Action::Quit => return WizardEvent::Quit,
-            Action::Character(c) => self.edit_state.insert(c),
+            Action::Character(c) if self.edit_state.value.len() < Self::MAX_INPUT_LEN => {
+                self.edit_state.insert(c);
+            }
             Action::Backspace => self.edit_state.backspace(),
             Action::Delete => self.edit_state.delete(),
             Action::Left => self.edit_state.move_left(),
@@ -512,11 +553,13 @@ impl WizardState {
             return;
         };
         let value = self.edit_state.value.trim().to_string();
+        let has_path = !value.is_empty();
         match target {
             EditTarget::CustomTemplate => {
+                // Custom path may be empty (means: no custom template) —
+                // unlike path fields there is no default to fall back to
                 self.templates_touched = true;
                 self.custom_template_path = value;
-                let has_path = !self.custom_template_path.is_empty();
                 let has_custom = self.selected_templates.contains(&PlanTemplate::Custom);
                 if has_path && !has_custom {
                     self.selected_templates.push(PlanTemplate::Custom);
@@ -527,17 +570,18 @@ impl WizardState {
             }
             EditTarget::PathField(index) => {
                 // Paths fall back to defaults rather than going empty
-                let value = if value.is_empty() {
-                    Self::path_default(index).to_string()
-                } else {
+                let committed = if has_path {
                     value
+                } else {
+                    Self::path_default(index).to_string()
                 };
-                *self.path_field_mut(index) = value;
+                *self.path_field_mut(index) = committed;
             }
         }
     }
 
     fn path_field(&self, index: usize) -> &str {
+        debug_assert!(index < Self::PATH_FIELDS);
         match index {
             0 => &self.paths.plans_dir,
             1 => &self.paths.docs_dir,
@@ -546,6 +590,7 @@ impl WizardState {
     }
 
     fn path_field_mut(&mut self, index: usize) -> &mut String {
+        debug_assert!(index < Self::PATH_FIELDS);
         match index {
             0 => &mut self.paths.plans_dir,
             1 => &mut self.paths.docs_dir,
@@ -554,6 +599,7 @@ impl WizardState {
     }
 
     fn path_default(index: usize) -> &'static str {
+        debug_assert!(index < Self::PATH_FIELDS);
         match index {
             0 => "plans/",
             1 => "docs/",
@@ -637,18 +683,24 @@ pub fn run() -> io::Result<()> {
 
     crossterm::terminal::enable_raw_mode()?;
     let mut stdout = io::stdout();
-    crossterm::execute!(stdout, crossterm::terminal::EnterAlternateScreen)?;
+    crossterm::execute!(
+        stdout,
+        crossterm::terminal::EnterAlternateScreen,
+        crossterm::event::EnableBracketedPaste
+    )?;
 
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
     let result = run_loop(&mut terminal);
 
-    crossterm::terminal::disable_raw_mode()?;
-    crossterm::execute!(
+    // Best-effort cleanup: a failure restoring one mode must not skip the rest
+    let _ = crossterm::terminal::disable_raw_mode();
+    let _ = crossterm::execute!(
         terminal.backend_mut(),
+        crossterm::event::DisableBracketedPaste,
         crossterm::terminal::LeaveAlternateScreen
-    )?;
-    terminal.show_cursor()?;
+    );
+    let _ = terminal.show_cursor();
 
     result
 }
@@ -661,9 +713,25 @@ fn run_loop(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> io::Result
         terminal.draw(|frame| render(frame, &theme, &mut state))?;
 
         if crossterm::event::poll(Duration::from_millis(250))? {
-            let crossterm::event::Event::Key(key) = crossterm::event::read()? else {
-                continue;
+            let key = match crossterm::event::read()? {
+                crossterm::event::Event::Key(key) => key,
+                // Bracketed paste: insert into the active edit, ignore otherwise
+                // (without this, a pasted trailing newline would commit the
+                // field and spill the rest into navigation, where 'q' quits)
+                crossterm::event::Event::Paste(text) => {
+                    if state.is_editing() {
+                        for c in text.chars().filter(|c| !c.is_control()) {
+                            state.handle(Action::Character(c));
+                        }
+                    }
+                    continue;
+                }
+                _ => continue,
             };
+            // Windows terminals also report key releases — only act on presses
+            if key.kind != crossterm::event::KeyEventKind::Press {
+                continue;
+            }
             // KeyHandler maps j/k/h/l/q/space to navigation, which would
             // swallow typed characters — use a literal mapping while editing
             let action = if state.is_editing() {
@@ -936,6 +1004,8 @@ fn render_paths(
     );
 
     let editing_path = matches!(state.edit, Some(EditTarget::PathField(_)));
+    // When not editing, the input previews the field under the cursor (the
+    // one a Toggle would start editing), not the last-committed field
     let mut input_state = if editing_path {
         state.edit_state.clone()
     } else {
@@ -1203,8 +1273,18 @@ fn preview_tree(
     templates: &[PlanTemplate],
     components: &[Component],
 ) -> String {
+    // Paths that escape (or might escape) the project root are shown verbatim
+    // with a warning instead of being normalized into a misleading nested
+    // entry — this preview is the user's confirmation surface
     let dir = |raw: &str| {
-        let trimmed = raw.trim_matches('/');
+        let cleaned = raw.trim();
+        if cleaned.starts_with('/')
+            || cleaned.starts_with('~')
+            || cleaned.split('/').any(|part| part == "..")
+        {
+            return format!("{cleaned}  (!) outside project root");
+        }
+        let trimmed = cleaned.trim_matches('/');
         if trimmed.is_empty() {
             "./".to_string()
         } else {
@@ -1693,6 +1773,138 @@ mod tests {
         state.handle(Action::Select); // -> Paths
 
         assert!(!state.selected_templates().contains(&PlanTemplate::Custom));
+    }
+
+    #[test]
+    fn shape_change_after_touch_refreshes_defaults() {
+        let mut state = WizardState::default();
+        advance_to_templates(&mut state);
+
+        // Touch the selection, then change shape — context change re-derives
+        state.toggle_template(PlanTemplate::Quickstart);
+        state.handle(Action::Back); // -> AiTooling
+        state.handle(Action::Back); // -> ProjectShape
+        state.handle(Action::Down); // single -> monorepo
+        state.handle(Action::Select); // -> AiTooling
+        state.handle(Action::Select); // -> Templates
+
+        assert_eq!(
+            state.selected_templates(),
+            &[PlanTemplate::Module, PlanTemplate::MonorepoIndex]
+        );
+    }
+
+    #[test]
+    fn back_from_templates_with_no_tools_returns_to_ai_tooling() {
+        let mut state = WizardState::default();
+        advance_to_templates(&mut state);
+
+        state.handle(Action::Back);
+        assert_eq!(state.step(), WizardStep::AiTooling);
+    }
+
+    #[test]
+    fn defaults_refresh_on_backward_entry_too() {
+        let mut state = WizardState::default();
+        state.toggle_tool(AiTool::ClaudeCode);
+        state.handle(Action::Select); // -> ProjectShape
+        state.handle(Action::Select); // -> AiTooling
+        state.handle(Action::Select); // -> ToolConfig
+        state.handle(Action::Select); // -> Templates
+        state.handle(Action::Select); // -> Paths
+
+        // Back must land on Templates with (refreshed) defaults intact
+        state.handle(Action::Back);
+        assert_eq!(state.step(), WizardStep::Templates);
+        assert!(!state.selected_templates().is_empty());
+    }
+
+    #[test]
+    fn index_and_monorepo_index_are_mutually_exclusive() {
+        let mut state = WizardState::default();
+        advance_to_templates(&mut state);
+
+        // Solo+single default includes Index
+        assert!(state.selected_templates().contains(&PlanTemplate::Index));
+        state.toggle_template(PlanTemplate::MonorepoIndex);
+        assert!(
+            state
+                .selected_templates()
+                .contains(&PlanTemplate::MonorepoIndex)
+        );
+        assert!(!state.selected_templates().contains(&PlanTemplate::Index));
+
+        state.toggle_template(PlanTemplate::Index);
+        assert!(state.selected_templates().contains(&PlanTemplate::Index));
+        assert!(
+            !state
+                .selected_templates()
+                .contains(&PlanTemplate::MonorepoIndex)
+        );
+    }
+
+    #[test]
+    fn effective_paths_reflects_live_edit_buffer() {
+        let mut state = WizardState::default();
+        advance_to_templates(&mut state);
+        state.handle(Action::Select); // -> Paths
+
+        state.handle(Action::Toggle); // edit plans dir
+        for c in "x".chars() {
+            state.handle(Action::Character(c));
+        }
+        // Uncommitted: stored value unchanged, effective value live
+        assert_eq!(state.paths().plans_dir, "plans/");
+        assert_eq!(state.effective_paths().plans_dir, "plans/x");
+    }
+
+    #[test]
+    fn tool_configs_survive_back_and_readvance() {
+        let mut state = WizardState::default();
+        state.toggle_tool(AiTool::ClaudeCode);
+        state.handle(Action::Select); // -> ProjectShape
+        state.handle(Action::Select); // -> AiTooling
+        state.handle(Action::Select); // -> ToolConfig
+        state.handle(Action::Character('a')); // customise: agents off
+
+        state.handle(Action::Back); // -> AiTooling
+        state.handle(Action::Select); // -> ToolConfig again
+
+        assert!(!state.tool_configs()[0].install_agents);
+    }
+
+    #[test]
+    fn preview_flags_paths_outside_project_root() {
+        let paths = PathsConfig {
+            plans_dir: "/etc/cron.d".to_string(),
+            docs_dir: "../escape".to_string(),
+            tooling_root: "~/aps".to_string(),
+        };
+        let preview = preview_tree(&paths, &[], &[]);
+
+        assert!(preview.contains("/etc/cron.d  (!) outside project root"));
+        assert!(preview.contains("../escape  (!) outside project root"));
+        assert!(preview.contains("~/aps  (!) outside project root"));
+        // Names merely containing dots are not flagged
+        let safe = PathsConfig {
+            plans_dir: "my..plans/".to_string(),
+            ..PathsConfig::default()
+        };
+        assert!(!preview_tree(&safe, &[], &[]).contains("(!)"));
+    }
+
+    #[test]
+    fn input_length_is_capped() {
+        let mut state = WizardState::default();
+        advance_to_templates(&mut state);
+        state.handle(Action::Select); // -> Paths
+        state.handle(Action::Toggle); // edit
+
+        for _ in 0..(WizardState::MAX_INPUT_LEN + 100) {
+            state.handle(Action::Character('a'));
+        }
+        state.handle(Action::Select);
+        assert!(state.paths().plans_dir.len() <= WizardState::MAX_INPUT_LEN);
     }
 
     #[test]
