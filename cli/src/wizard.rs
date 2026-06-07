@@ -74,6 +74,15 @@ pub enum Template {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Component {
+    LintRules,
+    ApsRules,
+    ProjectContext,
+    DesignsDir,
+    DecisionsDir,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum WizardStep {
     Profile,
     ProjectShape,
@@ -110,6 +119,8 @@ pub struct WizardState {
     editing_custom_template: bool,
     path_inputs: [TextInputState; 3],
     path_focus: usize,
+    selected_components: Vec<Component>,
+    component_index: usize,
 }
 
 impl Default for WizardState {
@@ -135,6 +146,8 @@ impl Default for WizardState {
                 path_input(".aps/"),
             ],
             path_focus: 0,
+            selected_components: WizardState::COMPONENTS.to_vec(),
+            component_index: 0,
         }
     }
 }
@@ -161,6 +174,13 @@ impl WizardState {
         Template::Index,
         Template::MonorepoIndex,
         Template::Custom,
+    ];
+    const COMPONENTS: [Component; 5] = [
+        Component::LintRules,
+        Component::ApsRules,
+        Component::ProjectContext,
+        Component::DesignsDir,
+        Component::DecisionsDir,
     ];
     const AI_TOOLS: [AiTool; 6] = [
         AiTool::ClaudeCode,
@@ -253,6 +273,68 @@ impl WizardState {
 
     pub fn path_focus(&self) -> usize {
         self.path_focus
+    }
+
+    pub fn selected_components(&self) -> &[Component] {
+        &self.selected_components
+    }
+
+    pub fn toggle_component(&mut self, component: Component) {
+        if let Some(index) = self
+            .selected_components
+            .iter()
+            .position(|selected| *selected == component)
+        {
+            self.selected_components.remove(index);
+        } else {
+            self.selected_components.push(component);
+            self.selected_components
+                .sort_by_key(|component| Self::component_order(*component));
+        }
+    }
+
+    fn has_component(&self, component: Component) -> bool {
+        self.selected_components.contains(&component)
+    }
+
+    /// Render the directory structure implied by the current selections.
+    /// Pure function of wizard state so the preview can update live while
+    /// path fields are edited.
+    pub fn directory_preview(&self) -> String {
+        let mut plans_children: Vec<String> = Vec::new();
+        for template in &self.selected_templates {
+            plans_children.push(match template {
+                Template::Quickstart => "quickstart.aps.md".to_string(),
+                Template::Index => "index.aps.md".to_string(),
+                Template::MonorepoIndex => "index.aps.md (monorepo)".to_string(),
+                Template::Module => "modules/".to_string(),
+                Template::Custom => format!("{} (custom)", self.custom_template_path()),
+            });
+        }
+        if self.has_component(Component::ApsRules) {
+            plans_children.push("aps-rules.md".to_string());
+        }
+        if self.has_component(Component::ProjectContext) {
+            plans_children.push("project-context.md".to_string());
+        }
+        plans_children.push("execution/".to_string());
+        if self.has_component(Component::DesignsDir) {
+            plans_children.push("designs/".to_string());
+        }
+        if self.has_component(Component::DecisionsDir) {
+            plans_children.push("decisions/".to_string());
+        }
+
+        let mut tooling_children: Vec<String> = Vec::new();
+        if self.has_component(Component::LintRules) {
+            tooling_children.push("lint/".to_string());
+        }
+
+        let mut lines: Vec<String> = Vec::new();
+        push_tree(&mut lines, self.plans_dir(), &plans_children);
+        push_tree(&mut lines, self.docs_dir(), &[]);
+        push_tree(&mut lines, self.tooling_root(), &tooling_children);
+        lines.join("\n")
     }
 
     pub fn toggle_template(&mut self, template: Template) {
@@ -430,9 +512,12 @@ impl WizardState {
                 self.template_index =
                     move_index(self.template_index, Self::TEMPLATES.len(), forward);
             }
-            // Selection state for these steps lands with their sections
-            // (TUI-003 Tasks 3-4).
-            WizardStep::Paths | WizardStep::Components => {}
+            WizardStep::Components => {
+                self.component_index =
+                    move_index(self.component_index, Self::COMPONENTS.len(), forward);
+            }
+            // Paths focus movement is handled by handle_editing.
+            WizardStep::Paths => {}
             WizardStep::Done => {}
         }
     }
@@ -441,6 +526,9 @@ impl WizardState {
         match self.step {
             WizardStep::AiTooling => self.toggle_tool(Self::AI_TOOLS[self.ai_tool_index]),
             WizardStep::Templates => self.toggle_template(Self::TEMPLATES[self.template_index]),
+            WizardStep::Components => {
+                self.toggle_component(Self::COMPONENTS[self.component_index])
+            }
             _ => {}
         }
     }
@@ -483,6 +571,25 @@ impl WizardState {
             .iter()
             .position(|candidate| *candidate == template)
             .unwrap_or(Self::TEMPLATES.len())
+    }
+
+    fn component_order(component: Component) -> usize {
+        Self::COMPONENTS
+            .iter()
+            .position(|candidate| *candidate == component)
+            .unwrap_or(Self::COMPONENTS.len())
+    }
+}
+
+fn push_tree(lines: &mut Vec<String>, root: &str, children: &[String]) {
+    lines.push(root.to_string());
+    for (index, child) in children.iter().enumerate() {
+        let connector = if index + 1 == children.len() {
+            "└── "
+        } else {
+            "├── "
+        };
+        lines.push(format!("{connector}{child}"));
     }
 }
 
@@ -1294,6 +1401,89 @@ mod tests {
 
         let ctrl_c = KeyEvent::new(KeyCode::Char('c'), KeyModifiers::CONTROL);
         assert_eq!(map_key(ctrl_c, true), Action::Quit);
+    }
+
+    fn at_components(state: &mut WizardState) {
+        for _ in 0..5 {
+            state.handle(Action::Select);
+        }
+        assert_eq!(state.step(), WizardStep::Components);
+    }
+
+    #[test]
+    fn components_default_to_all_enabled() {
+        let mut state = WizardState::default();
+        at_components(&mut state);
+
+        assert_eq!(
+            state.selected_components(),
+            &[
+                Component::LintRules,
+                Component::ApsRules,
+                Component::ProjectContext,
+                Component::DesignsDir,
+                Component::DecisionsDir,
+            ]
+        );
+    }
+
+    #[test]
+    fn space_toggles_highlighted_component() {
+        let mut state = WizardState::default();
+        at_components(&mut state);
+
+        state.handle(Action::Toggle); // lint rules highlighted first
+        assert!(
+            !state
+                .selected_components()
+                .contains(&Component::LintRules)
+        );
+
+        state.handle(Action::Toggle);
+        assert!(state.selected_components().contains(&Component::LintRules));
+    }
+
+    #[test]
+    fn directory_preview_reflects_paths_templates_and_components() {
+        let mut state = WizardState::default();
+        at_paths(&mut state);
+
+        state.handle(Action::Character('x')); // plans/ -> plans/x
+        state.handle(Action::Select); // -> Components
+
+        let preview = state.directory_preview();
+        assert!(preview.contains("plans/x"));
+        assert!(preview.contains("quickstart.aps.md")); // solo single default
+        assert!(preview.contains("designs/"));
+        assert!(preview.contains(".aps/"));
+        assert!(preview.contains("lint/"));
+
+        // deselect designs/ (index 3) and lint rules (index 0)
+        for _ in 0..3 {
+            state.handle(Action::Down);
+        }
+        state.handle(Action::Toggle);
+        state.handle(Action::Up);
+        state.handle(Action::Up);
+        state.handle(Action::Up);
+        state.handle(Action::Toggle);
+
+        let preview = state.directory_preview();
+        assert!(!preview.contains("designs/"));
+        assert!(!preview.contains("lint/"));
+    }
+
+    #[test]
+    fn directory_preview_updates_as_paths_change() {
+        let mut state = WizardState::default();
+        at_paths(&mut state);
+
+        let before = state.directory_preview();
+        state.handle(Action::Character('z'));
+        let after = state.directory_preview();
+
+        assert_ne!(before, after);
+        assert!(after.contains("plans/z"));
     }
 
     #[test]
