@@ -1,8 +1,12 @@
+use std::io::IsTerminal;
+use std::path::{Path, PathBuf};
+
 use clap::{Parser, Subcommand};
 
 #[allow(unused_imports)]
 use eddacraft_tui as _;
 
+mod config;
 mod scaffold;
 mod wizard;
 
@@ -20,8 +24,52 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
-    /// Run the interactive setup wizard (TUI)
-    Init,
+    /// Set up APS in this project (TUI wizard, flags, or config replay)
+    Init {
+        /// Skip the TUI and scaffold from flags (auto-enabled without a TTY)
+        #[arg(long)]
+        non_interactive: bool,
+        /// Replay a configuration written by a previous init
+        #[arg(long, value_name = "CONFIG_YML")]
+        from: Option<PathBuf>,
+        /// Profile: solo, team, or agent-operator
+        #[arg(long)]
+        profile: Option<String>,
+        /// Project shape: single or monorepo
+        #[arg(long)]
+        shape: Option<String>,
+        /// AI tools (comma-separated): claude-code, copilot, codex, opencode, gemini, generic
+        #[arg(long, value_delimiter = ',')]
+        tools: Vec<String>,
+        /// Plan templates (comma-separated): quickstart, module, index, monorepo-index
+        #[arg(long, value_delimiter = ',')]
+        templates: Vec<String>,
+        /// Path to a custom template file to install
+        #[arg(long)]
+        custom_template: Option<String>,
+        /// Plans directory (default: plans/)
+        #[arg(long)]
+        plans_dir: Option<String>,
+        /// Docs location (default: docs/)
+        #[arg(long)]
+        docs_dir: Option<String>,
+        /// Tooling root (default: .aps/)
+        #[arg(long)]
+        tooling_root: Option<String>,
+        /// Components (comma-separated): lint-rules, aps-rules, project-context,
+        /// designs-dir, decisions-dir
+        #[arg(long, value_delimiter = ',')]
+        components: Vec<String>,
+        /// Hook verbosity applied to all selected tools: full, minimal, none
+        #[arg(long)]
+        hooks: Option<String>,
+        /// Model preference applied to all selected tools: default, opus, sonnet
+        #[arg(long)]
+        model: Option<String>,
+        /// Skip agent installation for all selected tools
+        #[arg(long)]
+        no_agents: bool,
+    },
     /// Validate APS documents under plans/
     Lint,
     /// Resolve the next ready work item
@@ -37,14 +85,53 @@ fn main() {
         None => {
             println!("aps {} — pass --help for usage", env!("CARGO_PKG_VERSION"));
         }
-        Some(Command::Init) => {
-            if let Err(err) = wizard::run() {
+        Some(Command::Init {
+            non_interactive,
+            from,
+            profile,
+            shape,
+            tools,
+            templates,
+            custom_template,
+            plans_dir,
+            docs_dir,
+            tooling_root,
+            components,
+            hooks,
+            model,
+            no_agents,
+        }) => {
+            let flags = config::InitFlags {
+                profile,
+                shape,
+                tools,
+                templates,
+                custom_template,
+                plans_dir,
+                docs_dir,
+                tooling_root,
+                components,
+                hooks,
+                model,
+                no_agents,
+            };
+            let tty = std::io::stdin().is_terminal() && std::io::stdout().is_terminal();
+
+            if config::wants_tui(non_interactive, from.as_deref(), &flags, tty) {
+                if let Err(err) = wizard::run() {
+                    eprintln!("aps init failed: {err}");
+                    std::process::exit(1);
+                }
+                return;
+            }
+
+            if let Err(err) = run_non_interactive_init(from.as_deref(), &flags) {
                 eprintln!("aps init failed: {err}");
                 std::process::exit(1);
             }
         }
         Some(Command::Lint) => {
-            eprintln!("`aps lint` native port pending (TUI-005 / D-028)");
+            eprintln!("`aps lint` native port pending (TUI-009 / D-028)");
             std::process::exit(2);
         }
         Some(Command::Next { module }) => {
@@ -53,4 +140,17 @@ fn main() {
             std::process::exit(2);
         }
     }
+}
+
+fn run_non_interactive_init(from: Option<&Path>, flags: &config::InitFlags) -> Result<(), String> {
+    let base = match from {
+        Some(path) => {
+            let text = std::fs::read_to_string(path)
+                .map_err(|err| format!("cannot read {}: {err}", path.display()))?;
+            Some(config::parse_config(&text)?)
+        }
+        None => None,
+    };
+    let selections = config::build_selections(base, flags)?;
+    config::run_scaffold_console(Path::new("."), &selections)
 }

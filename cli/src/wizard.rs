@@ -694,7 +694,7 @@ impl WizardState {
 }
 
 impl ToolConfig {
-    fn default_for(tool: AiTool) -> Self {
+    pub fn default_for(tool: AiTool) -> Self {
         Self {
             tool,
             install_agents: tool.supports_agents(),
