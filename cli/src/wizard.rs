@@ -8,7 +8,10 @@ use ratatui::backend::CrosstermBackend;
 use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::widgets::{Block, Borders, Paragraph, StatefulWidget, Widget};
 use std::io::{self, IsTerminal};
+use std::path::PathBuf;
 use std::time::Duration;
+
+use crate::scaffold::{self, ScaffoldRun, Selections, StepStatus};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Profile {
@@ -96,7 +99,9 @@ pub enum WizardStep {
     Templates,
     Paths,
     Components,
-    Done,
+    Review,
+    Scaffold,
+    Summary,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -129,6 +134,9 @@ pub struct WizardState {
     tooling_root: TextInputState,
     component_index: usize,
     selected_components: Vec<Component>,
+    root: PathBuf,
+    scaffold_run: Option<ScaffoldRun>,
+    scaffold_error: Option<String>,
 }
 
 impl Default for WizardState {
@@ -155,6 +163,9 @@ impl Default for WizardState {
             tooling_root: text_input_with(Self::DEFAULT_TOOLING_ROOT),
             component_index: 0,
             selected_components: Self::COMPONENTS.to_vec(),
+            root: PathBuf::from("."),
+            scaffold_run: None,
+            scaffold_error: None,
         }
     }
 }
@@ -270,6 +281,14 @@ impl WizardState {
             return self.handle_text(action);
         }
 
+        // Scaffold execution is not interruptible except by quitting.
+        if self.step == WizardStep::Scaffold {
+            return match action {
+                Action::Quit => WizardEvent::Quit,
+                _ => WizardEvent::Continue,
+            };
+        }
+
         match action {
             Action::Quit => WizardEvent::Quit,
             Action::Up => {
@@ -381,8 +400,13 @@ impl WizardState {
                 self.restore_default_paths();
                 WizardStep::Components
             }
-            WizardStep::Components => WizardStep::Done,
-            WizardStep::Done => return WizardEvent::Complete,
+            WizardStep::Components => WizardStep::Review,
+            WizardStep::Review => {
+                self.start_scaffold();
+                WizardStep::Scaffold
+            }
+            WizardStep::Scaffold => WizardStep::Scaffold, // advanced by scaffold_tick
+            WizardStep::Summary => return WizardEvent::Complete,
         };
 
         if self.step == WizardStep::Templates && !self.templates_initialized {
@@ -403,8 +427,73 @@ impl WizardState {
             WizardStep::Templates => WizardStep::ToolConfig,
             WizardStep::Paths => WizardStep::Templates,
             WizardStep::Components => WizardStep::Paths,
-            WizardStep::Done => WizardStep::Components,
+            WizardStep::Review => WizardStep::Components,
+            // Scaffolding has side effects; there is no going back.
+            WizardStep::Scaffold => WizardStep::Scaffold,
+            WizardStep::Summary => WizardStep::Summary,
         };
+    }
+
+    /// Collect the wizard's selections for scaffold planning. Also the
+    /// hand-off point for the non-interactive path (TUI-005).
+    pub fn selections(&self) -> Selections {
+        Selections {
+            profile: self.profile,
+            shape: self.project_shape,
+            tools: self.tool_configs.clone(),
+            templates: self.selected_templates.clone(),
+            custom_template: self.custom_template_path().map(str::to_string),
+            plans_dir: self.plans_dir.value.clone(),
+            docs_dir: self.docs_dir.value.clone(),
+            tooling_root: self.tooling_root.value.clone(),
+            components: self.selected_components.clone(),
+        }
+    }
+
+    fn start_scaffold(&mut self) {
+        let selections = self.selections();
+        match scaffold::check_target(&self.root, &selections) {
+            Ok(()) => {
+                self.scaffold_run = Some(ScaffoldRun::new(self.root.clone(), &selections));
+            }
+            Err(message) => {
+                self.scaffold_error = Some(message);
+            }
+        }
+    }
+
+    /// Drive scaffold execution one step at a time so the event loop can
+    /// redraw between steps. No-op outside the Scaffold step.
+    pub fn scaffold_tick(&mut self) {
+        if self.step != WizardStep::Scaffold {
+            return;
+        }
+
+        match &mut self.scaffold_run {
+            Some(run) => {
+                if !run.run_next() {
+                    self.step = WizardStep::Summary;
+                }
+            }
+            // Target check failed; the summary screen shows the error.
+            None => self.step = WizardStep::Summary,
+        }
+    }
+
+    pub fn scaffold_run(&self) -> Option<&ScaffoldRun> {
+        self.scaffold_run.as_ref()
+    }
+
+    pub fn scaffold_error(&self) -> Option<&str> {
+        self.scaffold_error.as_deref()
+    }
+
+    #[cfg(test)]
+    pub fn with_root(root: PathBuf) -> Self {
+        Self {
+            root,
+            ..Self::default()
+        }
     }
 
     /// Empty path fields fall back to their defaults when leaving the step,
@@ -471,7 +560,8 @@ impl WizardState {
                 self.component_index =
                     move_index(self.component_index, Self::COMPONENTS.len(), forward);
             }
-            WizardStep::Paths | WizardStep::Done => {}
+            WizardStep::Paths | WizardStep::Review | WizardStep::Scaffold | WizardStep::Summary => {
+            }
         }
     }
 
@@ -651,6 +741,20 @@ fn run_loop(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> io::Result
     loop {
         terminal.draw(|frame| render(frame, &theme, &mut state))?;
 
+        // Execute one scaffold step per frame so progress renders smoothly.
+        if state.step() == WizardStep::Scaffold {
+            state.scaffold_tick();
+            if crossterm::event::poll(Duration::from_millis(10))? {
+                let crossterm::event::Event::Key(key) = crossterm::event::read()? else {
+                    continue;
+                };
+                if state.handle(KeyHandler::map(key)) == WizardEvent::Quit {
+                    return Ok(());
+                }
+            }
+            continue;
+        }
+
         if crossterm::event::poll(Duration::from_millis(250))? {
             let crossterm::event::Event::Key(key) = crossterm::event::read()? else {
                 continue;
@@ -721,7 +825,9 @@ fn render(frame: &mut Frame<'_>, theme: &EddaCraftTheme, state: &mut WizardState
         WizardStep::Templates => render_templates(frame, content, theme, state),
         WizardStep::Paths => render_paths(frame, content, theme, state),
         WizardStep::Components => render_components(frame, content, theme, state),
-        WizardStep::Done => render_done(frame, content, state),
+        WizardStep::Review => render_review(frame, content, state),
+        WizardStep::Scaffold => render_scaffold(frame, content, state),
+        WizardStep::Summary => render_summary(frame, content, state),
     }
 }
 
@@ -971,7 +1077,7 @@ fn render_components(
     );
 }
 
-fn render_done(frame: &mut Frame<'_>, area: Rect, state: &WizardState) {
+fn render_review(frame: &mut Frame<'_>, area: Rect, state: &WizardState) {
     let tools = if state.selected_tools().is_empty() {
         "none".to_string()
     } else {
@@ -1010,7 +1116,7 @@ fn render_done(frame: &mut Frame<'_>, area: Rect, state: &WizardState) {
             .join(", ")
     };
     let summary = format!(
-        "Profile: {}\nProject shape: {}\nAI tools: {}\nTemplates: {}\nPaths: plans={} docs={} tooling={}\nComponents: {}\n\nScaffold execution starts in TUI-004.",
+        "Profile: {}\nProject shape: {}\nAI tools: {}\nTemplates: {}\nPaths: plans={} docs={} tooling={}\nComponents: {}\n\nPress enter to scaffold, esc to go back.",
         state.profile().label(),
         state.project_shape.label(),
         tools,
@@ -1022,6 +1128,85 @@ fn render_done(frame: &mut Frame<'_>, area: Rect, state: &WizardState) {
     );
 
     Paragraph::new(summary)
+        .block(Block::default().title("Review").borders(Borders::ALL))
+        .render(area, frame.buffer_mut());
+}
+
+fn render_scaffold(frame: &mut Frame<'_>, area: Rect, state: &WizardState) {
+    let mut lines = Vec::new();
+    if let Some(run) = state.scaffold_run() {
+        let (done, total) = run.progress();
+        lines.push(format!("Scaffolding… {done}/{total}"));
+        lines.push(String::new());
+        for (label, status) in run.steps() {
+            let marker = match status {
+                StepStatus::Pending => "  …",
+                StepStatus::Done => "  ✓",
+                StepStatus::Failed(_) => "  ✗",
+            };
+            lines.push(format!("{marker} {label}"));
+            if let StepStatus::Failed(message) = status {
+                lines.push(format!("      {message}"));
+            }
+        }
+    } else if let Some(error) = state.scaffold_error() {
+        lines.push(format!("Cannot scaffold: {error}"));
+    }
+
+    Paragraph::new(lines.join("\n"))
+        .block(Block::default().title("Scaffold").borders(Borders::ALL))
+        .render(area, frame.buffer_mut());
+}
+
+fn render_summary(frame: &mut Frame<'_>, area: Rect, state: &WizardState) {
+    let mut lines = Vec::new();
+
+    if let Some(error) = state.scaffold_error() {
+        lines.push(format!("Scaffold aborted: {error}"));
+    } else if let Some(run) = state.scaffold_run() {
+        let failures = run.failures();
+        if failures.is_empty() {
+            lines.push("Scaffold complete.".to_string());
+        } else {
+            lines.push(format!(
+                "Scaffold finished with {} error(s):",
+                failures.len()
+            ));
+            for (label, message) in &failures {
+                lines.push(format!("  ✗ {label}: {message}"));
+            }
+        }
+        lines.push(String::new());
+        lines.push("Installed:".to_string());
+        for (label, status) in run.steps() {
+            if matches!(status, StepStatus::Done) {
+                lines.push(format!("  ✓ {label}"));
+            }
+        }
+    }
+
+    let notes: Vec<&str> = state
+        .tool_configs()
+        .iter()
+        .filter_map(|config| scaffold::post_install_note(config.tool))
+        .collect();
+    if !notes.is_empty() {
+        lines.push(String::new());
+        lines.push("Next steps:".to_string());
+        for note in notes {
+            lines.push(format!("  - {note}"));
+        }
+    }
+    lines.push(String::new());
+    lines.push(format!(
+        "  - Edit {}index.aps.md to define your plan",
+        state.plans_dir()
+    ));
+    lines.push("  - Docs: https://github.com/EddaCraft/anvil-plan-spec".to_string());
+    lines.push(String::new());
+    lines.push("Press enter to finish.".to_string());
+
+    Paragraph::new(lines.join("\n"))
         .block(Block::default().title("Summary").borders(Borders::ALL))
         .render(area, frame.buffer_mut());
 }
@@ -1358,13 +1543,31 @@ mod tests {
         panic!("never reached {step:?}, stuck at {:?}", state.step());
     }
 
+    fn temp_root(tag: &str) -> std::path::PathBuf {
+        let root =
+            std::env::temp_dir().join(format!("aps-wizard-test-{tag}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).unwrap();
+        root
+    }
+
     #[test]
-    fn done_screen_renders_before_completion() {
-        let mut state = WizardState::default();
+    fn review_screen_renders_before_scaffold() {
+        let root = temp_root("review");
+        let mut state = WizardState::with_root(root.clone());
 
-        advance_to(&mut state, WizardStep::Done);
+        advance_to(&mut state, WizardStep::Review);
 
+        // Enter starts the scaffold; ticking drives it to the summary.
+        assert_eq!(state.handle(Action::Select), WizardEvent::Continue);
+        assert_eq!(state.step(), WizardStep::Scaffold);
+        while state.step() == WizardStep::Scaffold {
+            state.scaffold_tick();
+        }
+        assert_eq!(state.step(), WizardStep::Summary);
         assert_eq!(state.handle(Action::Select), WizardEvent::Complete);
+
+        std::fs::remove_dir_all(&root).unwrap();
     }
 
     #[test]
@@ -1372,7 +1575,7 @@ mod tests {
         let mut state = WizardState::default();
 
         let mut visited = vec![state.step()];
-        while state.step() != WizardStep::Done {
+        while state.step() != WizardStep::Review {
             state.handle(Action::Select);
             if visited.last() != Some(&state.step()) {
                 visited.push(state.step());
@@ -1388,9 +1591,47 @@ mod tests {
                 WizardStep::Templates,
                 WizardStep::Paths,
                 WizardStep::Components,
-                WizardStep::Done,
+                WizardStep::Review,
             ]
         );
+    }
+
+    #[test]
+    fn scaffold_writes_selected_structure_to_root() {
+        let root = temp_root("scaffold");
+        let mut state = WizardState::with_root(root.clone());
+
+        advance_to(&mut state, WizardStep::Review);
+        state.handle(Action::Select);
+        while state.step() == WizardStep::Scaffold {
+            state.scaffold_tick();
+        }
+
+        let run = state.scaffold_run().expect("scaffold ran");
+        assert!(run.failures().is_empty(), "failures: {:?}", run.failures());
+        assert!(root.join("plans/index.aps.md").exists());
+        assert!(root.join(".aps/config.yml").exists());
+
+        std::fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
+    fn existing_plans_dir_surfaces_error_on_summary() {
+        let root = temp_root("collision");
+        std::fs::create_dir_all(root.join("plans")).unwrap();
+        let mut state = WizardState::with_root(root.clone());
+
+        advance_to(&mut state, WizardStep::Review);
+        state.handle(Action::Select);
+        while state.step() == WizardStep::Scaffold {
+            state.scaffold_tick();
+        }
+
+        assert_eq!(state.step(), WizardStep::Summary);
+        assert!(state.scaffold_error().is_some());
+        assert!(state.scaffold_run().is_none());
+
+        std::fs::remove_dir_all(&root).unwrap();
     }
 
     #[test]
@@ -1526,7 +1767,7 @@ mod tests {
     #[test]
     fn escape_steps_back_through_new_sections() {
         let mut state = WizardState::default();
-        advance_to(&mut state, WizardStep::Done);
+        advance_to(&mut state, WizardStep::Review);
 
         state.handle(Action::Back);
         assert_eq!(state.step(), WizardStep::Components);

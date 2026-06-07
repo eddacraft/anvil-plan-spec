@@ -3,6 +3,7 @@ use clap::{Parser, Subcommand};
 #[allow(unused_imports)]
 use eddacraft_tui as _;
 
+mod scaffold;
 mod wizard;
 
 #[derive(Parser)]
