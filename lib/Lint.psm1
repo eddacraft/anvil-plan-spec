@@ -49,16 +49,33 @@ function Find-ApsFiles {
         ForEach-Object { $_.FullName }
 }
 
+# Cross-file ID index: work item and decision IDs from the whole plan tree.
+# W003 resolves dependencies against this when the in-file check misses.
+function Build-ApsIdIndex {
+    param([string[]]$Files)
+    $ids = [System.Collections.Generic.HashSet[string]]::new()
+    foreach ($f in $Files) {
+        $lines = Get-Content -LiteralPath $f -ErrorAction SilentlyContinue
+        foreach ($line in $lines) {
+            # Work item headers: ### AUTH-001: title
+            if ($line -match '^### ([A-Za-z]+-[0-9]+):') { $null = $ids.Add($Matches[1]) }
+            # Decision entries: - **D-026:** text
+            if ($line -match '^- \*\*(D-[0-9]+):') { $null = $ids.Add($Matches[1]) }
+        }
+    }
+    return @($ids)
+}
+
 function Invoke-ApsFileLint {
-    param([string]$File)
+    param([string]$File, [string[]]$TreeIds = @())
     $fileType = Get-ApsFileType -FilePath $File
     Set-ApsFileType -Path $File -FileType $fileType
     Add-ApsFileCount
 
     switch ($fileType) {
         "index"    { return (Invoke-ApsIndexLint -File $File) }
-        "module"   { return (Invoke-ApsModuleLint -File $File) }
-        "simple"   { return (Invoke-ApsModuleLint -File $File) }
+        "module"   { return (Invoke-ApsModuleLint -File $File -TreeIds $TreeIds) }
+        "simple"   { return (Invoke-ApsModuleLint -File $File -TreeIds $TreeIds) }
         "issues"   { return (Invoke-ApsIssuesLint -File $File) }
         "design"   { return (Invoke-ApsDesignLint -File $File) }
         "actions"  { return $true }
@@ -104,9 +121,20 @@ function Invoke-ApsLint {
         return $false
     }
 
+    # Build the cross-file ID index. For a single-file target, widen the index
+    # to the surrounding plan tree so cross-module dependencies still resolve.
+    $indexFiles = @($files)
+    if (Test-Path -LiteralPath $Target -PathType Leaf) {
+        $tdir = (Resolve-Path (Split-Path $Target -Parent)).Path
+        $troot = $tdir
+        if ((Split-Path $tdir -Leaf) -eq "modules") { $troot = Split-Path $tdir -Parent }
+        $indexFiles += @(Find-ApsFiles -Directory $troot)
+    }
+    $treeIds = Build-ApsIdIndex -Files $indexFiles
+
     # Lint each file
     foreach ($file in $files) {
-        $null = Invoke-ApsFileLint -File $file
+        $null = Invoke-ApsFileLint -File $file -TreeIds $treeIds
 
         # Mark file as valid if no issues were added
         if (-not (Test-ApsFileHasResults -Path $file)) {

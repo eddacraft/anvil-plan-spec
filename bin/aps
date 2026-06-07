@@ -12,6 +12,7 @@
 #   aps start <ID>        Mark a Ready work item as In Progress
 #   aps complete <ID>     Mark an In Progress work item as Complete
 #   aps graph [module]    Show work item dependency graph
+#   aps audit [module]    Audit plan state against reality
 #   aps --help            Show this help
 #
 
@@ -38,6 +39,7 @@ source "$LIB_DIR/rules/design.sh"
 source "$LIB_DIR/lint.sh"
 source "$LIB_DIR/scaffold.sh"
 source "$LIB_DIR/orchestrate.sh"
+source "$LIB_DIR/audit.sh"
 
 show_help() {
   cat <<EOF
@@ -53,6 +55,7 @@ Usage:
   aps start <ID>        Mark a Ready work item as In Progress
   aps complete <ID>     Mark an In Progress work item as Complete
   aps graph [module]    Show work item dependency graph
+  aps audit [module]    Audit plan state (overstated/understated/stale)
   aps --help            Show this help
 
 Options:
@@ -77,6 +80,8 @@ Examples:
   aps complete AUTH-003       # Mark AUTH-003 Complete
   aps complete AUTH-003 --learning "retry on 5xx"
   aps graph auth              # Show auth dependency graph
+  aps audit                   # Audit the whole plan
+  aps audit auth --json       # Audit auth module, JSON output
 EOF
 }
 
@@ -115,6 +120,10 @@ main() {
     graph)
       shift
       cmd_graph "$@"
+      ;;
+    audit)
+      shift
+      cmd_audit "$@"
       ;;
     --help|-h|help|"")
       show_help

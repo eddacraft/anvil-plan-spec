@@ -142,5 +142,58 @@ else
   echo "SKIP (node or mcp/node_modules unavailable)"
 fi
 
+# Test 22: W019 - Broken module link in index detected
+echo -n "Test: W019 broken index link detected... "
+output=$($APS lint "$SCRIPT_DIR/fixtures/invalid/index-broken-link/index.aps.md" 2>&1) || true
+echo "$output" | grep -q "W019" && echo "$output" | grep -q "ghost.aps.md" || fail "W019 not detected"
+echo "$output" | grep -q "example.com" && fail "W019 flagged external link" || pass
+# Scaffold seed index must stay lint-clean (placeholder link is a warning, not error)
+$APS lint "$PROJECT_ROOT/scaffold/plans" > /dev/null 2>&1 || fail "scaffold plans no longer lint clean"
+
+# Test 23: W017 - Stale Last reviewed detected
+echo -n "Test: W017 stale module detected... "
+output=$($APS lint "$SCRIPT_DIR/fixtures/invalid/stale-module.aps.md" 2>&1) || true
+echo "$output" | grep -q "W017" && pass || fail "W017 not detected"
+
+# Test 24: W018 - Unaudited completion detected
+echo -n "Test: W018 unaudited completion detected... "
+output=$($APS lint "$SCRIPT_DIR/fixtures/invalid/unaudited-complete.aps.md" 2>&1) || true
+echo "$output" | grep -q "UNA-001.*W018\|W018.*UNA-001" || fail "W018 not detected for UNA-001"
+echo "$output" | grep -q "W018.*UNA-002\|UNA-002.*W018" && fail "W018 false positive on UNA-002" || pass
+
+# Test 25: W003 resolves dependencies across the plan tree
+echo -n "Test: W003 cross-file dependency resolution... "
+output=$($APS lint "$SCRIPT_DIR/fixtures/crossdep/" 2>&1) || true
+echo "$output" | grep -q "W003.*GHOST-999\|GHOST-999.*W003" || fail "W003 missing for unknown ID"
+echo "$output" | grep -qE "W003.*'(A-001|D-001)'" && fail "W003 false positive on cross-file ID" || pass
+
+# Test 26: aps audit detects all four finding classes and exits non-zero
+echo -n "Test: audit detects all finding classes... "
+if output=$(cd "$PROJECT_ROOT" && $APS audit --plans test/fixtures/audit/plans 2>&1); then
+  fail "expected exit 1 for broken audit fixture"
+fi
+for code in A001 A002 A003 A004; do
+  echo "$output" | grep -q "$code" || fail "$code not reported"
+done
+echo "$output" | grep -q "DEMO-001.*PASS" || fail "PASS verification missing"
+echo "$output" | grep -q "DEMO-003.*PARTIAL" || fail "PARTIAL verification missing"
+echo "$output" | grep -q "DEMO-006.*PARTIAL.*command not found" || fail "unresolvable command not PARTIAL"
+echo "$output" | grep -qE "A00[0-9].*DEMO-00[16]" && fail "false finding on DEMO-001/DEMO-006" || pass
+
+# Test 27: aps audit --json emits valid JSON with finding codes
+echo -n "Test: audit JSON output valid... "
+output=$(cd "$PROJECT_ROOT" && $APS audit --plans test/fixtures/audit/plans --json 2>&1) || true
+echo "$output" | grep -q '"findings"' || fail "findings key missing"
+if command -v python3 > /dev/null 2>&1; then
+  echo "$output" | python3 -m json.tool > /dev/null 2>&1 || fail "invalid JSON"
+fi
+pass
+
+# Test 28: aps audit --no-run skips validation execution
+echo -n "Test: audit --no-run skips execution... "
+output=$(cd "$PROJECT_ROOT" && $APS audit --plans test/fixtures/audit/plans --no-run 2>&1) || true
+echo "$output" | grep -q "DEMO-002.*FAIL" && fail "--no-run still executed validation"
+echo "$output" | grep -q "DEMO-002.*PARTIAL" && pass || fail "PARTIAL not reported under --no-run"
+
 echo ""
 echo -e "${GREEN}All tests passed!${NC}"

@@ -84,12 +84,57 @@ check_w003_dependencies() {
     dep_ids=$(echo "$deps_line" | grep -oE '[A-Z]+-[0-9]{3}' || true)
 
     for dep_id in $dep_ids; do
-      if ! echo "$all_ids" | grep -qw "$dep_id"; then
+      # Resolve in-file first, then against the plan-tree index (cross-module
+      # dependencies and decision references are legitimate)
+      if ! echo "$all_ids" | grep -qw "$dep_id" \
+        && ! echo "${APS_TREE_IDS:-}" | grep -qw "$dep_id"; then
         local line_num
         line_num=$(grep -n "Dependencies:.*$dep_id" "$file" | head -1 | cut -d: -f1)
-        add_result "$file" "warning" "W003" "Dependency '$dep_id' not found in this file" "$line_num"
+        add_result "$file" "warning" "W003" "Dependency '$dep_id' not found in plan" "$line_num"
       fi
     done
+  fi
+}
+
+# W018: Terminal work item missing Validation in an active module
+#
+# E005 deliberately exempts terminal items from required fields (closeout
+# compaction). But a Complete item with no Validation in a module that is
+# still active is exactly the "overstated completion" risk DOGFOOD-002
+# targets — the audit cannot verify it. Warning only; fully Complete modules
+# are archives and stay exempt.
+check_w018_terminal_validation() {
+  local file="$1"
+  local item_header="$2"
+  local item_line="$3"
+  local module_status="$4"
+
+  # Skip when the whole module is terminal (archive compaction is sanctioned)
+  if echo "$module_status" | grep -qiE '^(done|complete|merged|released|shipped|archived)'; then
+    return 0
+  fi
+
+  # Extract work item content until next ### or ## or EOF
+  local content
+  content=$(awk -v start="$item_line" '
+    NR == start { found=1; next }
+    found && /^###? / { exit }
+    found { print }
+  ' "$file")
+
+  # Terminal status: explicit field or "— Complete <date>" header suffix
+  local terminal=false
+  local status
+  status=$(echo "$content" | grep -m1 -E '^\- \*\*Status:\*\*' | sed -E 's/^- \*\*Status:\*\*[[:space:]]*//')
+  if echo "$status" | grep -qiE '^(done|complete|merged|released|shipped)\b'; then
+    terminal=true
+  elif echo "$item_header" | grep -qiE '(—|--) *(done|complete|merged|released|shipped)\b'; then
+    terminal=true
+  fi
+  [[ "$terminal" == true ]] || return 0
+
+  if ! echo "$content" | grep -qE '^\- \*\*Validation'; then
+    add_result "$file" "warning" "W018" "$item_header: Complete item has no Validation — completion cannot be audited" "$item_line"
   fi
 }
 
@@ -102,6 +147,10 @@ lint_work_items() {
   local all_ids
   all_ids=$(grep -oE '^### [A-Z]+-[0-9]+:' "$file" | sed 's/^### \([A-Z]*-[0-9]*\):.*/\1/' | tr '\n' ' ')
 
+  # Module status gates W018 (terminal modules are exempt archives)
+  local module_status
+  module_status=$(get_status "$file")
+
   # Process each work item
   while IFS=: read -r line_num header; do
     [[ -z "$header" ]] && continue
@@ -112,6 +161,7 @@ lint_work_items() {
     check_w001_id_format "$file" "$header" "$line_num"
     check_e005_required_fields "$file" "$header" "$line_num" || has_errors=true
     check_w003_dependencies "$file" "$line_num" "$all_ids"
+    check_w018_terminal_validation "$file" "$header" "$line_num" "$module_status"
   done <<< "$(get_work_items "$file")"
 
   $has_errors && return 1
