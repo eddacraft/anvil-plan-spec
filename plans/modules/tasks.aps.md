@@ -1,8 +1,8 @@
 # Tasks Module
 
-| ID    | Owner  | Priority | Status |
-| ----- | ------ | -------- | ------ |
-| TASKS | @aneki | medium   | Draft  |
+| ID    | Owner  | Priority | Status   |
+| ----- | ------ | -------- | -------- |
+| TASKS | @aneki | medium   | Complete |
 
 ## Purpose
 
@@ -38,7 +38,7 @@ items and action plans.
 
 ## Work Items
 
-### TASKS-001: Document APS-to-Tasks mapping — Draft
+### TASKS-001: Document APS-to-Tasks mapping — Complete 2026-06-07
 
 - **Intent:** Clarify when Claude Code Tasks should be used for APS execution
 - **Expected Outcome:** Prompt and documentation explain how to turn a module's
@@ -47,3 +47,13 @@ items and action plans.
   assignments without changing plan status prematurely
 - **Files:** docs/ai/prompting/claudecode/, docs/ai-agent-guide.md
 - **Confidence:** medium
+- **Results:** All four exposed prompts shipped
+  (`docs/ai/prompting/claudecode/`: tasks-from-module, wave-planning,
+  agent-assignment, sync-status) with a README covering the planning-layer /
+  execution-layer split. Dry-run validation 2026-06-07 against
+  `examples/user-auth/modules/auth.aps.md`: produced coherent assignments
+  (AUTH-001 → AUTH-002, two waves, single agent due to shared
+  `src/auth/auth.ts`), excluded the Draft SESSION module, mutated no plan
+  files, and matched `aps next --plans examples/user-auth` output.
+  `docs/ai-agent-guide.md` Prompt Entry Points now names the Tasks prompts
+  explicitly.

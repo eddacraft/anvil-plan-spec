@@ -191,7 +191,9 @@ Use these prompts to generate APS documents:
 **Tool-specific variants:**
 
 - [docs/ai/prompting/opencode/](ai/prompting/opencode/) — OpenCode-tuned prompts
-- [docs/ai/prompting/claudecode/](ai/prompting/claudecode/) — Claude Code in-session coordination
+- [docs/ai/prompting/claudecode/](ai/prompting/claudecode/) — Claude Code
+  Tasks coordination (tasks from modules, wave planning, agent assignment,
+  status sync)
 
 **First-class agent definitions** ship for Claude Code, Codex, GitHub Copilot,
 OpenCode, and Gemini. `aps init` installs them for the tools you select. See

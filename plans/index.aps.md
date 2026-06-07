@@ -75,7 +75,7 @@ release narratives live in [`plans/releases/`](./releases/).
 | Module                                        | Purpose                                                          | Status |
 | --------------------------------------------- | ---------------------------------------------------------------- | ------ |
 | [spec](./modules/spec.aps.md)                 | Canonical vocabulary + schema (status reconciliation)            | Draft  |
-| [tasks](./modules/tasks.aps.md)               | Claude Code Tasks integration                                    | Draft  |
+| [tasks](./modules/tasks.aps.md)               | Claude Code Tasks integration                                    | Complete |
 | [examples](./modules/examples.aps.md)         | Additional worked examples                                       | Draft  |
 | [prompts](./modules/prompts.aps.md)           | Tool-specific prompt variants                                    | Draft  |
 | [integrations](./modules/integrations.aps.md) | JSON export, GitHub sync                                         | Draft  |
