@@ -2,6 +2,7 @@ use eddacraft_tui::prelude::Action;
 use eddacraft_tui::prelude::TextInputState;
 use eddacraft_tui::prelude::{EddaCraftTheme, KeyHandler, Select, SelectItem, SelectState};
 use eddacraft_tui::prelude::{ShellBranding, render_shell};
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::Frame;
 use ratatui::Terminal;
 use ratatui::backend::CrosstermBackend;
@@ -107,6 +108,8 @@ pub struct WizardState {
     templates_touched: bool,
     custom_template_path: TextInputState,
     editing_custom_template: bool,
+    path_inputs: [TextInputState; 3],
+    path_focus: usize,
 }
 
 impl Default for WizardState {
@@ -126,8 +129,21 @@ impl Default for WizardState {
             templates_touched: false,
             custom_template_path: TextInputState::default(),
             editing_custom_template: false,
+            path_inputs: [
+                path_input("plans/"),
+                path_input("docs/"),
+                path_input(".aps/"),
+            ],
+            path_focus: 0,
         }
     }
+}
+
+fn path_input(value: &str) -> TextInputState {
+    let mut input = TextInputState::default();
+    input.value = value.to_string();
+    input.set_cursor(value.len());
+    input
 }
 
 impl WizardState {
@@ -216,7 +232,27 @@ impl WizardState {
     }
 
     pub fn is_editing(&self) -> bool {
-        self.step == WizardStep::Templates && self.editing_custom_template
+        match self.step {
+            WizardStep::Templates => self.editing_custom_template,
+            WizardStep::Paths => true,
+            _ => false,
+        }
+    }
+
+    pub fn plans_dir(&self) -> &str {
+        &self.path_inputs[0].value
+    }
+
+    pub fn docs_dir(&self) -> &str {
+        &self.path_inputs[1].value
+    }
+
+    pub fn tooling_root(&self) -> &str {
+        &self.path_inputs[2].value
+    }
+
+    pub fn path_focus(&self) -> usize {
+        self.path_focus
     }
 
     pub fn toggle_template(&mut self, template: Template) {
@@ -248,24 +284,43 @@ impl WizardState {
         }
     }
 
+    fn active_input_mut(&mut self) -> &mut TextInputState {
+        match self.step {
+            WizardStep::Paths => &mut self.path_inputs[self.path_focus],
+            _ => &mut self.custom_template_path,
+        }
+    }
+
     fn handle_editing(&mut self, action: Action) -> WizardEvent {
         match action {
             Action::Quit => return WizardEvent::Quit,
-            Action::Character(c) => self.custom_template_path.insert(c),
-            Action::Backspace => self.custom_template_path.backspace(),
-            Action::Delete => self.custom_template_path.delete(),
-            Action::Left => self.custom_template_path.move_left(),
-            Action::Right => self.custom_template_path.move_right(),
-            Action::Home => self.custom_template_path.home(),
-            Action::End => self.custom_template_path.end(),
-            Action::Select => self.editing_custom_template = false,
-            Action::Back => {
-                self.editing_custom_template = false;
-                if self.custom_template_path.value.is_empty() {
-                    self.selected_templates
-                        .retain(|template| *template != Template::Custom);
-                }
+            Action::Character(c) => self.active_input_mut().insert(c),
+            Action::Backspace => self.active_input_mut().backspace(),
+            Action::Delete => self.active_input_mut().delete(),
+            Action::Left => self.active_input_mut().move_left(),
+            Action::Right => self.active_input_mut().move_right(),
+            Action::Home => self.active_input_mut().home(),
+            Action::End => self.active_input_mut().end(),
+            Action::Up if self.step == WizardStep::Paths => {
+                self.path_focus = move_index(self.path_focus, self.path_inputs.len(), false);
             }
+            Action::Down if self.step == WizardStep::Paths => {
+                self.path_focus = move_index(self.path_focus, self.path_inputs.len(), true);
+            }
+            Action::Select => match self.step {
+                WizardStep::Paths => return self.advance(),
+                _ => self.editing_custom_template = false,
+            },
+            Action::Back => match self.step {
+                WizardStep::Paths => self.back(),
+                _ => {
+                    self.editing_custom_template = false;
+                    if self.custom_template_path.value.is_empty() {
+                        self.selected_templates
+                            .retain(|template| *template != Template::Custom);
+                    }
+                }
+            },
             _ => {}
         }
 
@@ -483,7 +538,7 @@ fn run_loop(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> io::Result
             let crossterm::event::Event::Key(key) = crossterm::event::read()? else {
                 continue;
             };
-            match state.handle(KeyHandler::map(key)) {
+            match state.handle(map_key(key, state.is_editing())) {
                 WizardEvent::Continue => {}
                 WizardEvent::Complete | WizardEvent::Quit => return Ok(()),
             }
@@ -784,6 +839,37 @@ impl ModelPreference {
             Self::Opus => "opus",
             Self::Sonnet => "sonnet",
         }
+    }
+}
+
+/// Map a key event to an Action, bypassing the vim-style aliases
+/// (`j`/`k`/`h`/`l`/`q`/space) while a text field is being edited so those
+/// characters are typable in paths.
+pub fn map_key(event: KeyEvent, editing: bool) -> Action {
+    if !editing {
+        return KeyHandler::map(event);
+    }
+
+    if event.modifiers.contains(KeyModifiers::CONTROL) {
+        return match event.code {
+            KeyCode::Char('c') => Action::Quit,
+            _ => Action::None,
+        };
+    }
+
+    match event.code {
+        KeyCode::Up => Action::Up,
+        KeyCode::Down => Action::Down,
+        KeyCode::Left => Action::Left,
+        KeyCode::Right => Action::Right,
+        KeyCode::Enter => Action::Select,
+        KeyCode::Esc => Action::Back,
+        KeyCode::Backspace => Action::Backspace,
+        KeyCode::Delete => Action::Delete,
+        KeyCode::Home => Action::Home,
+        KeyCode::End => Action::End,
+        KeyCode::Char(c) => Action::Character(c),
+        _ => Action::None,
     }
 }
 
@@ -1111,6 +1197,103 @@ mod tests {
         assert!(!state.is_editing());
         assert!(!state.selected_templates().contains(&Template::Custom));
         assert_eq!(state.step(), WizardStep::Templates);
+    }
+
+    fn at_paths(state: &mut WizardState) {
+        for _ in 0..4 {
+            state.handle(Action::Select);
+        }
+        assert_eq!(state.step(), WizardStep::Paths);
+    }
+
+    #[test]
+    fn paths_step_has_three_fields_with_defaults() {
+        let mut state = WizardState::default();
+        at_paths(&mut state);
+
+        assert_eq!(state.plans_dir(), "plans/");
+        assert_eq!(state.docs_dir(), "docs/");
+        assert_eq!(state.tooling_root(), ".aps/");
+        assert!(state.is_editing());
+    }
+
+    #[test]
+    fn arrows_move_path_focus_with_wrap() {
+        let mut state = WizardState::default();
+        at_paths(&mut state);
+
+        assert_eq!(state.path_focus(), 0);
+        state.handle(Action::Down);
+        assert_eq!(state.path_focus(), 1);
+        state.handle(Action::Down);
+        assert_eq!(state.path_focus(), 2);
+        state.handle(Action::Down);
+        assert_eq!(state.path_focus(), 0);
+        state.handle(Action::Up);
+        assert_eq!(state.path_focus(), 2);
+    }
+
+    #[test]
+    fn typing_edits_focused_path_field_without_navigation_side_effects() {
+        let mut state = WizardState::default();
+        at_paths(&mut state);
+
+        state.handle(Action::Character('x'));
+        assert_eq!(state.plans_dir(), "plans/x");
+
+        state.handle(Action::Backspace);
+        assert_eq!(state.plans_dir(), "plans/");
+
+        // vim-aliased characters must insert, not navigate or quit
+        assert_eq!(state.handle(Action::Character('j')), WizardEvent::Continue);
+        assert_eq!(state.handle(Action::Character('q')), WizardEvent::Continue);
+        assert_eq!(state.plans_dir(), "plans/jq");
+        assert_eq!(state.path_focus(), 0);
+        assert_eq!(state.step(), WizardStep::Paths);
+    }
+
+    #[test]
+    fn cursor_keys_operate_on_the_focused_path_field() {
+        let mut state = WizardState::default();
+        at_paths(&mut state);
+        state.handle(Action::Down); // focus docs dir
+
+        state.handle(Action::Home);
+        state.handle(Action::Character('m'));
+        assert_eq!(state.docs_dir(), "mdocs/");
+
+        state.handle(Action::Delete);
+        assert_eq!(state.docs_dir(), "mocs/");
+
+        state.handle(Action::End);
+        state.handle(Action::Left);
+        state.handle(Action::Backspace);
+        assert_eq!(state.docs_dir(), "moc/");
+    }
+
+    #[test]
+    fn map_key_passes_text_keys_through_when_editing() {
+        let plain = |code| KeyEvent::new(code, KeyModifiers::empty());
+
+        assert_eq!(map_key(plain(KeyCode::Char('j')), false), Action::Down);
+        assert_eq!(
+            map_key(plain(KeyCode::Char('j')), true),
+            Action::Character('j')
+        );
+        assert_eq!(
+            map_key(plain(KeyCode::Char('q')), true),
+            Action::Character('q')
+        );
+        assert_eq!(
+            map_key(plain(KeyCode::Char(' ')), true),
+            Action::Character(' ')
+        );
+        assert_eq!(map_key(plain(KeyCode::Esc), true), Action::Back);
+        assert_eq!(map_key(plain(KeyCode::Enter), true), Action::Select);
+        assert_eq!(map_key(plain(KeyCode::Backspace), true), Action::Backspace);
+
+        let ctrl_c = KeyEvent::new(KeyCode::Char('c'), KeyModifiers::CONTROL);
+        assert_eq!(map_key(ctrl_c, true), Action::Quit);
     }
 
     #[test]
