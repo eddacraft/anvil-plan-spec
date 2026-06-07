@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rust:
+    name: Rust CLI
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: cli -> target
+
+      - name: cargo check
+        working-directory: cli
+        run: cargo check --locked --all-targets
+
+      - name: cargo test
+        working-directory: cli
+        run: cargo test --locked
+
+  shell:
+    name: Shell script syntax
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: bash -n
+        run: |
+          set -e
+          mapfile -t files < <(find scaffold bin -type f \( -name "*.sh" -o -perm -u+x \) | sort -u)
+          for f in "${files[@]}"; do
+            echo "checking $f"
+            bash -n "$f"
+          done
