@@ -36,7 +36,10 @@ function Test-W019ModuleLinks {
 
         foreach ($m in [regex]::Matches($line, '\]\(([^)]+)\)')) {
             $target = $m.Groups[1].Value
-            if ($target -match '^(https?://|mailto:|#)') { continue }
+            # Strip markdown link titles: ](path "title")
+            $target = $target -replace '\s+["''].*$', ''
+            # Skip pure anchors and any URI scheme (http, mailto, file, ...)
+            if ($target -match '^(#|[A-Za-z][A-Za-z0-9+.-]*:)') { continue }
             $target = ($target -split '#')[0]
             if (-not $target) { continue }
             if (-not (Test-Path -LiteralPath (Join-Path $dir $target))) {

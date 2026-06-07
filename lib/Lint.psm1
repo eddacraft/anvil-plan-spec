@@ -56,7 +56,11 @@ function Build-ApsIdIndex {
     $ids = [System.Collections.Generic.HashSet[string]]::new()
     foreach ($f in $Files) {
         $lines = Get-Content -LiteralPath $f -ErrorAction SilentlyContinue
+        # Fence-aware: IDs inside code blocks are examples, not definitions
+        $fence = $false
         foreach ($line in $lines) {
+            if ($line -match '^(```|~~~)') { $fence = -not $fence; continue }
+            if ($fence) { continue }
             # Work item headers: ### AUTH-001: title
             if ($line -match '^### ([A-Za-z]+-[0-9]+):') { $null = $ids.Add($Matches[1]) }
             # Decision entries: - **D-026:** text

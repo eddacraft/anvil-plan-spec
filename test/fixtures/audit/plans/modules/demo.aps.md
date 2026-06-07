@@ -36,9 +36,10 @@ Audit fixture covering every finding class.
 ### DEMO-004: Understated draft
 
 - **Intent:** Draft item whose file already exists with content
-- **Expected Outcome:** Audit reports finding A002
+- **Expected Outcome:** Audit reports finding A002 (path is relative to the
+  plan root's parent, and bullet notation is tolerated)
 - **Validation:** `true`
-- **Files:** test/fixtures/audit/existing-artifact.txt
+- **Files:** existing-artifact.txt, missing-thing.txt
 - **Status:** Draft
 
 ### DEMO-005: Stale ready item
@@ -53,4 +54,10 @@ Audit fixture covering every finding class.
 - **Intent:** Complete item whose backtick span is a path, not a command
 - **Expected Outcome:** Audit reports PARTIAL (command not found), no finding
 - **Validation:** Inspect `src/made-up-path/` for the generated artifacts
+- **Status:** Complete
+
+### DEMO-007: Completion with no validation at all
+
+- **Intent:** Complete item missing the Validation field entirely
+- **Expected Outcome:** Audit reports PARTIAL (W018 owns the lint warning)
 - **Status:** Complete

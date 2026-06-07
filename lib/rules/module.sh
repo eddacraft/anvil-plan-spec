@@ -70,6 +70,7 @@ check_w017_last_reviewed() {
   fi
 
   local stale_days="${APS_STALE_DAYS:-60}"
+  [[ "$stale_days" =~ ^[0-9]+$ ]] || stale_days=60
   local reviewed_epoch now_epoch
   # GNU date first, BSD date fallback
   reviewed_epoch=$(date -d "$reviewed" +%s 2>/dev/null \

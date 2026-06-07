@@ -25,10 +25,9 @@ check_w019_module_links() {
 
   while IFS=: read -r line_num target; do
     [[ -z "$target" ]] && continue
-    # Skip external links and pure anchors
-    case "$target" in
-      http://*|https://*|mailto:*|\#*) continue ;;
-    esac
+    # Skip pure anchors and any URI scheme (http, mailto, file, vscode, ...)
+    [[ "$target" == \#* ]] && continue
+    [[ "$target" =~ ^[A-Za-z][A-Za-z0-9+.-]*: ]] && continue
     # Strip anchor fragment
     target="${target%%#*}"
     [[ -z "$target" ]] && continue
@@ -41,7 +40,9 @@ check_w019_module_links() {
     in_mod {
       line = $0
       while (match(line, /\]\([^)]+\)/)) {
-        print NR ":" substr(line, RSTART+2, RLENGTH-3)
+        target = substr(line, RSTART+2, RLENGTH-3)
+        sub(/[ \t]+["'\''].*$/, "", target)   # strip markdown link titles
+        print NR ":" target
         line = substr(line, RSTART+RLENGTH)
       }
     }

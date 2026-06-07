@@ -122,12 +122,14 @@ check_w018_terminal_validation() {
     found { print }
   ' "$file")
 
-  # Terminal status: explicit field or "— Complete <date>" header suffix
+  # Terminal status: an explicit Status field is authoritative; the
+  # "— Complete <date>" header suffix only counts when no field is present
+  # (otherwise a stale header would contradict E005's field-based check)
   local terminal=false
   local status
   status=$(echo "$content" | grep -m1 -E '^\- \*\*Status:\*\*' | sed -E 's/^- \*\*Status:\*\*[[:space:]]*//')
-  if echo "$status" | grep -qiE '^(done|complete|merged|released|shipped)\b'; then
-    terminal=true
+  if [[ -n "$status" ]]; then
+    echo "$status" | grep -qiE '^(done|complete|merged|released|shipped)\b' && terminal=true
   elif echo "$item_header" | grep -qiE '(—|--) *(done|complete|merged|released|shipped)\b'; then
     terminal=true
   fi

@@ -188,6 +188,8 @@ You've finished all work items in a module. Now what?
    executes each Complete item's Validation command and reports
    PASS / FAIL / PARTIAL, plus understated Drafts and stale review dates (see
    [usage.md](usage.md#aps-audit-module--check-plan-state-against-reality)).
+   Note it _executes_ commands from the plan files — only on plans you trust;
+   use `--no-run` otherwise.
 
 2. **Mark module complete.** Module status is hand-edited — the CLI only manages
    work item state. Bump the metadata table to `Complete` once every work item

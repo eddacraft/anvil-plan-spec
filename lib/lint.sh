@@ -81,14 +81,24 @@ APS_TREE_IDS=""
 
 # Usage: build_id_index file1 [file2 ...]
 build_id_index() {
-  APS_TREE_IDS=$({
-    for f in "$@"; do
-      # Work item headers: ### AUTH-001: title
-      grep -hoE '^### [A-Za-z]+-[0-9]+:' "$f" 2>/dev/null | sed -E 's/^### ([A-Za-z]+-[0-9]+):/\1/' || true
-      # Decision entries: - **D-026:** text
-      grep -hoE '^\- \*\*D-[0-9]+:' "$f" 2>/dev/null | sed -E 's/^- \*\*(D-[0-9]+):/\1/' || true
-    done
-  } | sort -u | tr '\n' ' ')
+  # Fence-aware: IDs inside ``` / ~~~ code blocks are examples, not
+  # definitions — indexing them would let a fake ID in a snippet vouch for
+  # a genuinely missing dependency.
+  APS_TREE_IDS=$(awk '
+    FNR == 1 { fence = 0 }
+    /^(```|~~~)/ { fence = !fence; next }
+    fence { next }
+    # Work item headers: ### AUTH-001: title
+    match($0, /^### [A-Za-z]+-[0-9]+:/) {
+      id = substr($0, 5, RLENGTH - 5)
+      print id
+    }
+    # Decision entries: - **D-026:** text
+    match($0, /^- \*\*D-[0-9]+:/) {
+      id = substr($0, 5, RLENGTH - 5)
+      print id
+    }
+  ' "$@" 2>/dev/null | sort -u | tr '\n' ' ')
   return 0
 }
 
@@ -220,8 +230,11 @@ EOF
   if [[ -f "$target" ]]; then
     local tdir troot
     tdir=$(cd "$(dirname "$target")" && pwd)
-    troot="$tdir"
-    [[ "$tdir" == */modules ]] && troot=$(dirname "$tdir")
+    # Climb out of modules/ (including nested subdirectories) to the plan root
+    case "$tdir" in
+      */modules|*/modules/*) troot="${tdir%/modules*}" ;;
+      *) troot="$tdir" ;;
+    esac
     while IFS= read -r file; do
       index_files+=("$file")
     done < <(find_aps_files "$troot")

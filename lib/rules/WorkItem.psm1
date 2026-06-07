@@ -87,10 +87,13 @@ function Test-W018TerminalValidation {
     $content = Get-ApsWorkItemContent -FilePath $File -StartLine $ItemLine
     $contentText = $content -join "`n"
 
-    # Terminal status: explicit field or "— Complete <date>" header suffix
+    # Terminal status: an explicit Status field is authoritative; the
+    # "— Complete <date>" header suffix only counts when no field is present
     $terminal = $false
-    if ($contentText -match '(?im)^- \*\*Status:\*\*[ \t]*(done|complete|merged|released|shipped)\b') {
-        $terminal = $true
+    if ($contentText -match '(?im)^- \*\*Status:\*\*[ \t]*(\S.*)$') {
+        if ($Matches[1] -match '(?i)^(done|complete|merged|released|shipped)\b') {
+            $terminal = $true
+        }
     } elseif ($ItemHeader -match '(?i)(—|--) *(done|complete|merged|released|shipped)\b') {
         $terminal = $true
     }

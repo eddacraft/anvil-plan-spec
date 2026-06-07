@@ -231,14 +231,19 @@ Findings: 4 (23 items audited)
 | A004 | Broken link — index `## Modules` link points to a non-existent file    |
 
 Options: `--json` for machine-readable output, `--no-run` to skip executing
-validation commands (A001 then reports `PARTIAL`), `--stale-days N` to tune
-the threshold (also via `APS_STALE_DAYS`). Exit code is non-zero when there
-are findings, so it slots into CI as a deeper, optional companion to
-`aps lint`.
+validation commands (verification reports `PARTIAL`; no A001 findings),
+`--stale-days N` to tune the threshold (also via `APS_STALE_DAYS`). Exit
+code is non-zero when there are findings, so it slots into CI as a deeper,
+optional companion to `aps lint`.
 
 > **Warning:** by default the audit _executes_ backtick `Validation` commands
-> found in Complete work items (with a timeout, `APS_AUDIT_TIMEOUT`, default
-> 60s). Only run it on plans you trust, or pass `--no-run`.
+> found in Complete work items, with full shell semantics (a timeout applies:
+> `APS_AUDIT_TIMEOUT`, default 60s, and a notice is printed to stderr). The
+> trust boundary is the plan file itself — anyone who can edit a Validation
+> field controls what runs. Only run it on plans you trust, or pass
+> `--no-run`. **In CI, use `--no-run` for pull-request-triggered jobs** —
+> running with execution enabled on PR-modified plans hands code execution
+> to the PR author. Reserve execution for trusted branches.
 
 ### Driving a plan from end to end
 

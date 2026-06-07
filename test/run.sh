@@ -9,6 +9,10 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 APS="$PROJECT_ROOT/bin/aps"
 
+# Pin hygiene thresholds so caller-environment values can't skew fixtures
+export APS_STALE_DAYS=60
+export APS_AUDIT_TIMEOUT=60
+
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 NC='\033[0m'
@@ -159,7 +163,9 @@ echo "$output" | grep -q "W017" && pass || fail "W017 not detected"
 echo -n "Test: W018 unaudited completion detected... "
 output=$($APS lint "$SCRIPT_DIR/fixtures/invalid/unaudited-complete.aps.md" 2>&1) || true
 echo "$output" | grep -q "UNA-001.*W018\|W018.*UNA-001" || fail "W018 not detected for UNA-001"
-echo "$output" | grep -q "W018.*UNA-002\|UNA-002.*W018" && fail "W018 false positive on UNA-002" || pass
+echo "$output" | grep -q "W018.*UNA-002\|UNA-002.*W018" && fail "W018 false positive on UNA-002"
+# Future Last reviewed date (2099-01-01) must never read as stale
+echo "$output" | grep -q "W017" && fail "W017 fired on future review date" || pass
 
 # Test 25: W003 resolves dependencies across the plan tree
 echo -n "Test: W003 cross-file dependency resolution... "
@@ -178,11 +184,16 @@ done
 echo "$output" | grep -q "DEMO-001.*PASS" || fail "PASS verification missing"
 echo "$output" | grep -q "DEMO-003.*PARTIAL" || fail "PARTIAL verification missing"
 echo "$output" | grep -q "DEMO-006.*PARTIAL.*command not found" || fail "unresolvable command not PARTIAL"
-echo "$output" | grep -qE "A00[0-9].*DEMO-00[16]" && fail "false finding on DEMO-001/DEMO-006" || pass
+echo "$output" | grep -q "DEMO-007.*PARTIAL.*no Validation field" || fail "missing Validation not PARTIAL"
+echo "$output" | grep -qE "A00[0-9].*DEMO-00[167]" && fail "false finding on DEMO-001/006/007"
+# Exactly one A004: titled link and vscode:// scheme must not be flagged
+[[ $(echo "$output" | grep -c "A004") -eq 1 ]] || fail "expected exactly one A004"
+pass
 
 # Test 27: aps audit --json emits valid JSON with finding codes
+# (stderr carries the execution notice and must stay out of the JSON stream)
 echo -n "Test: audit JSON output valid... "
-output=$(cd "$PROJECT_ROOT" && $APS audit --plans test/fixtures/audit/plans --json 2>&1) || true
+output=$(cd "$PROJECT_ROOT" && $APS audit --plans test/fixtures/audit/plans --json 2>/dev/null) || true
 echo "$output" | grep -q '"findings"' || fail "findings key missing"
 if command -v python3 > /dev/null 2>&1; then
   echo "$output" | python3 -m json.tool > /dev/null 2>&1 || fail "invalid JSON"
@@ -193,7 +204,14 @@ pass
 echo -n "Test: audit --no-run skips execution... "
 output=$(cd "$PROJECT_ROOT" && $APS audit --plans test/fixtures/audit/plans --no-run 2>&1) || true
 echo "$output" | grep -q "DEMO-002.*FAIL" && fail "--no-run still executed validation"
+echo "$output" | grep -q "A001" && fail "A001 finding produced under --no-run"
 echo "$output" | grep -q "DEMO-002.*PARTIAL" && pass || fail "PARTIAL not reported under --no-run"
+
+# Test 29: module-scoped audit suppresses index link checks
+echo -n "Test: audit module scope suppresses A004... "
+output=$(cd "$PROJECT_ROOT" && $APS audit demo --plans test/fixtures/audit/plans --no-run 2>&1) || true
+echo "$output" | grep -q "A004" && fail "A004 reported in module-scoped audit"
+echo "$output" | grep -q "A003.*DEMO-005\|DEMO-005.*A003" && pass || fail "scoped audit missed A003"
 
 echo ""
 echo -e "${GREEN}All tests passed!${NC}"

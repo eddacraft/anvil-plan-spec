@@ -42,7 +42,9 @@ audit_json_escape() {
   s="${s//\"/\\\"}"
   s="${s//$'\n'/\\n}"
   s="${s//$'\t'/\\t}"
-  printf '%s' "$s"
+  s="${s//$'\r'/\\r}"
+  # Remaining C0 control characters are illegal in JSON strings — drop them
+  printf '%s' "$s" | tr -d '\000-\010\013\014\016-\037'
 }
 
 # Extract the first backtick-quoted command from a Validation field value.
@@ -66,7 +68,9 @@ audit_date_age_days() {
   echo $(( (now_epoch - then_epoch) / 86400 ))
 }
 
-# Audit one Complete item: run its Validation command (unless --no-run)
+# Audit one Complete item: run its Validation command (unless --no-run).
+# A missing Validation field is PARTIAL (unverifiable), not a finding —
+# lint rule W018 owns that warning.
 audit_complete_item() {
   local i="$1" run_validation="$2" timeout_secs="$3"
   local id="${ORCH_ITEM_IDS[$i]}"
@@ -78,22 +82,27 @@ audit_complete_item() {
   validation=$(orch_field_value "$content" "Validation")
   if [[ -z "$validation" ]]; then
     AUDIT_VERIFICATIONS+=("$id|PARTIAL|no Validation field")
-    audit_add_finding "A001" "$id" "$module" "overstated risk: Complete with no Validation field"
     return 0
   fi
 
   local cmd
   cmd=$(audit_extract_command "$validation")
+  cmd="${cmd//$'\r'/}"
   if [[ -z "$cmd" ]]; then
     AUDIT_VERIFICATIONS+=("$id|PARTIAL|Validation is not a runnable command")
     return 0
   fi
 
   # Backticks in Validation prose are often paths or examples, not commands.
-  # Only execute when the first word actually resolves to something runnable;
-  # an unresolvable command is unverifiable (PARTIAL), not a failure.
-  local first_word="${cmd%% *}"
-  if ! command -v "$first_word" > /dev/null 2>&1 \
+  # Only execute when the first word resolves to something runnable. This is
+  # a prose-vs-command heuristic, NOT a security control: the command string
+  # executes with full shell semantics (pipes, &&, subshells are legitimate
+  # in validation commands). The trust boundary is the plan file itself —
+  # see --help and docs. type -P does a PATH-only lookup so functions and
+  # builtins inherited from this script cannot vouch for plan content.
+  local first_word rest
+  read -r first_word rest <<< "$cmd"
+  if ! type -P "$first_word" > /dev/null 2>&1 \
     && ! [[ -f "$first_word" && -x "$first_word" ]]; then
     AUDIT_VERIFICATIONS+=("$id|PARTIAL|command not found: $first_word")
     return 0
@@ -104,17 +113,29 @@ audit_complete_item() {
     return 0
   fi
 
-  if timeout "$timeout_secs" bash -c "$cmd" > /dev/null 2>&1; then
+  local rc=0
+  if command -v timeout > /dev/null 2>&1; then
+    timeout -k 5 "$timeout_secs" bash -c "$cmd" > /dev/null 2>&1 || rc=$?
+  else
+    bash -c "$cmd" > /dev/null 2>&1 || rc=$?
+  fi
+
+  if [[ $rc -eq 0 ]]; then
     AUDIT_VERIFICATIONS+=("$id|PASS|$cmd")
+  elif [[ $rc -eq 124 ]]; then
+    AUDIT_VERIFICATIONS+=("$id|FAIL|timed out after ${timeout_secs}s: $cmd")
+    audit_add_finding "A001" "$id" "$module" "overstated: Validation timed out: $cmd"
   else
     AUDIT_VERIFICATIONS+=("$id|FAIL|$cmd")
     audit_add_finding "A001" "$id" "$module" "overstated: Validation failed: $cmd"
   fi
 }
 
-# Audit one Draft item: flag when its Files already exist with content
+# Audit one Draft item: flag when its Files already exist with content.
+# Relative paths resolve against the plan root's parent (the repo root in
+# the conventional plans/ layout), so the audit works from any CWD.
 audit_draft_item() {
-  local i="$1"
+  local i="$1" repo_root="$2"
   local id="${ORCH_ITEM_IDS[$i]}"
   local module="${ORCH_ITEM_MODULES[$i]}"
   local content
@@ -125,14 +146,21 @@ audit_draft_item() {
   [[ -n "$files_field" ]] || return 0
 
   local existing=""
-  local path
+  local path resolved candidate
   while IFS= read -r path; do
     path=$(orch_trim "$path")
+    path="${path#- }"   # tolerate bullet-list notation in Files fields
     [[ -n "$path" ]] || continue
-    # Only regular files with content count as "substantive"
-    if [[ -s "$path" ]]; then
-      existing+="${existing:+, }$path"
-    fi
+    [[ "$path" == /* ]] && resolved="$path" || resolved="$repo_root/$path"
+    # Expand globs; literal paths pass through compgen unchanged
+    while IFS= read -r candidate; do
+      [[ -n "$candidate" ]] || continue
+      # Only regular files with content count as "substantive"
+      if [[ -s "$candidate" ]]; then
+        existing+="${existing:+, }$path"
+        break
+      fi
+    done < <(compgen -G "$resolved" 2>/dev/null || true)
   done < <(printf '%s\n' "$files_field" | tr ',' '\n')
 
   if [[ -n "$existing" ]]; then
@@ -181,9 +209,9 @@ audit_index_links() {
   local line_num target
   while IFS=: read -r line_num target; do
     [[ -n "$target" ]] || continue
-    case "$target" in
-      http://*|https://*|mailto:*|\#*) continue ;;
-    esac
+    # Skip pure anchors and any URI scheme (http, mailto, file, vscode, ...)
+    [[ "$target" == \#* ]] && continue
+    [[ "$target" =~ ^[A-Za-z][A-Za-z0-9+.-]*: ]] && continue
     target="${target%%#*}"
     [[ -n "$target" ]] || continue
     if [[ ! -e "$dir/$target" ]]; then
@@ -195,7 +223,9 @@ audit_index_links() {
     in_mod {
       line = $0
       while (match(line, /\]\([^)]+\)/)) {
-        print NR ":" substr(line, RSTART+2, RLENGTH-3)
+        target = substr(line, RSTART+2, RLENGTH-3)
+        sub(/[ \t]+["'\''].*$/, "", target)   # strip markdown link titles
+        print NR ":" target
         line = substr(line, RSTART+RLENGTH)
       }
     }
@@ -314,7 +344,8 @@ Arguments:
 Options:
   --plans DIR      Plan root directory (default: plans)
   --json           Output results in JSON format
-  --no-run         Do not execute Validation commands (A001 reports PARTIAL)
+  --no-run         Do not execute Validation commands (verification reports
+                   PARTIAL; no A001 findings are produced)
   --stale-days N   Staleness threshold in days (default: 60)
   --help           Show this help
 
@@ -343,6 +374,22 @@ EOF
     return 1
   fi
 
+  # Env-supplied values bypass flag validation — guard them here so a bad
+  # value degrades to the default instead of corrupting every verdict
+  # (a non-numeric timeout makes `timeout` exit 125, which reads as FAIL)
+  if ! [[ "$stale_days" =~ ^[0-9]+$ ]]; then
+    warn "APS_STALE_DAYS must be a number; using 60"
+    stale_days=60
+  fi
+  if ! [[ "$timeout_secs" =~ ^[0-9]+$ ]]; then
+    warn "APS_AUDIT_TIMEOUT must be a number; using 60"
+    timeout_secs=60
+  fi
+
+  if [[ "$run_validation" == "true" ]]; then
+    warn "executing Validation commands from plan files (use --no-run to skip)"
+  fi
+
   audit_reset_state
   orch_reset_state
   orch_load_work_items "$plan_root" true || {
@@ -350,21 +397,26 @@ EOF
     return 1
   }
 
+  local repo_root
+  repo_root=$(dirname "$plan_root")
+
   local audited=0
   local i
   for i in "${!ORCH_ITEM_IDS[@]}"; do
     orch_item_matches_module "$i" "$module_filter" || continue
-    ((audited++)) || true
 
     case "${ORCH_ITEM_STATUSES[$i]}" in
       Complete)
         audit_complete_item "$i" "$run_validation" "$timeout_secs"
+        ((audited++)) || true
         ;;
       Draft)
-        audit_draft_item "$i"
+        audit_draft_item "$i" "$repo_root"
+        ((audited++)) || true
         ;;
       Ready)
         audit_ready_item "$i" "$stale_days"
+        ((audited++)) || true
         ;;
     esac
   done
