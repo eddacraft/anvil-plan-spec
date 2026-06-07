@@ -219,9 +219,20 @@ impl Selections {
     }
 }
 
+/// Normalize a target directory, falling back to the default when the value
+/// is empty or unsafe. Absolute paths would replace the scaffold root in
+/// `Path::join`, and `..` components would escape it — both are rejected
+/// here as defense in depth behind the wizard's own validation (the
+/// non-interactive path reaches this function without going through the
+/// wizard).
 fn normalize_dir(value: &str, default: &str) -> String {
     let trimmed = value.trim().trim_end_matches('/');
-    if trimmed.is_empty() {
+    let path = Path::new(trimmed);
+    let unsafe_path = path.is_absolute()
+        || path
+            .components()
+            .any(|component| matches!(component, std::path::Component::ParentDir));
+    if trimmed.is_empty() || unsafe_path {
         default.to_string()
     } else {
         trimmed.to_string()
@@ -779,6 +790,14 @@ pub fn check_target(root: &Path, selections: &Selections) -> Result<(), String> 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn normalize_dir_rejects_unsafe_paths() {
+        assert_eq!(normalize_dir("../evil", "plans"), "plans");
+        assert_eq!(normalize_dir("/etc/aps", "plans"), "plans");
+        assert_eq!(normalize_dir("nested/../../evil", "plans"), "plans");
+        assert_eq!(normalize_dir("docs/plans/", "plans"), "docs/plans");
+    }
 
     fn base_selections() -> Selections {
         Selections {
