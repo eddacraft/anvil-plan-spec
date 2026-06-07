@@ -235,6 +235,12 @@ shared theme, keyboard conventions). APS consumes this as a crate dependency.
 - **Confidence:** medium
 - **Dependencies:** TUI-002, TUI-003
 - **Files:** cli/src/wizard.rs, cli/src/scaffold.rs, cli/src/main.rs
+- **Carried from TUI-003 council review:** before scaffold consumes the
+  wizard's path values, add a validated-path choke point in `WizardState`
+  (reject traversal components, decide policy on absolute paths) and
+  bracketed-paste handling (`Event::Paste` with sanitization) so pasted
+  multi-line input cannot replay Enter through the wizard
+  (session council-e077b725, C-006 deferred).
 
 ### TUI-005: Non-interactive fallback and config-driven init
 
