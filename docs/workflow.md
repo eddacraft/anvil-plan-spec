@@ -295,7 +295,17 @@ independent slices of the same work item.
 ### Review specs in PRs
 
 Include spec changes in your PRs. Reviewers should see what you planned
-alongside what you built.
+alongside what you built. A PR that implements a work item should carry:
+
+- The status change (`In Progress` → `Complete`, with date) — `aps complete`
+  does this for you
+- A `Results:` line for non-trivial items, and any learnings captured
+- New `Draft` items for work discovered along the way, or `ISS-NNN` / `Q-NNN`
+  entries in `plans/issues.md`
+- A green `aps lint plans` — and ideally a clean `aps audit --no-run`
+
+If the plan files didn't change, ask whether the plan still matches reality
+— that's exactly the drift `aps audit` exists to catch.
 
 ---
 

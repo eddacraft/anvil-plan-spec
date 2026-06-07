@@ -26,6 +26,36 @@ Each step has a checkpoint for verification.
 Closes #12
 ```
 
+## Plan Updates
+
+This repo dogfoods APS — the roadmap lives in
+[plans/index.aps.md](plans/index.aps.md) and module specs under
+`plans/modules/`. Treat plan files like code: if your change affects what
+the plans describe, update them **in the same PR**.
+
+**A plan update is required when your change touches:**
+
+- Templates, prompts, or examples
+- Installer or scaffold behaviour
+- Validation (lint/audit) behaviour
+- Any in-flight work item's scope or status
+
+**Marking status:** use the CLI (`./bin/aps start <ID>`,
+`./bin/aps complete <ID>`) or hand-edit the `- **Status:**` field
+(`Draft → Ready → In Progress → Complete`). Add a `Results:` line when
+completing non-trivial items, and log discoveries in `plans/issues.md`.
+
+**Validation to run before requesting review:**
+
+```bash
+./bin/aps lint plans              # plan structure
+./test/run.sh                     # CLI test suite
+npx markdownlint-cli "**/*.md"    # markdown style (CI-enforced)
+```
+
+See [AGENTS.md](AGENTS.md) → "Keeping the plans honest" for the full
+conventions, and [docs/workflow.md](docs/workflow.md) for the lifecycle.
+
 ## Scope Guardrails
 
 APS is a specification format for planning and task authorisation.
