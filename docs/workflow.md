@@ -184,7 +184,10 @@ You're going on vacation and someone else needs to continue your work.
 You've finished all work items in a module. Now what?
 
 1. **Validate all work items.** Run each work item's validation command. Make sure
-   everything actually works.
+   everything actually works. `aps audit <module>` does this mechanically — it
+   executes each Complete item's Validation command and reports
+   PASS / FAIL / PARTIAL, plus understated Drafts and stale review dates (see
+   [usage.md](usage.md#aps-audit-module--check-plan-state-against-reality)).
 
 2. **Mark module complete.** Module status is hand-edited — the CLI only manages
    work item state. Bump the metadata table to `Complete` once every work item

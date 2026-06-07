@@ -20,6 +20,7 @@ aps next [module]           # Show the next ready work item
 aps start <ID>              # Mark a Ready work item as In Progress
 aps complete <ID>           # Mark an In Progress work item as Complete
 aps graph [module]          # Show work items + dependency arrows
+aps audit [module]          # Audit plan state against reality
 aps --help                  # Top-level help
 aps <cmd> --help            # Per-command help
 ```
@@ -56,13 +57,16 @@ Errors cause a non-zero exit code. Warnings are informational.
 | Code | Scope          | Description                                                                                                             |
 | ---- | -------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | W001 | Work Item      | ID does not match `PREFIX-NNN` pattern (e.g., `AUTH-001`)                                                               |
-| W003 | Work Item      | Dependency references a task ID not found in the same file                                                              |
+| W003 | Work Item      | Dependency references an ID not found anywhere in the plan tree (work items and decisions both resolve cross-file)     |
 | W004 | Module / Index | Section exists but is empty (`## Purpose`, `## In Scope`, `## Overview`, `## Problem & Success Criteria`, `## Modules`) |
 | W005 | Module         | Status is `Ready` but no work items are defined                                                                         |
 | W010 | Issues         | Issue entry missing `Status`, `Discovered`, or `Severity` field                                                         |
 | W011 | Issues         | Question entry missing `Status`, `Discovered`, or `Priority` field                                                      |
 | W012 | Issues         | Issue ID does not match `ISS-NNN` format or uses wrong casing                                                           |
 | W013 | Issues         | Question ID does not match `Q-NNN` format or uses wrong casing                                                          |
+| W017 | Module         | Active module (`Ready` / `In Progress`) has no `**Last reviewed:**` field, or it is older than `APS_STALE_DAYS` (60)    |
+| W018 | Work Item      | Complete item has no `**Validation:**` field inside a still-active module — completion cannot be audited                |
+| W019 | Index          | Link in `## Modules` points to a non-existent file (warning so seed plans stay clean; `aps audit` gates it as A004)     |
 
 #### JSON output
 
@@ -108,6 +112,7 @@ Draft ──→ Ready ──→ In Progress ──→ Complete
 | `aps start`    | Ready → In Progress (all dependencies must be Complete) |
 | `aps complete` | In Progress → Complete                                  |
 | `aps graph`    | None — read-only                                        |
+| `aps audit`    | None — read-only (but executes Validation commands)     |
 
 Invalid transitions are rejected with a clear error. The CLI never silently
 forces a state change.
@@ -192,6 +197,48 @@ AUTH-004 [Ready] Add session audit log
 
 Useful for spotting blocked chains or auditing what's in flight. The arrow
 reads as "blocked by". An empty `<- none` means no upstream dependencies.
+
+### `aps audit [module]` — check plan state against reality
+
+Plans drift: items get marked Complete without passing their own validation,
+Draft items quietly ship, review dates go stale. The audit formalizes the
+completion-audit pattern from anvil-001 (which found 8 overstated and 19
+understated items across 191 by hand):
+
+```bash
+$ aps audit
+APS Audit
+
+Complete-item verification:
+  AUTH-001     PASS     npm test -- auth.test.ts
+  AUTH-002     FAIL     npm test -- session.test.ts
+  AUTH-003     PARTIAL  Validation is not a runnable command
+
+Findings:
+  A001  AUTH-002     overstated: Validation failed: npm test -- session.test.ts
+  A002  PAY-004      understated: Draft but files exist: src/pay/refund.ts
+  A003  UI-002       stale: module last reviewed 2026-01-10 (89 days ago, threshold 60)
+  A004  index        broken-link: ./modules/ghost.aps.md (line 41)
+
+Findings: 4 (23 items audited)
+```
+
+| Code | Meaning                                                                |
+| ---- | ---------------------------------------------------------------------- |
+| A001 | Overstated — `Complete` item whose `Validation` command fails          |
+| A002 | Understated — `Draft` item whose `Files` already exist with content    |
+| A003 | Stale — `Ready` item in a module with no recent `**Last reviewed:**`   |
+| A004 | Broken link — index `## Modules` link points to a non-existent file    |
+
+Options: `--json` for machine-readable output, `--no-run` to skip executing
+validation commands (A001 then reports `PARTIAL`), `--stale-days N` to tune
+the threshold (also via `APS_STALE_DAYS`). Exit code is non-zero when there
+are findings, so it slots into CI as a deeper, optional companion to
+`aps lint`.
+
+> **Warning:** by default the audit _executes_ backtick `Validation` commands
+> found in Complete work items (with a timeout, `APS_AUDIT_TIMEOUT`, default
+> 60s). Only run it on plans you trust, or pass `--no-run`.
 
 ### Driving a plan from end to end
 
