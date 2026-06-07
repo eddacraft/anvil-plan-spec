@@ -4,7 +4,7 @@ version = "0.4.0-dev"
 edition = "2024"
 license = "Apache-2.0"
 description = "Anvil Plan Spec — native Rust CLI and TUI wizard"
-repository = "https://github.com/Arkahna/anvil-plan-spec"
+repository = "https://github.com/EddaCraft/anvil-plan-spec"
 readme = "../README.md"
 publish = false
 
@@ -20,3 +20,9 @@ ratatui = "0.30"
 
 [lints.rust]
 unsafe_code = "forbid"
+
+# Small, self-contained release binaries for GitHub release assets.
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true

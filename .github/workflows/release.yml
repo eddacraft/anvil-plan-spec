@@ -1,0 +1,104 @@
+name: Release CLI
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-24.04-arm
+          - target: x86_64-apple-darwin
+            os: macos-latest
+          - target: aarch64-apple-darwin
+            os: macos-latest
+          - target: x86_64-pc-windows-gnu
+            os: ubuntu-latest
+            mingw: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install mingw-w64
+        if: matrix.mingw
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends gcc-mingw-w64-x86-64
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: cli -> target
+          key: ${{ matrix.target }}
+
+      - name: Build
+        working-directory: cli
+        run: cargo build --release --locked --target ${{ matrix.target }}
+
+      - name: Package
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          case "${{ matrix.target }}" in
+            *windows*)
+              cp "cli/target/${{ matrix.target }}/release/aps.exe" dist/
+              (cd dist && zip "aps-${{ matrix.target }}.zip" aps.exe && rm aps.exe)
+              ;;
+            *)
+              cp "cli/target/${{ matrix.target }}/release/aps" dist/
+              tar -czf "dist/aps-${{ matrix.target }}.tar.gz" -C dist aps
+              rm dist/aps
+              ;;
+          esac
+
+      - name: Smoke test (native targets)
+        if: matrix.target != 'x86_64-pc-windows-gnu' && matrix.target != 'x86_64-apple-darwin'
+        run: cli/target/${{ matrix.target }}/release/aps --version
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: aps-${{ matrix.target }}
+          path: dist/*
+          if-no-files-found: error
+
+  release:
+    name: Publish release assets
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Generate checksums
+        working-directory: dist
+        run: sha256sum aps-* > SHA256SUMS
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/aps-*
+            dist/SHA256SUMS
+          generate_release_notes: true
