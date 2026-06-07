@@ -1,8 +1,8 @@
 # TUI Onboarding Module
 
-| ID  | Owner  | Status   |
-| --- | ------ | -------- |
-| TUI | @aneki | Complete |
+| ID  | Owner  | Status                  |
+| --- | ------ | ----------------------- |
+| TUI | @aneki | In Progress (follow-up) |
 
 **Last reviewed:** 2026-06-08
 
@@ -366,6 +366,29 @@ shared theme, keyboard conventions). APS consumes this as a crate dependency.
   numbers, single-line JSON). Bash lint/next are now feature-frozen per
   orchestrate D-006.
 
+### TUI-010: Add bracketed paste support to wizard text entry
+
+- **Intent:** Carry forward council finding C-006 (session council-e077b725,
+  deferred during the TUI-003 review): without bracketed paste, a multi-line
+  clipboard replays each newline as an Enter keypress, which can drive the
+  wizard through Components and Review into scaffold execution without user
+  review.
+- **Expected Outcome:** `EnableBracketedPaste` is set alongside
+  `EnterAlternateScreen` (and cleared by `TerminalGuard` on exit). The event
+  loop handles `Event::Paste` explicitly during text entry: pasted text is
+  sanitized (control/bidi/zero-width characters stripped per `is_text_char`,
+  first line only) and inserted into the focused field. Paste events outside
+  text-entry steps are ignored. This also gives pasted input the same single
+  sanitization choke point as typed input.
+- **Validation:** Unit tests for the paste-sanitization helper (multi-line
+  input truncates to first line, control/bidi characters stripped); manual
+  pty test confirms pasting multi-line text into a path field inserts only
+  the first line and does not advance the wizard
+- **Confidence:** high
+- **Dependencies:** TUI-003
+- **Files:** cli/src/wizard.rs
+- **Status:** Ready
+
 ## Execution Strategy
 
 ### Wave 1: Foundation
@@ -394,6 +417,10 @@ shared theme, keyboard conventions). APS consumes this as a crate dependency.
 ### Wave 6: Native parser and lint port (depends on Wave 1; parallel with 2–5)
 
 - TUI-009: Shared Rust parser + `aps lint` + `aps next` parity
+
+### Wave 7: Hardening follow-ups (post-release)
+
+- TUI-010: Bracketed paste support (council C-006)
 
 ## Relationship to Other Modules
 
