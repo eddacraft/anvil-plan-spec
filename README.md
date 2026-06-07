@@ -15,9 +15,6 @@ APS is the planning layer that lives in your repo, travels with your code, and
 works with every AI tool you use — Claude Code, Cursor, Copilot, Codex, OpenCode,
 Gemini, ChatGPT, and whatever comes next.
 
-![aps init wizard](docs/assets/init-wizard.png)
-<!-- TODO: capture `aps init` Ratatui wizard screenshot -->
-
 ## Install in 10 seconds
 
 ```bash
@@ -37,14 +34,24 @@ into whatever tool you used yesterday.** Switch tools and you start over.
 
 APS solves three problems at once:
 
-|     | Without APS                                                                                   | With APS                                                                                |
-| --- | --------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-|     | Specs live in Notion, Linear, or a chat thread                                                | Specs live in `plans/`, versioned with your code                                        |
-|     | Each AI tool needs its own ruleset, context window, and re-explanation                        | One spec works everywhere — every agent reads the same markdown                         |
-|     | Agents wander off, invent scope, or run out of context halfway through                        | Work items are authorised, bounded, and dependency-aware                                |
-|     | No record of why a decision was made                                                          | Decisions, designs, and learnings sit beside the code                                   |
+| Pain                    | Without APS                                                                                       | With APS                                                                                |
+| ----------------------- | ------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| **Scattered specs**     | Specs live in Notion, Linear, a chat thread, or a manual PRD                                      | Specs live in `plans/`, versioned with your code                                        |
+| **Tool lock-in**        | Each AI tool needs its own ruleset, context window, and re-explanation                            | One spec works everywhere — every agent reads the same markdown                         |
+| **Agent drift**         | Agents wander off, invent scope, or run out of context halfway through                            | Work items are authorised, bounded, and dependency-aware                                |
+| **No decision history** | No record of why a decision was made                                                              | Decisions, designs, and learnings sit beside the code                                   |
 
 It's just markdown. No vendor lock-in. No daemons. No proprietary formats.
+
+## How APS differs from related formats
+
+APS isn't the only spec-driven workflow for AI coding. The closest neighbours:
+
+| Format           | Best at                                            | Where APS differs                                                                                                                                |
+| ---------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **BMAD-METHOD**  | Persona-driven workflows (PM, Architect, Dev, QA)  | APS has no persona agents or YAML workflow definitions — it's plain markdown that any tool reads.                                               |
+| **Spec Kit**     | Constitution + slash commands (`/speckit.*`)       | APS isn't tied to GitHub CLI or any single vendor. The same spec works in Claude, Cursor, Codex, OpenCode, or pasted into a chat window.          |
+| **OpenSpec**     | Lightweight change proposals                       | APS adds module boundaries, action plans with checkpoints, and a CLI (`next`/`start`/`complete`/`graph`) that drives execution, not just tracks it. |
 
 ## The 5-minute tour
 
@@ -68,13 +75,13 @@ Users want to reduce eye strain when working at night.
 
 - **Status:** Ready
 - **Outcome:** ThemeProvider wraps app, exposes toggle
-- **Test:** `npm test -- theme.test.tsx`
+- **Validation:** `npm test -- theme.test.tsx`
 
 ### 002: Add toggle to settings
 
 - **Status:** Ready
 - **Outcome:** Settings page has working theme toggle
-- **Test:** Manual verification
+- **Validation:** Manual verification
 - **Depends on:** 001
 ```
 
@@ -161,18 +168,20 @@ Full notes: [CHANGELOG.md](CHANGELOG.md).
 
 ## Templates
 
-| Template                                                           | Use When                                              |
-| ------------------------------------------------------------------ | ----------------------------------------------------- |
-| [quickstart.template.md](templates/quickstart.template.md)         | **Try APS in 5 minutes** — minimal single-file format |
-| [index.template.md](templates/index.template.md)                   | Starting a new plan or initiative                     |
-| [index-expanded.template.md](templates/index-expanded.template.md) | Larger initiatives with 6+ modules or rich metadata   |
-| [index-monorepo.template.md](templates/index-monorepo.template.md) | Monorepos with multiple packages or apps              |
-| [module.template.md](templates/module.template.md)                 | Defining a bounded module with work items             |
-| [simple.template.md](templates/simple.template.md)                 | Small, self-contained features                        |
-| [actions.template.md](templates/actions.template.md)               | Breaking work items into executable actions           |
-| [issues.template.md](templates/issues.template.md)                 | Tracking dev-time discoveries (ISS-NNN / Q-NNN)       |
-| [design.template.md](templates/design.template.md)                 | Technical/architectural design for complex work       |
-| [solution.template.md](templates/solution.template.md)             | Documenting solved problems (compound phase)          |
+| Template                                                                       | Use When                                                  |
+| ------------------------------------------------------------------------------ | --------------------------------------------------------- |
+| [quickstart.template.md](templates/quickstart.template.md)                     | **Try APS in 5 minutes** — minimal single-file format     |
+| [index.template.md](templates/index.template.md)                               | Starting a new plan or initiative                         |
+| [index-expanded.template.md](templates/index-expanded.template.md)             | Larger initiatives with 6+ modules or rich metadata       |
+| [index-monorepo.template.md](templates/index-monorepo.template.md)             | Monorepos with multiple packages or apps                  |
+| [module.template.md](templates/module.template.md)                             | Defining a bounded module with work items                 |
+| [simple.template.md](templates/simple.template.md)                             | Small, self-contained features                            |
+| [actions.template.md](templates/actions.template.md)                           | Breaking work items into executable actions               |
+| [issues.template.md](templates/issues.template.md)                             | Tracking dev-time discoveries (ISS-NNN / Q-NNN)           |
+| [design.template.md](templates/design.template.md)                             | Technical/architectural design for complex work           |
+| [solution.template.md](templates/solution.template.md)                         | Documenting solved problems (compound phase)              |
+| [completed-index.template.md](templates/completed-index.template.md)           | Rolling shipped work into a historical index              |
+| [release.template.md](templates/release.template.md)                           | Telling the story of a release (theme, criteria, risks)   |
 
 ## Worked examples
 
@@ -235,8 +244,8 @@ execution is fast and clean.
 
 ```text
 Plan → Execute → Validate → Learn → Plan again
-  ↑                                      │
-  └──────────────────────────────────────┘
+  ↑                                          │
+  └──────────────────────────────────────────┘
 ```
 
 **The 80/20 split:** 80% planning and review, 20% execution. The cycle exists
