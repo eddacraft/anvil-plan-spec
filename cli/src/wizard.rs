@@ -114,11 +114,15 @@ pub struct WizardState {
     tool_config_index: usize,
     selected_templates: Vec<Template>,
     template_index: usize,
+    /// Once the user toggles any template row, defaults stop recomputing —
+    /// even if they later go back and change profile or shape. Manual
+    /// selections always win over recomputed defaults (council C-008).
     templates_touched: bool,
     custom_template_path: TextInputState,
     editing_custom_template: bool,
     path_inputs: [TextInputState; 3],
     path_focus: usize,
+    path_error: Option<&'static str>,
     selected_components: Vec<Component>,
     component_index: usize,
 }
@@ -146,6 +150,7 @@ impl Default for WizardState {
                 path_input(".aps/"),
             ],
             path_focus: 0,
+            path_error: None,
             selected_components: WizardState::COMPONENTS.to_vec(),
             component_index: 0,
         }
@@ -338,6 +343,9 @@ impl WizardState {
     }
 
     pub fn toggle_template(&mut self, template: Template) {
+        // Note: custom_template_path keeps its value across Custom
+        // toggle-off/on cycles so an accidental deselect doesn't lose a
+        // typed path (council C-011).
         self.templates_touched = true;
         if let Some(index) = self
             .selected_templates
@@ -369,16 +377,39 @@ impl WizardState {
     fn active_input_mut(&mut self) -> &mut TextInputState {
         match self.step {
             WizardStep::Paths => &mut self.path_inputs[self.path_focus],
-            _ => &mut self.custom_template_path,
+            WizardStep::Templates => &mut self.custom_template_path,
+            // is_editing() restricts handle_editing to the two steps above.
+            _ => unreachable!("handle_editing reached outside an editing step"),
+        }
+    }
+
+    /// Deselect Custom when its path is blank — a pathless custom template
+    /// has nothing to install. Applied on both confirm and cancel.
+    fn drop_custom_if_blank(&mut self) {
+        if self.custom_template_path.value.trim().is_empty() {
+            self.selected_templates
+                .retain(|template| *template != Template::Custom);
         }
     }
 
     fn handle_editing(&mut self, action: Action) -> WizardEvent {
         match action {
             Action::Quit => return WizardEvent::Quit,
-            Action::Character(c) => self.active_input_mut().insert(c),
-            Action::Backspace => self.active_input_mut().backspace(),
-            Action::Delete => self.active_input_mut().delete(),
+            Action::Character(c) if is_text_char(c) => {
+                self.path_error = None;
+                self.active_input_mut().insert(c);
+            }
+            // Control, bidi-override, and zero-width characters are dropped:
+            // they corrupt stored paths and enable filename spoofing.
+            Action::Character(_) => {}
+            Action::Backspace => {
+                self.path_error = None;
+                self.active_input_mut().backspace();
+            }
+            Action::Delete => {
+                self.path_error = None;
+                self.active_input_mut().delete();
+            }
             Action::Left => self.active_input_mut().move_left(),
             Action::Right => self.active_input_mut().move_right(),
             Action::Home => self.active_input_mut().home(),
@@ -390,19 +421,31 @@ impl WizardState {
                 self.path_focus = move_index(self.path_focus, self.path_inputs.len(), true);
             }
             Action::Select => match self.step {
-                WizardStep::Paths => return self.advance(),
-                _ => self.editing_custom_template = false,
+                WizardStep::Paths => {
+                    if self
+                        .path_inputs
+                        .iter()
+                        .any(|input| input.value.trim().is_empty())
+                    {
+                        self.path_error = Some("Path fields cannot be empty");
+                    } else {
+                        return self.advance();
+                    }
+                }
+                _ => {
+                    self.editing_custom_template = false;
+                    self.drop_custom_if_blank();
+                }
             },
             Action::Back => match self.step {
                 WizardStep::Paths => self.back(),
                 _ => {
                     self.editing_custom_template = false;
-                    if self.custom_template_path.value.is_empty() {
-                        self.selected_templates
-                            .retain(|template| *template != Template::Custom);
-                    }
+                    self.drop_custom_if_blank();
                 }
             },
+            // Up/Down are intentionally inert while editing the custom
+            // template path — there is no second field to focus.
             _ => {}
         }
 
@@ -466,11 +509,17 @@ impl WizardState {
             WizardStep::Done => return WizardEvent::Complete,
         };
 
+        self.apply_template_defaults();
+
+        WizardEvent::Continue
+    }
+
+    /// Recompute template defaults whenever the Templates step is entered —
+    /// forward or backward — until the user makes a manual selection.
+    fn apply_template_defaults(&mut self) {
         if self.step == WizardStep::Templates && !self.templates_touched {
             self.selected_templates = Self::default_templates(self.profile, self.project_shape);
         }
-
-        WizardEvent::Continue
     }
 
     fn back(&mut self) {
@@ -485,6 +534,8 @@ impl WizardState {
             WizardStep::Components => WizardStep::Paths,
             WizardStep::Done => WizardStep::Components,
         };
+
+        self.apply_template_defaults();
     }
 
     fn move_selection(&mut self, forward: bool) {
@@ -608,6 +659,23 @@ impl ToolConfig {
     }
 }
 
+/// Restores the terminal on drop — including on panic or early error —
+/// so a wizard crash never leaves the user's shell in raw mode inside the
+/// alternate screen. All cleanup is best-effort: a failing step must not
+/// prevent the remaining ones (council C-004).
+struct TerminalGuard;
+
+impl Drop for TerminalGuard {
+    fn drop(&mut self) {
+        let _ = crossterm::execute!(
+            io::stdout(),
+            crossterm::terminal::LeaveAlternateScreen,
+            crossterm::cursor::Show
+        );
+        let _ = crossterm::terminal::disable_raw_mode();
+    }
+}
+
 pub fn run() -> io::Result<()> {
     if !io::stdin().is_terminal() || !io::stdout().is_terminal() {
         return Err(io::Error::new(
@@ -617,21 +685,12 @@ pub fn run() -> io::Result<()> {
     }
 
     crossterm::terminal::enable_raw_mode()?;
-    let mut stdout = io::stdout();
-    crossterm::execute!(stdout, crossterm::terminal::EnterAlternateScreen)?;
+    let _guard = TerminalGuard;
+    crossterm::execute!(io::stdout(), crossterm::terminal::EnterAlternateScreen)?;
 
-    let backend = CrosstermBackend::new(stdout);
+    let backend = CrosstermBackend::new(io::stdout());
     let mut terminal = Terminal::new(backend)?;
-    let result = run_loop(&mut terminal);
-
-    crossterm::terminal::disable_raw_mode()?;
-    crossterm::execute!(
-        terminal.backend_mut(),
-        crossterm::terminal::LeaveAlternateScreen
-    )?;
-    terminal.show_cursor()?;
-
-    result
+    run_loop(&mut terminal)
 }
 
 fn run_loop(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> io::Result<()> {
@@ -933,6 +992,11 @@ fn render_paths(
         );
     }
 
+    if let Some(error) = state.path_error {
+        Paragraph::new(format!("⚠ {error}"))
+            .render(fields[3], frame.buffer_mut());
+    }
+
     Paragraph::new(state.directory_preview())
         .block(Block::default().title("Preview").borders(Borders::ALL))
         .render(columns[1], frame.buffer_mut());
@@ -1155,6 +1219,8 @@ pub fn map_key(event: KeyEvent, editing: bool) -> Action {
     if event.modifiers.contains(KeyModifiers::CONTROL) {
         return match event.code {
             KeyCode::Char('c') => Action::Quit,
+            KeyCode::Char('a') => Action::Home,
+            KeyCode::Char('e') => Action::End,
             _ => Action::None,
         };
     }
@@ -1173,6 +1239,17 @@ pub fn map_key(event: KeyEvent, editing: bool) -> Action {
         KeyCode::Char(c) => Action::Character(c),
         _ => Action::None,
     }
+}
+
+/// Characters allowed into path/template text fields. Control codes, bidi
+/// overrides, and zero-width characters are rejected — they corrupt stored
+/// paths and enable filename spoofing once TUI-004 writes to disk.
+fn is_text_char(c: char) -> bool {
+    !c.is_control()
+        && !matches!(
+            c,
+            '\u{200B}'..='\u{200F}' | '\u{202A}'..='\u{202E}' | '\u{2066}'..='\u{2069}' | '\u{FEFF}'
+        )
 }
 
 fn move_index(current: usize, len: usize, forward: bool) -> usize {
@@ -1431,6 +1508,43 @@ mod tests {
             mono.selected_templates(),
             &[Template::Module, Template::MonorepoIndex]
         );
+
+        // single + agent operator -> index + module (wildcard arm)
+        let mut agent = WizardState::default();
+        agent.handle(Action::Down);
+        agent.handle(Action::Down);
+        at_templates(&mut agent);
+        assert_eq!(
+            agent.selected_templates(),
+            &[Template::Module, Template::Index]
+        );
+    }
+
+    #[test]
+    fn manual_template_selection_survives_back_and_forward() {
+        let mut state = WizardState::default();
+        at_templates(&mut state);
+
+        state.handle(Action::Toggle); // deselect quickstart -> touched
+        state.handle(Action::Select); // -> AiTooling
+        state.handle(Action::Back); // -> Templates again
+
+        assert_eq!(state.selected_templates(), &[]);
+    }
+
+    #[test]
+    fn enter_with_empty_custom_path_deselects_custom() {
+        let mut state = WizardState::default();
+        at_templates(&mut state);
+
+        state.handle(Action::Up); // wrap to custom row
+        state.handle(Action::Toggle);
+        assert!(state.is_editing());
+
+        state.handle(Action::Select); // confirm without typing
+
+        assert!(!state.is_editing());
+        assert!(!state.selected_templates().contains(&Template::Custom));
     }
 
     #[test]
@@ -1574,6 +1688,39 @@ mod tests {
     }
 
     #[test]
+    fn empty_path_field_blocks_advance() {
+        let mut state = WizardState::default();
+        at_paths(&mut state);
+
+        for _ in 0.."plans/".len() {
+            state.handle(Action::Backspace);
+        }
+        assert_eq!(state.plans_dir(), "");
+
+        state.handle(Action::Select);
+        assert_eq!(state.step(), WizardStep::Paths);
+        assert!(state.path_error.is_some());
+
+        state.handle(Action::Character('p'));
+        assert!(state.path_error.is_none());
+
+        state.handle(Action::Select);
+        assert_eq!(state.step(), WizardStep::Components);
+    }
+
+    #[test]
+    fn control_and_bidi_characters_are_rejected() {
+        let mut state = WizardState::default();
+        at_paths(&mut state);
+
+        state.handle(Action::Character('\u{1b}')); // escape
+        state.handle(Action::Character('\u{202E}')); // bidi override
+        state.handle(Action::Character('\u{200B}')); // zero-width space
+
+        assert_eq!(state.plans_dir(), "plans/");
+    }
+
+    #[test]
     fn map_key_passes_text_keys_through_when_editing() {
         let plain = |code| KeyEvent::new(code, KeyModifiers::empty());
 
@@ -1596,6 +1743,11 @@ mod tests {
 
         let ctrl_c = KeyEvent::new(KeyCode::Char('c'), KeyModifiers::CONTROL);
         assert_eq!(map_key(ctrl_c, true), Action::Quit);
+
+        let ctrl_a = KeyEvent::new(KeyCode::Char('a'), KeyModifiers::CONTROL);
+        let ctrl_e = KeyEvent::new(KeyCode::Char('e'), KeyModifiers::CONTROL);
+        assert_eq!(map_key(ctrl_a, true), Action::Home);
+        assert_eq!(map_key(ctrl_e, true), Action::End);
     }
 
     fn at_components(state: &mut WizardState) {
