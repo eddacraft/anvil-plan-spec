@@ -383,6 +383,21 @@ impl WizardState {
     /// Empty values are fine (the scaffold substitutes defaults); absolute
     /// and parent-traversing paths would let the scaffold write outside the
     /// project root.
+    /// Insert pasted text into the focused text field. Only the first line
+    /// is taken and unsafe characters are stripped — the same choke point as
+    /// typed input. No-op outside text entry, so a paste can never navigate
+    /// or trigger scaffold execution.
+    pub fn paste(&mut self, text: &str) {
+        if !self.text_entry_active() {
+            return;
+        }
+
+        self.path_error = None;
+        for c in sanitize_paste(text).chars() {
+            self.current_text_mut().insert(c);
+        }
+    }
+
     fn first_invalid_path(&self) -> Option<&'static str> {
         [&self.plans_dir, &self.docs_dir, &self.tooling_root]
             .into_iter()
@@ -766,6 +781,17 @@ fn invalid_path_reason(value: &str) -> Option<&'static str> {
     None
 }
 
+/// Reduce pasted text to something safe for a single-line path field: the
+/// first line only, with control/bidi/zero-width characters stripped.
+fn sanitize_paste(text: &str) -> String {
+    text.lines()
+        .next()
+        .unwrap_or("")
+        .chars()
+        .filter(|c| is_text_char(*c))
+        .collect()
+}
+
 /// Restores the terminal on drop — including on panic or early error — so a
 /// wizard crash never leaves the user's shell in raw mode inside the
 /// alternate screen. Cleanup is best-effort: a failing step must not prevent
@@ -776,6 +802,7 @@ impl Drop for TerminalGuard {
     fn drop(&mut self) {
         let _ = crossterm::execute!(
             io::stdout(),
+            crossterm::event::DisableBracketedPaste,
             crossterm::terminal::LeaveAlternateScreen,
             crossterm::cursor::Show
         );
@@ -793,7 +820,11 @@ pub fn run() -> io::Result<()> {
 
     crossterm::terminal::enable_raw_mode()?;
     let _guard = TerminalGuard;
-    crossterm::execute!(io::stdout(), crossterm::terminal::EnterAlternateScreen)?;
+    crossterm::execute!(
+        io::stdout(),
+        crossterm::terminal::EnterAlternateScreen,
+        crossterm::event::EnableBracketedPaste
+    )?;
 
     let backend = CrosstermBackend::new(io::stdout());
     let mut terminal = Terminal::new(backend)?;
@@ -822,8 +853,16 @@ fn run_loop(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> io::Result
         }
 
         if crossterm::event::poll(Duration::from_millis(250))? {
-            let crossterm::event::Event::Key(key) = crossterm::event::read()? else {
-                continue;
+            let key = match crossterm::event::read()? {
+                crossterm::event::Event::Key(key) => key,
+                // Bracketed paste delivers the clipboard as one event
+                // instead of replayed keystrokes — without this, pasted
+                // newlines arrive as Enter and walk the wizard forward.
+                crossterm::event::Event::Paste(text) => {
+                    state.paste(&text);
+                    continue;
+                }
+                _ => continue,
             };
             // Text-entry steps need raw characters; the vim-style handler
             // would swallow h/j/k/l/q as navigation.
@@ -1929,5 +1968,51 @@ mod tests {
 
         assert_eq!(state.step(), WizardStep::Paths);
         assert!(state.path_error.is_some());
+    }
+
+    #[test]
+    fn sanitize_paste_takes_first_line_and_strips_unsafe_chars() {
+        assert_eq!(sanitize_paste("docs/plans\nrm -rf /\nboom"), "docs/plans");
+        assert_eq!(sanitize_paste("line1\r\nline2"), "line1");
+        assert_eq!(sanitize_paste("a\u{202E}b\u{1b}c\u{200B}d"), "abcd");
+        assert_eq!(sanitize_paste("plain/path"), "plain/path");
+        assert_eq!(sanitize_paste(""), "");
+    }
+
+    #[test]
+    fn paste_inserts_into_focused_field_without_advancing() {
+        let mut state = WizardState::default();
+        advance_to(&mut state, WizardStep::Paths);
+
+        state.paste("custom\nrm -rf /\nmore");
+
+        assert_eq!(state.plans_dir.value, "plans/custom");
+        assert_eq!(state.step(), WizardStep::Paths);
+    }
+
+    #[test]
+    fn paste_targets_the_custom_template_field_while_editing() {
+        let mut state = WizardState::default();
+        advance_to(&mut state, WizardStep::Templates);
+
+        // select the custom template row to open its input
+        state.handle(Action::Up);
+        state.handle(Action::Toggle);
+        assert!(state.text_entry_active());
+
+        state.paste("my/template.md");
+
+        assert_eq!(state.custom_template.value, "my/template.md");
+    }
+
+    #[test]
+    fn paste_is_ignored_outside_text_entry() {
+        let mut state = WizardState::default();
+        assert_eq!(state.step(), WizardStep::Profile);
+
+        state.paste("evil");
+
+        assert_eq!(state.plans_dir.value, "plans/");
+        assert_eq!(state.custom_template.value, "");
     }
 }

@@ -386,8 +386,17 @@ shared theme, keyboard conventions). APS consumes this as a crate dependency.
   the first line and does not advance the wizard
 - **Confidence:** high
 - **Dependencies:** TUI-003
-- **Files:** cli/src/wizard.rs
-- **Status:** Ready
+- **Files:** cli/src/wizard.rs, cli/Cargo.toml
+- **Status:** In Progress
+- **Results:** `EnableBracketedPaste` set on wizard entry and cleared by
+  `TerminalGuard` (crossterm `bracketed-paste` feature enabled).
+  `Event::Paste` routes to `WizardState::paste()`, which is a no-op outside
+  text entry and otherwise inserts `sanitize_paste(text)` — first line only,
+  control/bidi/zero-width characters stripped via the same `is_text_char`
+  filter as typed input. 4 new unit tests (78 total). Behavioral smoke test:
+  a three-line paste into the Paths step in an empty directory creates zero
+  files and the wizard stays on Paths; previously the newlines replayed as
+  Enter and drove the wizard into scaffold execution.
 
 ## Execution Strategy
 
