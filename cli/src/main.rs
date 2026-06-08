@@ -26,6 +26,9 @@ struct Cli {
     command: Option<Command>,
 }
 
+// Init carries the whole non-interactive wizard surface (~290 bytes); the
+// enum is parsed once at startup, so boxing it buys nothing but indirection.
+#[allow(clippy::large_enum_variant)]
 #[derive(Subcommand)]
 enum Command {
     /// Set up APS in this project (TUI wizard, flags, or config replay)

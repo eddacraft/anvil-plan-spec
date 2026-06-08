@@ -27,9 +27,13 @@ jobs:
         with:
           workspaces: cli -> target
 
-      - name: cargo check
+      - name: cargo fmt
         working-directory: cli
-        run: cargo check --locked --all-targets
+        run: cargo fmt --check
+
+      - name: cargo clippy
+        working-directory: cli
+        run: cargo clippy --locked --all-targets -- -D warnings
 
       - name: cargo test
         working-directory: cli
