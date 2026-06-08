@@ -95,27 +95,27 @@ pub fn lint_target(target: &str) -> Result<LintReport, String> {
     // widen the index to the surrounding plan tree so cross-module
     // dependencies still resolve.
     let mut index_files = files.clone();
-    if target_path.is_file() {
-        if let Some(parent) = target_path.parent() {
-            let tdir = std::fs::canonicalize(if parent.as_os_str().is_empty() {
-                Path::new(".")
-            } else {
-                parent
-            })
-            .unwrap_or_else(|_| parent.to_path_buf());
-            let tdir_str = tdir.to_string_lossy().into_owned();
-            // Climb out of modules/ (including nested subdirectories).
-            let troot = match tdir_str.find("/modules") {
-                Some(at)
-                    if tdir_str[at..] == *"/modules"
-                        || tdir_str[at + "/modules".len()..].starts_with('/') =>
-                {
-                    tdir_str[..at].to_string()
-                }
-                _ => tdir_str,
-            };
-            index_files.extend(parser::find_aps_files(Path::new(&troot)));
-        }
+    if target_path.is_file()
+        && let Some(parent) = target_path.parent()
+    {
+        let tdir = std::fs::canonicalize(if parent.as_os_str().is_empty() {
+            Path::new(".")
+        } else {
+            parent
+        })
+        .unwrap_or_else(|_| parent.to_path_buf());
+        let tdir_str = tdir.to_string_lossy().into_owned();
+        // Climb out of modules/ (including nested subdirectories).
+        let troot = match tdir_str.find("/modules") {
+            Some(at)
+                if tdir_str[at..] == *"/modules"
+                    || tdir_str[at + "/modules".len()..].starts_with('/') =>
+            {
+                tdir_str[..at].to_string()
+            }
+            _ => tdir_str,
+        };
+        index_files.extend(parser::find_aps_files(Path::new(&troot)));
     }
     let tree_ids = build_id_index(&index_files);
 
@@ -237,7 +237,7 @@ fn check_w019_module_links(report: &mut LintReport, plan: &PlanFile) {
             rest = &after[close + 1..];
 
             // Strip markdown link titles: ` "title"` / ` 'title'`.
-            if let Some(at) = target.find(|c| c == ' ' || c == '\t') {
+            if let Some(at) = target.find([' ', '\t']) {
                 let tail = target[at..].trim_start();
                 if tail.starts_with('"') || tail.starts_with('\'') {
                     target.truncate(at);
