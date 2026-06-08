@@ -278,6 +278,25 @@ impl WizardState {
         self.editing_custom_template || self.step == WizardStep::Paths
     }
 
+    /// Insert pasted text into the focused field. Ignored outside text
+    /// entry. Pasted content goes through the same sanitization choke point
+    /// as typed input (`is_text_char`), truncated to the first line so a
+    /// multi-line clipboard cannot replay Enter keypresses.
+    pub fn paste(&mut self, text: &str) {
+        if !self.text_entry_active() {
+            return;
+        }
+        self.path_error = None;
+        let sanitized = sanitize_paste(text);
+        let field = self.current_text_mut();
+        for c in sanitized.chars() {
+            if field.value.len() >= MAX_INPUT_LEN {
+                break;
+            }
+            field.insert(c);
+        }
+    }
+
     pub fn handle(&mut self, action: Action) -> WizardEvent {
         if self.text_entry_active() {
             return self.handle_text(action);
@@ -349,7 +368,10 @@ impl WizardState {
             }
             Action::Character(c) if is_text_char(c) => {
                 self.path_error = None;
-                self.current_text_mut().insert(c);
+                let field = self.current_text_mut();
+                if field.value.len() < MAX_INPUT_LEN {
+                    field.insert(c);
+                }
             }
             // Control, bidi-override, and zero-width characters are dropped:
             // they corrupt stored paths and enable filename spoofing once the
@@ -618,6 +640,17 @@ impl WizardState {
         {
             self.selected_templates.remove(index);
         } else {
+            // Index and MonorepoIndex scaffold the same file — selecting one
+            // deselects the other (council-b2bd78ac C-001)
+            match template {
+                Template::Index => self
+                    .selected_templates
+                    .retain(|selected| *selected != Template::MonorepoIndex),
+                Template::MonorepoIndex => self
+                    .selected_templates
+                    .retain(|selected| *selected != Template::Index),
+                _ => {}
+            }
             self.selected_templates.push(template);
             self.selected_templates
                 .sort_by_key(|template| Self::template_order(*template));
@@ -738,12 +771,28 @@ impl ToolConfig {
 /// Characters allowed into path/template text fields. Control codes, bidi
 /// overrides, and zero-width characters are rejected — they corrupt stored
 /// paths and enable filename spoofing when the scaffold writes to disk.
+/// Longest accepted text-field value — PATH_MAX on Linux; nothing
+/// legitimate is anywhere close.
+const MAX_INPUT_LEN: usize = 4096;
+
 fn is_text_char(c: char) -> bool {
     !c.is_control()
         && !matches!(
             c,
             '\u{200B}'..='\u{200F}' | '\u{202A}'..='\u{202E}' | '\u{2066}'..='\u{2069}' | '\u{FEFF}'
         )
+}
+
+/// Sanitize clipboard content for a single-line text field: first line only,
+/// character policy identical to typed input, bounded length.
+fn sanitize_paste(text: &str) -> String {
+    text.lines()
+        .next()
+        .unwrap_or("")
+        .chars()
+        .filter(|c| is_text_char(*c))
+        .take(MAX_INPUT_LEN)
+        .collect()
 }
 
 /// Why a target directory value is unusable, or None if it is fine.
@@ -776,6 +825,7 @@ impl Drop for TerminalGuard {
     fn drop(&mut self) {
         let _ = crossterm::execute!(
             io::stdout(),
+            crossterm::event::DisableBracketedPaste,
             crossterm::terminal::LeaveAlternateScreen,
             crossterm::cursor::Show
         );
@@ -793,7 +843,11 @@ pub fn run() -> io::Result<()> {
 
     crossterm::terminal::enable_raw_mode()?;
     let _guard = TerminalGuard;
-    crossterm::execute!(io::stdout(), crossterm::terminal::EnterAlternateScreen)?;
+    crossterm::execute!(
+        io::stdout(),
+        crossterm::terminal::EnterAlternateScreen,
+        crossterm::event::EnableBracketedPaste
+    )?;
 
     let backend = CrosstermBackend::new(io::stdout());
     let mut terminal = Terminal::new(backend)?;
@@ -814,6 +868,9 @@ fn run_loop(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> io::Result
                 let crossterm::event::Event::Key(key) = crossterm::event::read()? else {
                     continue;
                 };
+                if key.kind != crossterm::event::KeyEventKind::Press {
+                    continue;
+                }
                 if state.handle(KeyHandler::map(key)) == WizardEvent::Quit {
                     return Ok(());
                 }
@@ -822,9 +879,23 @@ fn run_loop(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> io::Result
         }
 
         if crossterm::event::poll(Duration::from_millis(250))? {
-            let crossterm::event::Event::Key(key) = crossterm::event::read()? else {
-                continue;
+            let key = match crossterm::event::read()? {
+                crossterm::event::Event::Key(key) => key,
+                // Bracketed paste lands in the focused text field, sanitized
+                // through the same choke point as typed input. Without this,
+                // each pasted newline replays as Enter and can drive the
+                // wizard through Components and Review into scaffold
+                // execution without user review (TUI-010 / C-006).
+                crossterm::event::Event::Paste(text) => {
+                    state.paste(&text);
+                    continue;
+                }
+                _ => continue,
             };
+            // Windows terminals also report key releases — act on presses only
+            if key.kind != crossterm::event::KeyEventKind::Press {
+                continue;
+            }
             // Text-entry steps need raw characters; the vim-style handler
             // would swallow h/j/k/l/q as navigation.
             let action = if state.text_entry_active() {
@@ -1929,5 +2000,78 @@ mod tests {
 
         assert_eq!(state.step(), WizardStep::Paths);
         assert!(state.path_error.is_some());
+    }
+
+    #[test]
+    fn sanitize_paste_keeps_first_line_and_strips_unsafe_chars() {
+        assert_eq!(sanitize_paste("plans/\ndocs/\n"), "plans/");
+        assert_eq!(sanitize_paste("a\r\nb"), "a");
+        assert_eq!(sanitize_paste("sp\u{202E}oof\u{200B}ed"), "spoofed");
+        assert_eq!(sanitize_paste("tab\there"), "tabhere");
+        assert_eq!(sanitize_paste(""), "");
+        assert_eq!(sanitize_paste("\n\n"), "");
+    }
+
+    #[test]
+    fn paste_inserts_first_line_without_advancing() {
+        let mut state = WizardState::default();
+        advance_to(&mut state, WizardStep::Paths);
+
+        for _ in 0.."plans/".len() {
+            state.handle(Action::Backspace);
+        }
+        state.paste("specs/\nq\nq\n");
+
+        // Only the first line landed, and the step did not move
+        assert_eq!(state.step(), WizardStep::Paths);
+        assert_eq!(state.plans_dir.value, "specs/");
+    }
+
+    #[test]
+    fn paste_outside_text_entry_is_ignored() {
+        let mut state = WizardState::default();
+        assert_eq!(state.step(), WizardStep::Profile);
+
+        state.paste("jjj q");
+        assert_eq!(state.step(), WizardStep::Profile);
+        assert_eq!(state.plans_dir.value, "plans/");
+    }
+
+    #[test]
+    fn index_and_monorepo_index_are_mutually_exclusive() {
+        let mut state = WizardState::default();
+        advance_to(&mut state, WizardStep::Templates);
+
+        assert!(state.selected_templates().contains(&Template::Index));
+        state.toggle_template(Template::MonorepoIndex);
+        assert!(
+            state
+                .selected_templates()
+                .contains(&Template::MonorepoIndex)
+        );
+        assert!(!state.selected_templates().contains(&Template::Index));
+
+        state.toggle_template(Template::Index);
+        assert!(state.selected_templates().contains(&Template::Index));
+        assert!(
+            !state
+                .selected_templates()
+                .contains(&Template::MonorepoIndex)
+        );
+    }
+
+    #[test]
+    fn text_input_length_is_capped() {
+        let mut state = WizardState::default();
+        advance_to(&mut state, WizardStep::Paths);
+
+        for _ in 0..(MAX_INPUT_LEN + 50) {
+            state.handle(Action::Character('a'));
+        }
+        assert!(state.plans_dir.value.len() <= MAX_INPUT_LEN);
+
+        // Paste respects the same bound
+        state.paste(&"b".repeat(MAX_INPUT_LEN * 2));
+        assert!(state.plans_dir.value.len() <= MAX_INPUT_LEN);
     }
 }

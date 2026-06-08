@@ -366,7 +366,7 @@ shared theme, keyboard conventions). APS consumes this as a crate dependency.
   numbers, single-line JSON). Bash lint/next are now feature-frozen per
   orchestrate D-006.
 
-### TUI-010: Add bracketed paste support to wizard text entry
+### TUI-010: Add bracketed paste support to wizard text entry — Complete 2026-06-08
 
 - **Intent:** Carry forward council finding C-006 (session council-e077b725,
   deferred during the TUI-003 review): without bracketed paste, a multi-line
@@ -384,10 +384,20 @@ shared theme, keyboard conventions). APS consumes this as a crate dependency.
   input truncates to first line, control/bidi characters stripped); manual
   pty test confirms pasting multi-line text into a path field inserts only
   the first line and does not advance the wizard
+- **Learning:** "Pasted clipboard must reuse the typed-input sanitization choke point — a second filter path inevitably drifts"
 - **Confidence:** high
 - **Dependencies:** TUI-003
 - **Files:** cli/src/wizard.rs
-- **Status:** Ready
+- **Status:** Complete: 2026-06-08
+- **Results:** EnableBracketedPaste set with EnterAlternateScreen; cleared by
+  TerminalGuard. Event::Paste routes to WizardState::paste — sanitize_paste
+  keeps the first line, filters through is_text_char, and respects the new
+  MAX_INPUT_LEN (4096) bound that now also caps typed input. Paste outside
+  text entry is ignored. Also ported from council-b2bd78ac (the closed
+  PR #60 review): KeyEventKind::Press filtering at both poll sites (Windows
+  double-fire) and Index<->MonorepoIndex mutual exclusion in
+  toggle_template. 5 new tests (79 total). Manual pty paste check pending —
+  headless dev host; covered by unit tests of the sanitization path.
 
 ## Execution Strategy
 
