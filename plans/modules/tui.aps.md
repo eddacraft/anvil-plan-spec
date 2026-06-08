@@ -4,7 +4,7 @@
 | --- | ------ | ----------------------- |
 | TUI | @aneki | Complete                |
 
-**Last reviewed:** 2026-06-08
+**Last reviewed:** 2026-06-09
 
 ## Purpose
 
@@ -398,6 +398,29 @@ shared theme, keyboard conventions). APS consumes this as a crate dependency.
   a three-line paste into the Paths step in an empty directory creates zero
   files and the wizard stays on Paths; previously the newlines replayed as
   Enter and drove the wizard into scaffold execution.
+
+### TUI-011: Wizard input hardening — key-release filter and index exclusivity — Complete 2026-06-09
+
+- **Intent:** Carry forward two findings from council session council-b2bd78ac
+  (the review of the superseded PR #60) that TUI-010 did not cover, so the
+  full council pass on the wizard is accounted for.
+- **Expected Outcome:** (1) the event loop ignores non-`Press` key events at
+  both poll sites, so terminals that also report key releases (Windows) do not
+  double every keystroke and navigation step; (2) selecting `Index` or
+  `MonorepoIndex` deselects the other, since both scaffold `index.aps.md` and
+  selecting both would have the scaffold write one over the other.
+- **Validation:** `cargo test` unit test asserts toggling one index template
+  clears the other and at most one is ever selected; key-release filtering is
+  exercised through the event loop (manual check on a release-reporting
+  terminal).
+- **Confidence:** high
+- **Dependencies:** TUI-003, TUI-010
+- **Files:** cli/src/wizard.rs
+- **Status:** Complete: 2026-06-09
+- **Results:** `KeyEventKind::Press` guard added to the scaffold-step and
+  main poll sites. `toggle_template` makes `Index`/`MonorepoIndex` mutually
+  exclusive. 1 new unit test (80 total); fmt + clippy `-D warnings` clean
+  (the gate landed in #65).
 
 ## Execution Strategy
 
