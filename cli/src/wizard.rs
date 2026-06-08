@@ -633,6 +633,18 @@ impl WizardState {
         {
             self.selected_templates.remove(index);
         } else {
+            // Index and MonorepoIndex both scaffold index.aps.md — selecting
+            // one deselects the other so the scaffold never writes one over
+            // the other (council-b2bd78ac C-001).
+            match template {
+                Template::Index => self
+                    .selected_templates
+                    .retain(|selected| *selected != Template::MonorepoIndex),
+                Template::MonorepoIndex => self
+                    .selected_templates
+                    .retain(|selected| *selected != Template::Index),
+                _ => {}
+            }
             self.selected_templates.push(template);
             self.selected_templates
                 .sort_by_key(|template| Self::template_order(*template));
@@ -854,6 +866,9 @@ fn run_loop(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> io::Result
                 let crossterm::event::Event::Key(key) = crossterm::event::read()? else {
                     continue;
                 };
+                if key.kind != crossterm::event::KeyEventKind::Press {
+                    continue;
+                }
                 if state.handle(KeyHandler::map(key)) == WizardEvent::Quit {
                     return Ok(());
                 }
@@ -873,6 +888,11 @@ fn run_loop(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> io::Result
                 }
                 _ => continue,
             };
+            // Windows terminals report key releases too; acting on both would
+            // double every keystroke and navigation step.
+            if key.kind != crossterm::event::KeyEventKind::Press {
+                continue;
+            }
             // Text-entry steps need raw characters; the vim-style handler
             // would swallow h/j/k/l/q as navigation.
             let action = if state.text_entry_active() {
@@ -1784,6 +1804,40 @@ mod tests {
         assert!(state.selected_templates().contains(&Template::Quickstart));
         state.handle(Action::Toggle); // cursor starts on quickstart
         assert!(!state.selected_templates().contains(&Template::Quickstart));
+    }
+
+    #[test]
+    fn index_and_monorepo_index_are_mutually_exclusive() {
+        let mut state = WizardState::default();
+        advance_to(&mut state, WizardStep::Templates);
+
+        // Solo+single starts with Index selected.
+        assert!(state.selected_templates().contains(&Template::Index));
+
+        state.toggle_template(Template::MonorepoIndex);
+        assert!(
+            state
+                .selected_templates()
+                .contains(&Template::MonorepoIndex)
+        );
+        assert!(!state.selected_templates().contains(&Template::Index));
+
+        // And back the other way.
+        state.toggle_template(Template::Index);
+        assert!(state.selected_templates().contains(&Template::Index));
+        assert!(
+            !state
+                .selected_templates()
+                .contains(&Template::MonorepoIndex)
+        );
+
+        // At most one index template is ever selected.
+        let index_count = state
+            .selected_templates()
+            .iter()
+            .filter(|t| matches!(t, Template::Index | Template::MonorepoIndex))
+            .count();
+        assert_eq!(index_count, 1);
     }
 
     #[test]
