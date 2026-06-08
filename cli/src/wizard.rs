@@ -379,10 +379,6 @@ impl WizardState {
         WizardEvent::Continue
     }
 
-    /// Check the three target directories before leaving the Paths step.
-    /// Empty values are fine (the scaffold substitutes defaults); absolute
-    /// and parent-traversing paths would let the scaffold write outside the
-    /// project root.
     /// Insert pasted text into the focused text field. Only the first line
     /// is taken and unsafe characters are stripped — the same choke point as
     /// typed input. No-op outside text entry, so a paste can never navigate
@@ -398,6 +394,10 @@ impl WizardState {
         }
     }
 
+    /// Check the three target directories before leaving the Paths step.
+    /// Empty values are fine (the scaffold substitutes defaults); absolute
+    /// and parent-traversing paths would let the scaffold write outside the
+    /// project root.
     fn first_invalid_path(&self) -> Option<&'static str> {
         [&self.plans_dir, &self.docs_dir, &self.tooling_root]
             .into_iter()
@@ -781,14 +781,21 @@ fn invalid_path_reason(value: &str) -> Option<&'static str> {
     None
 }
 
+/// Upper bound on characters accepted from a single paste — keeps a
+/// pathological single-line clipboard from freezing the UI or flooding the
+/// field.
+const MAX_PASTE_CHARS: usize = 4096;
+
 /// Reduce pasted text to something safe for a single-line path field: the
-/// first line only, with control/bidi/zero-width characters stripped.
+/// first line only, with control/bidi/zero-width characters stripped,
+/// capped at MAX_PASTE_CHARS.
 fn sanitize_paste(text: &str) -> String {
     text.lines()
         .next()
         .unwrap_or("")
         .chars()
         .filter(|c| is_text_char(*c))
+        .take(MAX_PASTE_CHARS)
         .collect()
 }
 
@@ -842,6 +849,8 @@ fn run_loop(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> io::Result
         if state.step() == WizardStep::Scaffold {
             state.scaffold_tick();
             if crossterm::event::poll(Duration::from_millis(10))? {
+                // Paste (and any non-key event) is intentionally discarded
+                // here — the scaffold step is non-interactive.
                 let crossterm::event::Event::Key(key) = crossterm::event::read()? else {
                     continue;
                 };
@@ -1977,6 +1986,12 @@ mod tests {
         assert_eq!(sanitize_paste("a\u{202E}b\u{1b}c\u{200B}d"), "abcd");
         assert_eq!(sanitize_paste("plain/path"), "plain/path");
         assert_eq!(sanitize_paste(""), "");
+    }
+
+    #[test]
+    fn sanitize_paste_caps_pathological_length() {
+        let huge = "x".repeat(MAX_PASTE_CHARS * 3);
+        assert_eq!(sanitize_paste(&huge).chars().count(), MAX_PASTE_CHARS);
     }
 
     #[test]
