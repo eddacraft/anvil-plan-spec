@@ -2,7 +2,7 @@
 
 | ID  | Owner  | Status                  |
 | --- | ------ | ----------------------- |
-| TUI | @aneki | In Progress (follow-up) |
+| TUI | @aneki | Complete                |
 
 **Last reviewed:** 2026-06-08
 
@@ -384,10 +384,11 @@ shared theme, keyboard conventions). APS consumes this as a crate dependency.
   input truncates to first line, control/bidi characters stripped); manual
   pty test confirms pasting multi-line text into a path field inserts only
   the first line and does not advance the wizard
+- **Learning:** "crossterm gates Event::Paste behind the bracketed-paste feature flag — without it the variant doesn't exist and paste arrives as replayed keystrokes"
 - **Confidence:** high
 - **Dependencies:** TUI-003
 - **Files:** cli/src/wizard.rs, cli/Cargo.toml
-- **Status:** In Progress
+- **Status:** Complete: 2026-06-08
 - **Results:** `EnableBracketedPaste` set on wizard entry and cleared by
   `TerminalGuard` (crossterm `bracketed-paste` feature enabled).
   `Event::Paste` routes to `WizardState::paste()`, which is a no-op outside
