@@ -234,9 +234,32 @@ fi
 if bash "$INSTALL" --setup </dev/null >/dev/null 2>&1; then
   fail "--setup without a tool should exit non-zero"
 fi
-# No mode + no terminal must not silently scaffold; assert it never reaches download
-out=$(bash "$INSTALL" </dev/null 2>&1 || true)
-echo "$out" | grep -qiE 'no mode|Choose \[1-5\]' || fail "no-mode path neither errored nor prompted"
+if bash "$INSTALL" --init "" </dev/null >/dev/null 2>&1; then
+  fail "empty TARGET should exit non-zero"
+fi
+if bash "$INSTALL" --agent /abs </dev/null >/dev/null 2>&1; then
+  fail "absolute TARGET should be rejected for project modes"
+fi
+# No mode + no terminal MUST exit non-zero (not silently scaffold). setsid
+# detaches the controlling terminal so /dev/tty is genuinely absent.
+if bash "$INSTALL" </dev/null >/dev/null 2>&1; then
+  fail "no-mode no-tty path should exit non-zero"
+fi
+if command -v setsid >/dev/null 2>&1; then
+  if setsid bash "$INSTALL" </dev/null >/dev/null 2>&1; then
+    fail "no-mode detached path should exit non-zero"
+  fi
+fi
+pass
+
+# Test 32: Each mode flag dispatches to its own path (marker in output)
+echo -n "Test: installer mode dispatch... "
+out=$(bash "$INSTALL" --setup foo </dev/null 2>&1 || true)
+echo "$out" | grep -qi "Add integration: foo" || fail "--setup did not reach setup path"
+echo "$out" | grep -qi "setup is not available" || fail "--setup should gate on a setup-capable CLI"
+# --upgrade against a dir with no plans/ fails fast before any network use
+out=$(cd "$(mktemp -d)" && bash "$INSTALL" --upgrade </dev/null 2>&1 || true)
+echo "$out" | grep -qi "nothing to upgrade" || fail "--upgrade did not reach upgrade path"
 pass
 
 echo ""

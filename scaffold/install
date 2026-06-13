@@ -49,17 +49,11 @@ while [[ $# -gt 0 ]]; do
   shift
 done
 
-# Validate TARGET (only for project-scoped modes; --cli installs machine-wide)
-if [[ "$MODE" != "cli" ]]; then
-  if [[ "$TARGET" == /* ]]; then
-    echo "error: Absolute paths are not allowed for TARGET; please use a relative path (e.g., ./my-project)." >&2
-    exit 1
-  fi
-
-  if [[ "$TARGET" == *".."* ]]; then
-    echo "error: Parent directory references ('..') are not allowed in TARGET." >&2
-    exit 1
-  fi
+# Reject an empty TARGET regardless of mode — "" would make PLANS_DIR=/plans
+# and write to the filesystem root.
+if [[ -z "$TARGET" ]]; then
+  echo "error: TARGET must not be empty." >&2
+  exit 1
 fi
 
 PLANS_DIR="$TARGET/plans"
@@ -79,7 +73,7 @@ fi
 
 info()  { echo -e "${GREEN}>${NC} $1"; }
 warn()  { echo -e "${YELLOW}>${NC} $1"; }
-error() { echo -e "${RED}error:${NC} $1"; }
+error() { echo -e "${RED}error:${NC} $1" >&2; }
 step()  { echo -e "${BLUE}==>${NC} ${BOLD}$1${NC}"; }
 
 download() {
@@ -161,18 +155,17 @@ install_binary() {
 ask_yn() {
   local prompt="$1"
   local default="${2:-n}"
+  local answer yn_hint
+  if [[ "$default" == "y" ]]; then yn_hint="Y/n"; else yn_hint="y/N"; fi
 
   if [[ -t 0 ]]; then
-    local yn_hint
-    if [[ "$default" == "y" ]]; then yn_hint="Y/n"; else yn_hint="y/N"; fi
     printf "%s [%s] " "$prompt" "$yn_hint"
     read -r answer
     answer="${answer:-$default}"
     [[ "$answer" =~ ^[Yy] ]]
-  elif [[ -r /dev/tty ]]; then
-    # `curl | bash` makes stdin a pipe; use the controlling terminal when present.
-    local yn_hint
-    if [[ "$default" == "y" ]]; then yn_hint="Y/n"; else yn_hint="y/N"; fi
+  elif { : < /dev/tty; } 2>/dev/null; then
+    # `curl | bash` makes stdin a pipe; use the controlling terminal when it
+    # can actually be opened (a node that merely exists is not enough).
     printf "%s [%s] " "$prompt" "$yn_hint" > /dev/tty
     read -r answer < /dev/tty
     answer="${answer:-$default}"
@@ -356,30 +349,38 @@ install_upgrade() {
     exit 1
   fi
   step "Refreshing templates and CLI via the update entrypoint"
-  curl -fsSL "$BASE_URL/scaffold/update" | bash -s -- "$TARGET"
+  # Forward the version pin: a bare child bash would re-default VERSION to main
+  # and silently refresh the payload from HEAD.
+  curl -fsSL "$BASE_URL/scaffold/update" | VERSION="$VERSION" bash -s -- "$TARGET"
 }
 
-# Add a single tool integration to an existing project. Ensures a CLI is
-# available, then delegates to `aps setup <tool>`.
+# Add a single tool integration to an existing project by delegating to
+# `aps setup <tool>`. The `setup` command ships with the native binary (and
+# is built out under INSTALL-012); the bash CLI does not provide it yet, so
+# this gates on a setup-capable `aps` and writes nothing if none is found.
 install_setup() {
   local tool="$1"
   echo ""
   echo -e "${BOLD}Anvil Plan Spec (APS)${NC}"
   echo "Add integration: $tool"
   echo ""
+
   local aps_bin=""
   if command -v aps &>/dev/null; then
     aps_bin="aps"
   elif [[ -x "$TARGET/bin/aps" ]]; then
     aps_bin="$TARGET/bin/aps"
-  else
-    step "Installing APS CLI first"
-    for f in bin/aps lib/output.sh lib/lint.sh lib/orchestrate.sh lib/scaffold.sh lib/rules/common.sh lib/rules/module.sh lib/rules/index.sh lib/rules/workitem.sh lib/rules/issues.sh lib/rules/design.sh; do
-      download_root "$f" "$TARGET/$f"
-    done
-    chmod +x "$TARGET/bin/aps"
-    aps_bin="$TARGET/bin/aps"
   fi
+
+  # Probe for the setup subcommand before doing anything destructive.
+  if [[ -z "$aps_bin" ]] || ! "$aps_bin" setup --help >/dev/null 2>&1; then
+    error "aps setup is not available from the installed CLI"
+    echo "  Install the native CLI first (it ships 'aps setup'):" >&2
+    echo "    curl -fsSL $BASE_URL/scaffold/install | bash -s -- --cli --binary" >&2
+    echo "  then re-run: aps setup $tool" >&2
+    exit 1
+  fi
+
   step "Running aps setup $tool"
   (cd "$TARGET" && "$aps_bin" setup "$tool")
 }
@@ -600,6 +601,21 @@ if [[ -z "$MODE" ]]; then
     usage_modes >&2
     echo "" >&2
     error "no mode given and no terminal for the picker (use --cli/--init/--agent/--upgrade/--setup)"
+    exit 1
+  fi
+fi
+
+# Validate TARGET now that the mode is known. --cli installs machine-wide and
+# ignores TARGET; project-scoped modes must stay inside the working tree.
+if [[ "$MODE" == "cli" ]]; then
+  [[ "$TARGET" != "." ]] && warn "--cli installs machine-wide; ignoring TARGET '$TARGET'"
+else
+  if [[ "$TARGET" == /* ]]; then
+    error "Absolute paths are not allowed for TARGET; use a relative path (e.g., ./my-project)."
+    exit 1
+  fi
+  if [[ "$TARGET" == *".."* ]]; then
+    error "Parent directory references ('..') are not allowed in TARGET."
     exit 1
   fi
 fi

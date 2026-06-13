@@ -18,12 +18,15 @@ $Target = "."
 $Mode = ""
 $SetupTarget = ""
 
+$UseBinary = $false
+
 for ($i = 0; $i -lt $args.Count; $i++) {
     switch ($args[$i]) {
         { $_ -in "--cli", "--global", "-g" } { $Mode = "cli" }
         "--init"    { $Mode = "init" }
         "--agent"   { $Mode = "agent" }
         "--upgrade" { $Mode = "upgrade" }
+        { $_ -in "--binary", "-b" } { $UseBinary = $true }
         "--setup"   {
             $Mode = "setup"
             $SetupTarget = if ($i + 1 -lt $args.Count) { $args[$i + 1] } else { "" }
@@ -43,17 +46,11 @@ for ($i = 0; $i -lt $args.Count; $i++) {
     }
 }
 
-# Validate TARGET (only for project-scoped modes; cli installs machine-wide)
-if ($Mode -ne "cli") {
-    if ([System.IO.Path]::IsPathRooted($Target)) {
-        [Console]::Error.WriteLine("error: Absolute paths are not allowed for TARGET; please use a relative path (e.g., .\my-project).")
-        exit 1
-    }
-
-    if ($Target -cmatch '\.\.') {
-        [Console]::Error.WriteLine("error: Parent directory references ('..') are not allowed in TARGET.")
-        exit 1
-    }
+# Reject an empty TARGET regardless of mode — "" makes PlansDir an absolute
+# root path.
+if (-not $Target) {
+    [Console]::Error.WriteLine("error: TARGET must not be empty.")
+    exit 1
 }
 
 $PlansDir = Join-Path $Target "plans"
@@ -237,8 +234,27 @@ function Install-ApsAgent {
     Invoke-Download -Path "plans/aps-rules.md" -Destination (Join-Path $PlansDir "aps-rules.md")
     Invoke-Download -Path "plans/project-context.md" -Destination (Join-Path $PlansDir "project-context.md")
     Write-Info "index.aps.md, aps-rules.md, project-context.md"
+
+    Write-Step "Writing agent next steps"
+    $nextSteps = @'
+# APS Agent Bootstrap — Next Steps
+
+This repository was just initialized with a minimal APS planning layer
+for an AI agent. Before implementing anything:
+
+1. Read `plans/aps-rules.md` for the planning conventions.
+2. Ask the operator for the project intent — what is being built and why.
+3. Populate `plans/project-context.md` with that durable background.
+4. Draft `plans/index.aps.md` (problem, outcomes, scope, modules).
+5. Wait for an approved work item before writing any implementation code.
+
+No hooks, agents, or tool integrations were installed. Run `aps setup`
+to add them when needed.
+'@
+    Set-Content -LiteralPath (Join-Path $PlansDir "agent-next-steps.md") -Value $nextSteps
+    Write-Info "plans/agent-next-steps.md"
     Write-Step "Agent bootstrap complete"
-    Write-Info "Read plans/aps-rules.md, then draft plans/index.aps.md. Run 'aps setup' to add tools."
+    Get-Content -LiteralPath (Join-Path $PlansDir "agent-next-steps.md")
 }
 
 # --- Upgrade: hand off to the update entrypoint (deep cleanup is INSTALL-013) ---
@@ -253,11 +269,23 @@ function Install-ApsUpgrade {
         exit 1
     }
     Write-Step "Refreshing templates and CLI via the update entrypoint"
+    # Save to a temp file so $Target can be forwarded as an argument — an
+    # argument-less Invoke-Expression would always operate on the cwd.
     $u = "$BaseUrl/scaffold/update.ps1"
-    Invoke-Expression ((Invoke-WebRequest -Uri $u -UseBasicParsing).Content)
+    $tmp = Join-Path ([System.IO.Path]::GetTempPath()) "aps-update-$PID.ps1"
+    try {
+        (Invoke-WebRequest -Uri $u -UseBasicParsing).Content | Set-Content -LiteralPath $tmp
+        & $tmp $Target
+    } finally {
+        Remove-Item -LiteralPath $tmp -ErrorAction SilentlyContinue
+    }
 }
 
 # --- Setup: add one tool integration via aps setup ---
+#
+# `aps setup` ships with the native binary (built out under INSTALL-012); the
+# PowerShell CLI does not provide it yet, so gate on a setup-capable aps and
+# write nothing if none is found — matching the bash installer.
 
 function Install-ApsSetup {
     param([string]$Tool)
@@ -265,7 +293,19 @@ function Install-ApsSetup {
     Write-Host "Anvil Plan Spec (APS)" -ForegroundColor White
     Write-Host "Add integration: $Tool"
     Write-Host ""
-    Write-Step "Run 'aps setup $Tool' once the CLI is installed (aps setup is the integration entrypoint)"
+
+    $apsCmd = Get-Command aps -ErrorAction SilentlyContinue
+    $hasSetup = $false
+    if ($apsCmd) {
+        try { & aps setup --help *>$null; $hasSetup = ($LASTEXITCODE -eq 0) } catch { $hasSetup = $false }
+    }
+    if (-not $hasSetup) {
+        Write-Err "aps setup is not available from the installed CLI"
+        Write-Host "  Install the native CLI first (it ships 'aps setup'), then run: aps setup $Tool"
+        exit 1
+    }
+    Write-Step "Running aps setup $Tool"
+    & aps setup $Tool
 }
 
 # --- Mode picker (no flag given) ---
@@ -350,7 +390,6 @@ Write-Step "Creating directory structure"
 New-Item -ItemType Directory -Path (Join-Path $PlansDir "modules") -Force | Out-Null
 New-Item -ItemType Directory -Path (Join-Path $PlansDir "execution") -Force | Out-Null
 New-Item -ItemType Directory -Path (Join-Path $PlansDir "decisions") -Force | Out-Null
-New-Item -ItemType Directory -Path (Join-Path $Target "designs") -Force | Out-Null
 
 # --- Download templates ---
 
@@ -373,9 +412,6 @@ Write-Info "modules/.index-monorepo.template.md"
 
 Invoke-Download -Path "plans/execution/.actions.template.md" -Destination (Join-Path $PlansDir (Join-Path "execution" ".actions.template.md"))
 Write-Info "execution/.actions.template.md"
-
-Invoke-Download -Path "designs/.design.template.md" -Destination (Join-Path $Target (Join-Path "designs" ".design.template.md"))
-Write-Info "designs/.design.template.md"
 
 $gitkeep = Join-Path $PlansDir (Join-Path "decisions" ".gitkeep")
 New-Item -ItemType File -Path $gitkeep -Force | Out-Null
@@ -419,9 +455,6 @@ Write-Step "Installation complete"
 Write-Host ""
 Write-Host "  bin/"
 Write-Host "  +-- aps.ps1                          <- CLI (PowerShell)"
-Write-Host ""
-Write-Host "  designs/"
-Write-Host "  +-- .design.template.md              <- Template for technical designs"
 Write-Host ""
 Write-Host "  plans/"
 Write-Host "  +-- aps-rules.md              # Agent guidance"
@@ -509,10 +542,26 @@ Write-Host ""
 # --- Resolve mode and dispatch ---
 
 if (-not $Mode) {
-    if ([Environment]::UserInteractive) {
+    # Match Request-YesNo's interactivity check: redirected stdin must not
+    # land in Read-Host and block.
+    if ([Environment]::UserInteractive -and -not [Console]::IsInputRedirected) {
         Select-ApsMode
     } else {
         [Console]::Error.WriteLine("error: no mode given (use --cli/--init/--agent/--upgrade/--setup)")
+        exit 1
+    }
+}
+
+# Validate TARGET now that the mode is known (cli installs machine-wide).
+if ($Mode -eq "cli") {
+    if ($Target -ne ".") { Write-Warn "--cli installs machine-wide; ignoring TARGET '$Target'" }
+} else {
+    if ([System.IO.Path]::IsPathRooted($Target)) {
+        [Console]::Error.WriteLine("error: Absolute paths are not allowed for TARGET; please use a relative path (e.g., .\my-project).")
+        exit 1
+    }
+    if ($Target -cmatch '\.\.') {
+        [Console]::Error.WriteLine("error: Parent directory references ('..') are not allowed in TARGET.")
         exit 1
     }
 }
