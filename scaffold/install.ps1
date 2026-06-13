@@ -12,28 +12,45 @@
 $ErrorActionPreference = "Stop"
 
 $Version = if ($env:APS_VERSION) { $env:APS_VERSION } else { "main" }
-$GlobalInstall = $false
 $Target = "."
+# Mode is chosen by a flag, or by the picker when none is given.
+#   cli / init / agent / upgrade / setup (see usage)
+$Mode = ""
+$SetupTarget = ""
 
-foreach ($a in $args) {
-    if ($a -eq "--global" -or $a -eq "-g") {
-        $GlobalInstall = $true
-    } else {
-        $Target = $a
+$UseBinary = $false
+
+for ($i = 0; $i -lt $args.Count; $i++) {
+    switch ($args[$i]) {
+        { $_ -in "--cli", "--global", "-g" } { $Mode = "cli" }
+        "--init"    { $Mode = "init" }
+        "--agent"   { $Mode = "agent" }
+        "--upgrade" { $Mode = "upgrade" }
+        { $_ -in "--binary", "-b" } { $UseBinary = $true }
+        "--setup"   {
+            $Mode = "setup"
+            $SetupTarget = if ($i + 1 -lt $args.Count) { $args[$i + 1] } else { "" }
+            if (-not $SetupTarget -or $SetupTarget -like "-*") {
+                [Console]::Error.WriteLine("error: --setup requires a tool (e.g. --setup claude-code)")
+                exit 1
+            }
+            $i++
+        }
+        default {
+            if ($args[$i] -like "-*") {
+                [Console]::Error.WriteLine("error: unknown option: $($args[$i])")
+                exit 1
+            }
+            $Target = $args[$i]
+        }
     }
 }
 
-# Validate TARGET (only for project-scoped installs)
-if (-not $GlobalInstall) {
-    if ([System.IO.Path]::IsPathRooted($Target)) {
-        [Console]::Error.WriteLine("error: Absolute paths are not allowed for TARGET; please use a relative path (e.g., .\my-project).")
-        exit 1
-    }
-
-    if ($Target -cmatch '\.\.') {
-        [Console]::Error.WriteLine("error: Parent directory references ('..') are not allowed in TARGET.")
-        exit 1
-    }
+# Reject an empty TARGET regardless of mode — "" makes PlansDir an absolute
+# root path.
+if (-not $Target) {
+    [Console]::Error.WriteLine("error: TARGET must not be empty.")
+    exit 1
 }
 
 $PlansDir = Join-Path $Target "plans"
@@ -199,12 +216,129 @@ function Install-ApsGlobal {
     Write-Host ""
 }
 
-# --- Branch: global install exits early ---
+# --- Agent bootstrap: minimal planning layer + next steps ---
 
-if ($GlobalInstall) {
-    Install-ApsGlobal
-    exit 0
+function Install-ApsAgent {
+    Write-Host ""
+    Write-Host "Anvil Plan Spec (APS)" -ForegroundColor White
+    Write-Host "Agent bootstrap"
+    Write-Host ""
+    if (Test-Path -LiteralPath $PlansDir -PathType Container) {
+        Write-Err "plans/ directory already exists at $Target"
+        exit 1
+    }
+    Write-Step "Creating minimal planning layer"
+    New-Item -ItemType Directory -Force -Path (Join-Path $PlansDir "modules") | Out-Null
+    New-Item -ItemType Directory -Force -Path (Join-Path $PlansDir "execution") | Out-Null
+    Invoke-Download -Path "plans/index.aps.md" -Destination (Join-Path $PlansDir "index.aps.md")
+    Invoke-Download -Path "plans/aps-rules.md" -Destination (Join-Path $PlansDir "aps-rules.md")
+    Invoke-Download -Path "plans/project-context.md" -Destination (Join-Path $PlansDir "project-context.md")
+    Write-Info "index.aps.md, aps-rules.md, project-context.md"
+
+    Write-Step "Writing agent next steps"
+    $nextSteps = @'
+# APS Agent Bootstrap — Next Steps
+
+This repository was just initialized with a minimal APS planning layer
+for an AI agent. Before implementing anything:
+
+1. Read `plans/aps-rules.md` for the planning conventions.
+2. Ask the operator for the project intent — what is being built and why.
+3. Populate `plans/project-context.md` with that durable background.
+4. Draft `plans/index.aps.md` (problem, outcomes, scope, modules).
+5. Wait for an approved work item before writing any implementation code.
+
+No hooks, agents, or tool integrations were installed. Run `aps setup`
+to add them when needed.
+'@
+    Set-Content -LiteralPath (Join-Path $PlansDir "agent-next-steps.md") -Value $nextSteps
+    Write-Info "plans/agent-next-steps.md"
+    Write-Step "Agent bootstrap complete"
+    Get-Content -LiteralPath (Join-Path $PlansDir "agent-next-steps.md")
 }
+
+# --- Upgrade: hand off to the update entrypoint (deep cleanup is INSTALL-013) ---
+
+function Install-ApsUpgrade {
+    Write-Host ""
+    Write-Host "Anvil Plan Spec (APS)" -ForegroundColor White
+    Write-Host "Upgrade existing project"
+    Write-Host ""
+    if (-not (Test-Path -LiteralPath $PlansDir -PathType Container)) {
+        Write-Err "no plans/ directory at $Target — nothing to upgrade"
+        exit 1
+    }
+    Write-Step "Refreshing templates and CLI via the update entrypoint"
+    # Save to a temp file so $Target can be forwarded as an argument — an
+    # argument-less Invoke-Expression would always operate on the cwd.
+    $u = "$BaseUrl/scaffold/update.ps1"
+    $tmp = Join-Path ([System.IO.Path]::GetTempPath()) "aps-update-$PID.ps1"
+    try {
+        (Invoke-WebRequest -Uri $u -UseBasicParsing).Content | Set-Content -LiteralPath $tmp
+        & $tmp $Target
+    } finally {
+        Remove-Item -LiteralPath $tmp -ErrorAction SilentlyContinue
+    }
+}
+
+# --- Setup: add one tool integration via aps setup ---
+#
+# `aps setup` ships with the native binary (built out under INSTALL-012); the
+# PowerShell CLI does not provide it yet, so gate on a setup-capable aps and
+# write nothing if none is found — matching the bash installer.
+
+function Install-ApsSetup {
+    param([string]$Tool)
+    Write-Host ""
+    Write-Host "Anvil Plan Spec (APS)" -ForegroundColor White
+    Write-Host "Add integration: $Tool"
+    Write-Host ""
+
+    $apsCmd = Get-Command aps -ErrorAction SilentlyContinue
+    $hasSetup = $false
+    if ($apsCmd) {
+        try { & aps setup --help *>$null; $hasSetup = ($LASTEXITCODE -eq 0) } catch { $hasSetup = $false }
+    }
+    if (-not $hasSetup) {
+        Write-Err "aps setup is not available from the installed CLI"
+        Write-Host "  Install the native CLI first (it ships 'aps setup'), then run: aps setup $Tool"
+        exit 1
+    }
+    Write-Step "Running aps setup $Tool"
+    & aps setup $Tool
+}
+
+# --- Mode picker (no flag given) ---
+
+function Select-ApsMode {
+    Write-Host ""
+    Write-Host "Anvil Plan Spec (APS)" -ForegroundColor White
+    Write-Host "What would you like to do?"
+    Write-Host ""
+    Write-Host "  1) Install the APS CLI on this machine"
+    Write-Host "  2) Initialize APS planning in this repository"
+    Write-Host "  3) Initialize this repository for an AI agent"
+    Write-Host "  4) Upgrade an existing APS project"
+    Write-Host "  5) Add a tool integration"
+    Write-Host ""
+    $choice = Read-Host "Choose [1-5]"
+    switch ($choice) {
+        "1" { $script:Mode = "cli" }
+        "2" { $script:Mode = "init" }
+        "3" { $script:Mode = "agent" }
+        "4" { $script:Mode = "upgrade" }
+        "5" {
+            $script:Mode = "setup"
+            $script:SetupTarget = Read-Host "Tool (claude-code, copilot, codex, opencode, gemini)"
+            if (-not $script:SetupTarget) { Write-Err "no tool given"; exit 1 }
+        }
+        default { Write-Err "invalid choice: $choice"; exit 1 }
+    }
+}
+
+# --- Default project scaffold (init mode) ---
+
+function Install-ApsInit {
 
 # --- Header ---
 
@@ -256,7 +390,6 @@ Write-Step "Creating directory structure"
 New-Item -ItemType Directory -Path (Join-Path $PlansDir "modules") -Force | Out-Null
 New-Item -ItemType Directory -Path (Join-Path $PlansDir "execution") -Force | Out-Null
 New-Item -ItemType Directory -Path (Join-Path $PlansDir "decisions") -Force | Out-Null
-New-Item -ItemType Directory -Path (Join-Path $Target "designs") -Force | Out-Null
 
 # --- Download templates ---
 
@@ -279,9 +412,6 @@ Write-Info "modules/.index-monorepo.template.md"
 
 Invoke-Download -Path "plans/execution/.actions.template.md" -Destination (Join-Path $PlansDir (Join-Path "execution" ".actions.template.md"))
 Write-Info "execution/.actions.template.md"
-
-Invoke-Download -Path "designs/.design.template.md" -Destination (Join-Path $Target (Join-Path "designs" ".design.template.md"))
-Write-Info "designs/.design.template.md"
 
 $gitkeep = Join-Path $PlansDir (Join-Path "decisions" ".gitkeep")
 New-Item -ItemType File -Path $gitkeep -Force | Out-Null
@@ -325,9 +455,6 @@ Write-Step "Installation complete"
 Write-Host ""
 Write-Host "  bin/"
 Write-Host "  +-- aps.ps1                          <- CLI (PowerShell)"
-Write-Host ""
-Write-Host "  designs/"
-Write-Host "  +-- .design.template.md              <- Template for technical designs"
 Write-Host ""
 Write-Host "  plans/"
 Write-Host "  +-- aps-rules.md              # Agent guidance"
@@ -410,3 +537,40 @@ Write-Host "  3. Point your AI agent at plans\aps-rules.md, or run aps next"
 Write-Host ""
 Write-Host "Docs: https://github.com/EddaCraft/anvil-plan-spec"
 Write-Host ""
+}
+
+# --- Resolve mode and dispatch ---
+
+if (-not $Mode) {
+    # Match Request-YesNo's interactivity check: redirected stdin must not
+    # land in Read-Host and block.
+    if ([Environment]::UserInteractive -and -not [Console]::IsInputRedirected) {
+        Select-ApsMode
+    } else {
+        [Console]::Error.WriteLine("error: no mode given (use --cli/--init/--agent/--upgrade/--setup)")
+        exit 1
+    }
+}
+
+# Validate TARGET now that the mode is known (cli installs machine-wide).
+if ($Mode -eq "cli") {
+    if ($Target -ne ".") { Write-Warn "--cli installs machine-wide; ignoring TARGET '$Target'" }
+} else {
+    if ([System.IO.Path]::IsPathRooted($Target)) {
+        [Console]::Error.WriteLine("error: Absolute paths are not allowed for TARGET; please use a relative path (e.g., .\my-project).")
+        exit 1
+    }
+    if ($Target -cmatch '\.\.') {
+        [Console]::Error.WriteLine("error: Parent directory references ('..') are not allowed in TARGET.")
+        exit 1
+    }
+}
+
+switch ($Mode) {
+    "cli"     { Install-ApsGlobal }
+    "init"    { Install-ApsInit }
+    "agent"   { Install-ApsAgent }
+    "upgrade" { Install-ApsUpgrade }
+    "setup"   { Install-ApsSetup -Tool $SetupTarget }
+    default   { Write-Err "unknown mode: $Mode"; exit 1 }
+}

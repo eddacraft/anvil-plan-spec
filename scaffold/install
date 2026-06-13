@@ -15,32 +15,45 @@
 set -euo pipefail
 
 VERSION="${VERSION:-main}"
-GLOBAL_INSTALL=false
 USE_BINARY=false
-AGENT_INSTALL=false
 TARGET="."
+# Mode is chosen by a flag, or by the TTY picker when none is given.
+#   cli     install the APS CLI on this machine (was --global)
+#   init    scaffold APS planning into this repo (the old default)
+#   agent   minimal planning layer + agent next steps
+#   upgrade upgrade an existing APS project
+#   setup   add a tool integration (--setup <tool>)
+MODE=""
+SETUP_TARGET=""
 
 # Parse flags
-for arg in "$@"; do
-  case "$arg" in
-    --global|-g) GLOBAL_INSTALL=true ;;
-    --binary|-b) USE_BINARY=true ;;
-    --agent)     AGENT_INSTALL=true ;;
-    *) TARGET="$arg" ;;
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --cli|--global|-g) MODE="cli" ;;
+    --init)            MODE="init" ;;
+    --agent)           MODE="agent" ;;
+    --upgrade)         MODE="upgrade" ;;
+    --setup)
+      MODE="setup"
+      SETUP_TARGET="${2:-}"
+      if [[ -z "$SETUP_TARGET" || "$SETUP_TARGET" == -* ]]; then
+        echo "error: --setup requires a tool (e.g. --setup claude-code)" >&2
+        exit 1
+      fi
+      shift
+      ;;
+    --binary|-b)       USE_BINARY=true ;;
+    -*) echo "error: unknown option: $1" >&2; exit 1 ;;
+    *) TARGET="$1" ;;
   esac
+  shift
 done
 
-# Validate TARGET (only for project-scoped installs)
-if [[ "$GLOBAL_INSTALL" == false ]]; then
-  if [[ "$TARGET" == /* ]]; then
-    echo "error: Absolute paths are not allowed for TARGET; please use a relative path (e.g., ./my-project)." >&2
-    exit 1
-  fi
-
-  if [[ "$TARGET" == *".."* ]]; then
-    echo "error: Parent directory references ('..') are not allowed in TARGET." >&2
-    exit 1
-  fi
+# Reject an empty TARGET regardless of mode — "" would make PLANS_DIR=/plans
+# and write to the filesystem root.
+if [[ -z "$TARGET" ]]; then
+  echo "error: TARGET must not be empty." >&2
+  exit 1
 fi
 
 PLANS_DIR="$TARGET/plans"
@@ -60,7 +73,7 @@ fi
 
 info()  { echo -e "${GREEN}>${NC} $1"; }
 warn()  { echo -e "${YELLOW}>${NC} $1"; }
-error() { echo -e "${RED}error:${NC} $1"; }
+error() { echo -e "${RED}error:${NC} $1" >&2; }
 step()  { echo -e "${BLUE}==>${NC} ${BOLD}$1${NC}"; }
 
 download() {
@@ -142,18 +155,17 @@ install_binary() {
 ask_yn() {
   local prompt="$1"
   local default="${2:-n}"
+  local answer yn_hint
+  if [[ "$default" == "y" ]]; then yn_hint="Y/n"; else yn_hint="y/N"; fi
 
   if [[ -t 0 ]]; then
-    local yn_hint
-    if [[ "$default" == "y" ]]; then yn_hint="Y/n"; else yn_hint="y/N"; fi
     printf "%s [%s] " "$prompt" "$yn_hint"
     read -r answer
     answer="${answer:-$default}"
     [[ "$answer" =~ ^[Yy] ]]
-  elif [[ -r /dev/tty ]]; then
-    # `curl | bash` makes stdin a pipe; use the controlling terminal when present.
-    local yn_hint
-    if [[ "$default" == "y" ]]; then yn_hint="Y/n"; else yn_hint="y/N"; fi
+  elif { : < /dev/tty; } 2>/dev/null; then
+    # `curl | bash` makes stdin a pipe; use the controlling terminal when it
+    # can actually be opened (a node that merely exists is not enough).
     printf "%s [%s] " "$prompt" "$yn_hint" > /dev/tty
     read -r answer < /dev/tty
     answer="${answer:-$default}"
@@ -323,18 +335,58 @@ EOF
   cat "$PLANS_DIR/agent-next-steps.md"
 }
 
-# Branch: global install exits early
-if [[ "$GLOBAL_INSTALL" == true ]]; then
-  install_global
-  exit 0
-fi
+# Upgrade an existing APS project. The deep cleanup (backups, hook-path
+# rewrites) is INSTALL-013's `scaffold/upgrade`; until it lands, hand off to
+# the update entrypoint, which refreshes templates and runtime in place.
+install_upgrade() {
+  echo ""
+  echo -e "${BOLD}Anvil Plan Spec (APS)${NC}"
+  echo "Upgrade existing project"
+  echo ""
+  if [[ ! -d "$PLANS_DIR" ]]; then
+    error "no plans/ directory at $TARGET — nothing to upgrade"
+    echo "  Run with --init to scaffold a new project." >&2
+    exit 1
+  fi
+  step "Refreshing templates and CLI via the update entrypoint"
+  # Forward the version pin: a bare child bash would re-default VERSION to main
+  # and silently refresh the payload from HEAD.
+  curl -fsSL "$BASE_URL/scaffold/update" | VERSION="$VERSION" bash -s -- "$TARGET"
+}
 
-# Branch: agent bootstrap exits early
-if [[ "$AGENT_INSTALL" == true ]]; then
-  install_agent
-  exit 0
-fi
+# Add a single tool integration to an existing project by delegating to
+# `aps setup <tool>`. The `setup` command ships with the native binary (and
+# is built out under INSTALL-012); the bash CLI does not provide it yet, so
+# this gates on a setup-capable `aps` and writes nothing if none is found.
+install_setup() {
+  local tool="$1"
+  echo ""
+  echo -e "${BOLD}Anvil Plan Spec (APS)${NC}"
+  echo "Add integration: $tool"
+  echo ""
 
+  local aps_bin=""
+  if command -v aps &>/dev/null; then
+    aps_bin="aps"
+  elif [[ -x "$TARGET/bin/aps" ]]; then
+    aps_bin="$TARGET/bin/aps"
+  fi
+
+  # Probe for the setup subcommand before doing anything destructive.
+  if [[ -z "$aps_bin" ]] || ! "$aps_bin" setup --help >/dev/null 2>&1; then
+    error "aps setup is not available from the installed CLI"
+    echo "  Install the native CLI first (it ships 'aps setup'):" >&2
+    echo "    curl -fsSL $BASE_URL/scaffold/install | bash -s -- --cli --binary" >&2
+    echo "  then re-run: aps setup $tool" >&2
+    exit 1
+  fi
+
+  step "Running aps setup $tool"
+  (cd "$TARGET" && "$aps_bin" setup "$tool")
+}
+
+# Default project scaffold (the `init` mode): CLI + plans + skill + commands.
+install_init() {
 # Header
 echo ""
 echo -e "${BOLD}Anvil Plan Spec (APS)${NC}"
@@ -477,3 +529,102 @@ printf '  3. Point your AI agent at %bplans/aps-rules.md%b, or run %baps next%b\
 echo ""
 echo "Docs: https://github.com/EddaCraft/anvil-plan-spec"
 echo ""
+}
+
+# Print the mode menu and read a choice from the controlling terminal.
+usage_modes() {
+  cat <<EOF
+Anvil Plan Spec (APS) installer
+
+Usage: curl -fsSL .../scaffold/install | bash -s -- [MODE] [TARGET]
+
+Modes:
+  --cli              Install the APS CLI on this machine
+  --init             Scaffold APS planning into this repository
+  --agent            Minimal planning layer + agent next steps
+  --upgrade          Upgrade an existing APS project
+  --setup <tool>     Add a tool integration (claude-code, copilot, codex, ...)
+
+Options:
+  --binary           Prefer a prebuilt binary over the bash CLI
+  -g, --global       Alias for --cli
+
+With no mode in an interactive terminal, a picker is shown.
+EOF
+}
+
+pick_mode() {
+  echo "" > /dev/tty
+  echo -e "${BOLD}Anvil Plan Spec (APS)${NC}" > /dev/tty
+  echo "What would you like to do?" > /dev/tty
+  echo "" > /dev/tty
+  echo "  1) Install the APS CLI on this machine" > /dev/tty
+  echo "  2) Initialize APS planning in this repository" > /dev/tty
+  echo "  3) Initialize this repository for an AI agent" > /dev/tty
+  echo "  4) Upgrade an existing APS project" > /dev/tty
+  echo "  5) Add a tool integration" > /dev/tty
+  echo "" > /dev/tty
+  printf "Choose [1-5]: " > /dev/tty
+  local choice
+  read -r choice < /dev/tty
+  case "$choice" in
+    1) MODE="cli" ;;
+    2) MODE="init" ;;
+    3) MODE="agent" ;;
+    4) MODE="upgrade" ;;
+    5)
+      MODE="setup"
+      printf "Tool (claude-code, copilot, codex, opencode, gemini): " > /dev/tty
+      read -r SETUP_TARGET < /dev/tty
+      if [[ -z "$SETUP_TARGET" ]]; then
+        error "no tool given"
+        exit 1
+      fi
+      ;;
+    *) error "invalid choice: $choice"; exit 1 ;;
+  esac
+}
+
+# Resolve the mode: explicit flag wins; otherwise pick interactively, or
+# print usage and fail when there is no terminal to ask. `-r /dev/tty` is not
+# enough — on a detached process the node can exist yet fail to open — so we
+# probe by actually opening it.
+have_tty() {
+  [[ -t 0 ]] && return 0
+  { : < /dev/tty; } 2>/dev/null
+}
+
+if [[ -z "$MODE" ]]; then
+  if have_tty; then
+    pick_mode
+  else
+    usage_modes >&2
+    echo "" >&2
+    error "no mode given and no terminal for the picker (use --cli/--init/--agent/--upgrade/--setup)"
+    exit 1
+  fi
+fi
+
+# Validate TARGET now that the mode is known. --cli installs machine-wide and
+# ignores TARGET; project-scoped modes must stay inside the working tree.
+if [[ "$MODE" == "cli" ]]; then
+  [[ "$TARGET" != "." ]] && warn "--cli installs machine-wide; ignoring TARGET '$TARGET'"
+else
+  if [[ "$TARGET" == /* ]]; then
+    error "Absolute paths are not allowed for TARGET; use a relative path (e.g., ./my-project)."
+    exit 1
+  fi
+  if [[ "$TARGET" == *".."* ]]; then
+    error "Parent directory references ('..') are not allowed in TARGET."
+    exit 1
+  fi
+fi
+
+case "$MODE" in
+  cli)     install_global ;;
+  init)    install_init ;;
+  agent)   install_agent ;;
+  upgrade) install_upgrade ;;
+  setup)   install_setup "$SETUP_TARGET" ;;
+  *) error "unknown mode: $MODE"; exit 1 ;;
+esac

@@ -21,10 +21,13 @@ Gemini, ChatGPT, and whatever comes next.
 curl -fsSL https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install | bash
 ```
 
-Then run `aps init` for the interactive setup wizard.
+This opens a mode picker — install the CLI, initialize a repo, bootstrap an
+agent, upgrade, or add a tool integration. Skip it with a flag:
+`--cli`, `--init`, `--agent`, `--upgrade`, or `--setup <tool>`. Then run
+`aps init` for the interactive setup wizard.
 
 Want to inspect the installer first? Pipe to `less`. Need Windows, version
-pinning, or `--global`? See [docs/installation.md](docs/installation.md).
+pinning, or non-interactive flags? See [docs/installation.md](docs/installation.md).
 
 ## Why APS?
 

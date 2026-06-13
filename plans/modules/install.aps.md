@@ -4,7 +4,7 @@
 | ------- | ------ | -------- | ----------------------- |
 | INSTALL | @aneki | high     | In Progress (follow-up) |
 
-**Last reviewed:** 2026-06-08
+**Last reviewed:** 2026-06-14
 
 ## Purpose
 
@@ -378,7 +378,7 @@ Notes on schema:
   (plans/designs/, project-context.md). `project-context.md` template with
   HTML comment TODO markers. Both installed by v2 init and migrate.
 
-### INSTALL-010: Split install, init, setup, agent bootstrap, and upgrade
+### INSTALL-010: Split install, init, setup, agent bootstrap, and upgrade — Complete 2026-06-14
 
 - **Intent:** Make the public APS entrypoints match the actual user journeys
   without forcing a large project-local footprint.
@@ -392,11 +392,25 @@ Notes on schema:
   the picker before writing files. Running with `--cli` installs only the CLI.
   Running with `--init` creates only minimal planning files. Running with
   `--agent` creates minimal planning files plus agent-readable next steps.
+- **Learning:** "-r /dev/tty is not enough to know a terminal is usable — on
+  a detached process (curl|bash in CI) the node exists but opening it fails;
+  probe by actually opening it"
 - **Confidence:** high
 - **Dependencies:** INSTALL-003, INSTALL-008, INSTALL-009
 - **Files:** scaffold/install, scaffold/install.ps1, docs/installation.md,
   README.md
-- **Status:** Ready
+- **Status:** Complete: 2026-06-14
+- **Action plan:** [execution/INSTALL-010.actions.md](../execution/INSTALL-010.actions.md)
+- **Results:** `scaffold/install` no longer defaults to the heavy project
+  scaffold. Flags `--cli`/`--init`/`--agent`/`--upgrade`/`--setup <tool>`
+  select a mode; with none, a TTY picker runs and a non-terminal session
+  prints usage and exits non-zero (no silent scaffold). The old default
+  scaffold became `install_init`; `--global` aliases `--cli`. `--upgrade`
+  hands to the update entrypoint (deep cleanup is INSTALL-013); `--setup`
+  ensures a CLI then runs `aps setup <tool>`. PowerShell `install.ps1`
+  brought to the same mode surface (it previously had only `--global`).
+  Tests 30–31 cover the mode contract and arg guards; docs + README show
+  the picker and flags. Full suite green; `aps lint` + markdownlint clean.
 
 ### INSTALL-011: Make `aps init` minimal by default
 

@@ -213,5 +213,54 @@ output=$(cd "$PROJECT_ROOT" && $APS audit demo --plans test/fixtures/audit/plans
 echo "$output" | grep -q "A004" && fail "A004 reported in module-scoped audit"
 echo "$output" | grep -q "A003.*DEMO-005\|DEMO-005.*A003" && pass || fail "scoped audit missed A003"
 
+# Test 30: Installer advertises all five modes (INSTALL-010)
+echo -n "Test: installer advertises modes... "
+INSTALL="$PROJECT_ROOT/scaffold/install"
+for flag in --cli --init --agent --upgrade --setup; do
+  grep -qF -- "$flag" "$INSTALL" || fail "install missing flag $flag"
+done
+grep -qE 'MODE="cli"|MODE="init"|MODE="agent"|MODE="upgrade"|MODE="setup"' "$INSTALL" || fail "install missing mode dispatch"
+grep -q 'pick_mode' "$INSTALL" || fail "install missing TTY picker"
+# PowerShell parity
+grep -qF -- '--upgrade' "$PROJECT_ROOT/scaffold/install.ps1" || fail "install.ps1 missing --upgrade"
+grep -q 'Select-ApsMode' "$PROJECT_ROOT/scaffold/install.ps1" || fail "install.ps1 missing picker"
+pass
+
+# Test 31: Installer argument guards reject bad input without network
+echo -n "Test: installer rejects bad args... "
+if bash "$INSTALL" --bogus </dev/null >/dev/null 2>&1; then
+  fail "unknown flag should exit non-zero"
+fi
+if bash "$INSTALL" --setup </dev/null >/dev/null 2>&1; then
+  fail "--setup without a tool should exit non-zero"
+fi
+if bash "$INSTALL" --init "" </dev/null >/dev/null 2>&1; then
+  fail "empty TARGET should exit non-zero"
+fi
+if bash "$INSTALL" --agent /abs </dev/null >/dev/null 2>&1; then
+  fail "absolute TARGET should be rejected for project modes"
+fi
+# No mode + no terminal MUST exit non-zero (not silently scaffold). setsid
+# detaches the controlling terminal so /dev/tty is genuinely absent.
+if bash "$INSTALL" </dev/null >/dev/null 2>&1; then
+  fail "no-mode no-tty path should exit non-zero"
+fi
+if command -v setsid >/dev/null 2>&1; then
+  if setsid bash "$INSTALL" </dev/null >/dev/null 2>&1; then
+    fail "no-mode detached path should exit non-zero"
+  fi
+fi
+pass
+
+# Test 32: Each mode flag dispatches to its own path (marker in output)
+echo -n "Test: installer mode dispatch... "
+out=$(bash "$INSTALL" --setup foo </dev/null 2>&1 || true)
+echo "$out" | grep -qi "Add integration: foo" || fail "--setup did not reach setup path"
+echo "$out" | grep -qi "setup is not available" || fail "--setup should gate on a setup-capable CLI"
+# --upgrade against a dir with no plans/ fails fast before any network use
+out=$(cd "$(mktemp -d)" && bash "$INSTALL" --upgrade </dev/null 2>&1 || true)
+echo "$out" | grep -qi "nothing to upgrade" || fail "--upgrade did not reach upgrade path"
+pass
+
 echo ""
 echo -e "${GREEN}All tests passed!${NC}"

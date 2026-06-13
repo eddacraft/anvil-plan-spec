@@ -6,13 +6,31 @@
 curl -fsSL https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install | bash
 ```
 
-This downloads the APS scaffold into the current directory -- plans,
-templates, skill, and a local copy of the CLI.
+In an interactive terminal this shows a **mode picker** before writing any
+files:
 
-After install, run `aps init` to launch the Ratatui-based onboarding wizard.
-It walks you through scaffolding your first plan, picking which AI agent
-ports to install (Claude Code / Codex / Copilot / OpenCode / Gemini), and
-writing `plans/project-context.md`.
+1. **Install the APS CLI** on this machine
+2. **Initialize APS planning** in this repository
+3. **Initialize this repository for an AI agent** (minimal layer + next steps)
+4. **Upgrade** an existing APS project
+5. **Add a tool integration**
+
+Pick non-interactively with a flag (required when there is no terminal, e.g.
+in CI):
+
+```bash
+curl -fsSL .../scaffold/install | bash -s -- --cli       # CLI only, machine-wide
+curl -fsSL .../scaffold/install | bash -s -- --init      # scaffold this repo
+curl -fsSL .../scaffold/install | bash -s -- --agent     # minimal agent bootstrap
+curl -fsSL .../scaffold/install | bash -s -- --upgrade   # upgrade in place
+curl -fsSL .../scaffold/install | bash -s -- --setup claude-code   # add one integration
+```
+
+`--init` is the full scaffold — plans, templates, skill, and a local copy of
+the CLI. After it, run `aps init` to launch the Ratatui-based onboarding
+wizard: it scaffolds your first plan, picks which AI agent ports to install
+(Claude Code / Codex / Copilot / OpenCode / Gemini), and writes
+`plans/project-context.md`.
 
 ## Global Install
 
