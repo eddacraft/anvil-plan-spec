@@ -213,5 +213,31 @@ output=$(cd "$PROJECT_ROOT" && $APS audit demo --plans test/fixtures/audit/plans
 echo "$output" | grep -q "A004" && fail "A004 reported in module-scoped audit"
 echo "$output" | grep -q "A003.*DEMO-005\|DEMO-005.*A003" && pass || fail "scoped audit missed A003"
 
+# Test 30: Installer advertises all five modes (INSTALL-010)
+echo -n "Test: installer advertises modes... "
+INSTALL="$PROJECT_ROOT/scaffold/install"
+for flag in --cli --init --agent --upgrade --setup; do
+  grep -qF -- "$flag" "$INSTALL" || fail "install missing flag $flag"
+done
+grep -qE 'MODE="cli"|MODE="init"|MODE="agent"|MODE="upgrade"|MODE="setup"' "$INSTALL" || fail "install missing mode dispatch"
+grep -q 'pick_mode' "$INSTALL" || fail "install missing TTY picker"
+# PowerShell parity
+grep -qF -- '--upgrade' "$PROJECT_ROOT/scaffold/install.ps1" || fail "install.ps1 missing --upgrade"
+grep -q 'Select-ApsMode' "$PROJECT_ROOT/scaffold/install.ps1" || fail "install.ps1 missing picker"
+pass
+
+# Test 31: Installer argument guards reject bad input without network
+echo -n "Test: installer rejects bad args... "
+if bash "$INSTALL" --bogus </dev/null >/dev/null 2>&1; then
+  fail "unknown flag should exit non-zero"
+fi
+if bash "$INSTALL" --setup </dev/null >/dev/null 2>&1; then
+  fail "--setup without a tool should exit non-zero"
+fi
+# No mode + no terminal must not silently scaffold; assert it never reaches download
+out=$(bash "$INSTALL" </dev/null 2>&1 || true)
+echo "$out" | grep -qiE 'no mode|Choose \[1-5\]' || fail "no-mode path neither errored nor prompted"
+pass
+
 echo ""
 echo -e "${GREEN}All tests passed!${NC}"

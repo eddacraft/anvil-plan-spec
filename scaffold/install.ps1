@@ -12,19 +12,39 @@
 $ErrorActionPreference = "Stop"
 
 $Version = if ($env:APS_VERSION) { $env:APS_VERSION } else { "main" }
-$GlobalInstall = $false
 $Target = "."
+# Mode is chosen by a flag, or by the picker when none is given.
+#   cli / init / agent / upgrade / setup (see usage)
+$Mode = ""
+$SetupTarget = ""
 
-foreach ($a in $args) {
-    if ($a -eq "--global" -or $a -eq "-g") {
-        $GlobalInstall = $true
-    } else {
-        $Target = $a
+for ($i = 0; $i -lt $args.Count; $i++) {
+    switch ($args[$i]) {
+        { $_ -in "--cli", "--global", "-g" } { $Mode = "cli" }
+        "--init"    { $Mode = "init" }
+        "--agent"   { $Mode = "agent" }
+        "--upgrade" { $Mode = "upgrade" }
+        "--setup"   {
+            $Mode = "setup"
+            $SetupTarget = if ($i + 1 -lt $args.Count) { $args[$i + 1] } else { "" }
+            if (-not $SetupTarget -or $SetupTarget -like "-*") {
+                [Console]::Error.WriteLine("error: --setup requires a tool (e.g. --setup claude-code)")
+                exit 1
+            }
+            $i++
+        }
+        default {
+            if ($args[$i] -like "-*") {
+                [Console]::Error.WriteLine("error: unknown option: $($args[$i])")
+                exit 1
+            }
+            $Target = $args[$i]
+        }
     }
 }
 
-# Validate TARGET (only for project-scoped installs)
-if (-not $GlobalInstall) {
+# Validate TARGET (only for project-scoped modes; cli installs machine-wide)
+if ($Mode -ne "cli") {
     if ([System.IO.Path]::IsPathRooted($Target)) {
         [Console]::Error.WriteLine("error: Absolute paths are not allowed for TARGET; please use a relative path (e.g., .\my-project).")
         exit 1
@@ -199,12 +219,86 @@ function Install-ApsGlobal {
     Write-Host ""
 }
 
-# --- Branch: global install exits early ---
+# --- Agent bootstrap: minimal planning layer + next steps ---
 
-if ($GlobalInstall) {
-    Install-ApsGlobal
-    exit 0
+function Install-ApsAgent {
+    Write-Host ""
+    Write-Host "Anvil Plan Spec (APS)" -ForegroundColor White
+    Write-Host "Agent bootstrap"
+    Write-Host ""
+    if (Test-Path -LiteralPath $PlansDir -PathType Container) {
+        Write-Err "plans/ directory already exists at $Target"
+        exit 1
+    }
+    Write-Step "Creating minimal planning layer"
+    New-Item -ItemType Directory -Force -Path (Join-Path $PlansDir "modules") | Out-Null
+    New-Item -ItemType Directory -Force -Path (Join-Path $PlansDir "execution") | Out-Null
+    Invoke-Download -Path "plans/index.aps.md" -Destination (Join-Path $PlansDir "index.aps.md")
+    Invoke-Download -Path "plans/aps-rules.md" -Destination (Join-Path $PlansDir "aps-rules.md")
+    Invoke-Download -Path "plans/project-context.md" -Destination (Join-Path $PlansDir "project-context.md")
+    Write-Info "index.aps.md, aps-rules.md, project-context.md"
+    Write-Step "Agent bootstrap complete"
+    Write-Info "Read plans/aps-rules.md, then draft plans/index.aps.md. Run 'aps setup' to add tools."
 }
+
+# --- Upgrade: hand off to the update entrypoint (deep cleanup is INSTALL-013) ---
+
+function Install-ApsUpgrade {
+    Write-Host ""
+    Write-Host "Anvil Plan Spec (APS)" -ForegroundColor White
+    Write-Host "Upgrade existing project"
+    Write-Host ""
+    if (-not (Test-Path -LiteralPath $PlansDir -PathType Container)) {
+        Write-Err "no plans/ directory at $Target — nothing to upgrade"
+        exit 1
+    }
+    Write-Step "Refreshing templates and CLI via the update entrypoint"
+    $u = "$BaseUrl/scaffold/update.ps1"
+    Invoke-Expression ((Invoke-WebRequest -Uri $u -UseBasicParsing).Content)
+}
+
+# --- Setup: add one tool integration via aps setup ---
+
+function Install-ApsSetup {
+    param([string]$Tool)
+    Write-Host ""
+    Write-Host "Anvil Plan Spec (APS)" -ForegroundColor White
+    Write-Host "Add integration: $Tool"
+    Write-Host ""
+    Write-Step "Run 'aps setup $Tool' once the CLI is installed (aps setup is the integration entrypoint)"
+}
+
+# --- Mode picker (no flag given) ---
+
+function Select-ApsMode {
+    Write-Host ""
+    Write-Host "Anvil Plan Spec (APS)" -ForegroundColor White
+    Write-Host "What would you like to do?"
+    Write-Host ""
+    Write-Host "  1) Install the APS CLI on this machine"
+    Write-Host "  2) Initialize APS planning in this repository"
+    Write-Host "  3) Initialize this repository for an AI agent"
+    Write-Host "  4) Upgrade an existing APS project"
+    Write-Host "  5) Add a tool integration"
+    Write-Host ""
+    $choice = Read-Host "Choose [1-5]"
+    switch ($choice) {
+        "1" { $script:Mode = "cli" }
+        "2" { $script:Mode = "init" }
+        "3" { $script:Mode = "agent" }
+        "4" { $script:Mode = "upgrade" }
+        "5" {
+            $script:Mode = "setup"
+            $script:SetupTarget = Read-Host "Tool (claude-code, copilot, codex, opencode, gemini)"
+            if (-not $script:SetupTarget) { Write-Err "no tool given"; exit 1 }
+        }
+        default { Write-Err "invalid choice: $choice"; exit 1 }
+    }
+}
+
+# --- Default project scaffold (init mode) ---
+
+function Install-ApsInit {
 
 # --- Header ---
 
@@ -410,3 +504,24 @@ Write-Host "  3. Point your AI agent at plans\aps-rules.md, or run aps next"
 Write-Host ""
 Write-Host "Docs: https://github.com/EddaCraft/anvil-plan-spec"
 Write-Host ""
+}
+
+# --- Resolve mode and dispatch ---
+
+if (-not $Mode) {
+    if ([Environment]::UserInteractive) {
+        Select-ApsMode
+    } else {
+        [Console]::Error.WriteLine("error: no mode given (use --cli/--init/--agent/--upgrade/--setup)")
+        exit 1
+    }
+}
+
+switch ($Mode) {
+    "cli"     { Install-ApsGlobal }
+    "init"    { Install-ApsInit }
+    "agent"   { Install-ApsAgent }
+    "upgrade" { Install-ApsUpgrade }
+    "setup"   { Install-ApsSetup -Tool $SetupTarget }
+    default   { Write-Err "unknown mode: $Mode"; exit 1 }
+}
