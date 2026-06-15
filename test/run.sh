@@ -401,5 +401,24 @@ bash "$UPSH" "$SAFE" </dev/null 2>&1 | grep -qi "dry run" || fail "scaffold/upgr
 rm -rf "$SAFE"
 pass
 
+# Test 37: .aps/config.yml project contract — cli_version + path keys (INSTALL-014)
+echo -n "Test: config.yml project contract... "
+CFG_DIR=$(mktemp -d)
+APS_LOCAL="$PROJECT_ROOT" $APS init "$CFG_DIR" --non-interactive >/dev/null 2>&1 || fail "init for config test failed"
+CFG="$CFG_DIR/.aps/config.yml"
+grep -qE '^cli_version:' "$CFG" || fail "config missing cli_version"
+grep -qE '^plans_dir:' "$CFG" || fail "config missing plans_dir"
+grep -qE '^docs_dir:' "$CFG" || fail "config missing docs_dir"
+grep -qE '^tooling_root:' "$CFG" || fail "config missing tooling_root"
+rm -rf "$CFG_DIR"
+# Alternate plans_dir fixture exists and pins a non-default tree
+FIX="$PROJECT_ROOT/test/fixtures/config/alt-plans-dir.yml"
+[[ -f "$FIX" ]] || fail "alt-plans-dir fixture missing"
+grep -qE '^plans_dir: docs/plans/' "$FIX" || fail "fixture lacks alternate plans_dir"
+grep -qE '^cli_version:' "$FIX" || fail "fixture lacks cli_version"
+# This repo dogfoods the contract
+grep -qE '^cli_version:' "$PROJECT_ROOT/.aps/config.yml" || fail "repo .aps/config.yml missing cli_version"
+pass
+
 echo ""
 echo -e "${GREEN}All tests passed!${NC}"

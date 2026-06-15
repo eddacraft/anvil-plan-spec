@@ -489,6 +489,8 @@ impl WizardState {
             docs_dir: self.docs_dir.value.clone(),
             tooling_root: self.tooling_root.value.clone(),
             components: self.selected_components.clone(),
+            // Serialization stamps the running binary's version (D-035).
+            cli_version: None,
         }
     }
 

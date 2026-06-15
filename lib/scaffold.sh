@@ -6,6 +6,11 @@
 APS_VERSION="${APS_VERSION:-main}"
 APS_BASE_URL="https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/$APS_VERSION"
 
+# Semver of the bash CLI release, stamped into .aps/config.yml as the project
+# contract's cli_version (INSTALL-014). The native binary stamps its own crate
+# version; this is the bash-fallback equivalent.
+APS_CLI_VERSION="${APS_CLI_VERSION:-0.3.0}"
+
 # --- v2 file lists (.aps/ layout) ---
 
 # Plan templates and rules for plans/
@@ -298,6 +303,14 @@ write_config() {
 
   {
     echo "# .aps/config.yml — written by installer, read by updater"
+    echo ""
+    echo "# Project contract (INSTALL-014 / D-035): toolchain pin + runtime path"
+    echo "# defaults the global 'aps' binary discovers by walking up from cwd."
+    echo "cli_version: \"$APS_CLI_VERSION\""
+    echo "plans_dir: plans/"
+    echo "docs_dir: docs/"
+    echo "tooling_root: .aps/"
+    echo ""
     echo "aps:"
     echo "  version: \"0.3.0\""
     echo "  config_schema: 1"

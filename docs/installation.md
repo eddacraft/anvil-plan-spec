@@ -138,6 +138,30 @@ specs, or action steps.
 `plans/issues.md`, action plans, and anything under `plans/decisions/` or
 `plans/designs/`.
 
+## Project Config Contract (`.aps/config.yml`)
+
+`aps init` writes `.aps/config.yml`, the per-repo contract the global `aps`
+binary reads by walking up from the current directory. Its contract fields:
+
+```yaml
+cli_version: 0.4.0-dev   # toolchain semver, stamped from the running binary
+plans_dir: plans/        # where plan documents live
+docs_dir: docs/          # where generated docs live
+tooling_root: .aps/      # APS-owned tooling root
+```
+
+- **`cli_version`** pins the toolchain a project expects. `aps init` stamps it
+  from the running binary; `aps init --from <config>` replays an existing pin,
+  and warns + inherits the current version when an older config predates the
+  field.
+- **`plans_dir` / `docs_dir` / `tooling_root`** are runtime defaults, not just
+  init metadata — a monorepo can set `plans_dir: packages/foo/plans/`. Explicit
+  flags (`--plans`, …) override them.
+- Unknown keys are ignored for forward compatibility, so newer fields never
+  break an older CLI.
+
+Both the native binary and the bash CLI write these same contract keys.
+
 ## Upgrade (Remove Generated Bloat)
 
 Older or heavier installs scatter generated files across the repo (root
