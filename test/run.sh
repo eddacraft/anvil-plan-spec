@@ -505,5 +505,31 @@ init_line=$(grep -n 'Initialize APS planning in this repository' "$INSTALL" | he
   || fail "picker should offer CLI install before repo init"
 pass
 
+# Test 41: aps doctor migration diagnostics (INSTALL-017)
+echo -n "Test: aps doctor migration diagnostics... "
+# doctor is a native-binary command; the migration docs + command wiring must
+# exist, and the built binary (when present) must flag a bloated v1 project.
+grep -qi 'Migrating to the Global Binary' "$PROJECT_ROOT/docs/installation.md" \
+  || fail "installation.md missing migration section"
+grep -qF 'aps doctor' "$PROJECT_ROOT/docs/usage.md" || fail "usage.md missing aps doctor"
+grep -q 'Command::Doctor' "$PROJECT_ROOT/cli/src/main.rs" || fail "main.rs missing Doctor command"
+DOCTOR_BIN="$PROJECT_ROOT/cli/target/release/aps"
+if [[ -x "$DOCTOR_BIN" ]]; then
+  DOC=$(mktemp -d)
+  mkdir -p "$DOC/bin" "$DOC/lib" "$DOC/.aps"
+  printf '#!/usr/bin/env bash\n' > "$DOC/bin/aps"
+  printf '# bash lint\n' > "$DOC/lib/lint.sh"
+  printf 'cli_version: 0.0.1\n' > "$DOC/.aps/config.yml"
+  printf 'PATH_add bin\n' > "$DOC/.envrc"
+  out=$( cd "$DOC" && "$DOCTOR_BIN" doctor 2>&1 || true )
+  echo "$out" | grep -qi 'vendored CLI' || fail "doctor did not flag vendored CLI"
+  echo "$out" | grep -qi 'direnv' || fail "doctor did not flag stale direnv"
+  echo "$out" | grep -qi 'cli_version' || fail "doctor did not report cli_version"
+  rm -rf "$DOC"
+  pass
+else
+  echo "SKIP (cli/target/release/aps not built)"
+fi
+
 echo ""
 echo -e "${GREEN}All tests passed!${NC}"

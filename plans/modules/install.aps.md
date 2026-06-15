@@ -670,7 +670,23 @@ Notes on schema:
 - **Dependencies:** INSTALL-013, INSTALL-014, INSTALL-015
 - **Files:** cli/src/setup.rs or new `cli/src/doctor.rs`, docs/installation.md,
   docs/usage.md, scaffold/upgrade, test/fixtures/
-- **Status:** Draft
+- **Status:** Complete: 2026-06-15
+- **Results:** New `cli/src/doctor.rs` implements `aps doctor` — a read-only
+  diagnostic that reports the global binary version, `cli_version` match,
+  leftover vendored CLI trees (gated on an APS marker so an unrelated project
+  `lib/` is never flagged), an incomplete global `~/.aps/lib/` runtime (a
+  missing `audit.sh` is a Problem → non-zero exit), and stale direnv
+  `PATH_add bin` entries. Wired as a top-level command in `main.rs`. The
+  diagnosis is a pure, injectable function (`diagnose(start, home, exe)`) with
+  three unit tests: clean global project, bloated v1 project (leftovers, drift,
+  and stale direnv), and an incomplete `~/.aps/lib/` missing `audit.sh`. Added a
+  "Migrating to the Global Binary" walkthrough to `docs/installation.md` (the 5
+  steps: doctor → install binary → pin `cli_version` → `aps upgrade` → drop
+  direnv; plus bash-fallback and CI guidance) and an `aps doctor` section to
+  `docs/usage.md`. `scaffold/update --global` is unchanged (still the bash
+  fallback path). Test 41 covers the docs + command wiring and runs the built
+  binary against a bloated fixture; `cargo test` (88) + bash suite +
+  markdownlint + clippy all green.
 
 ### INSTALL-018: Binary-first project init (no default local CLI vendoring)
 

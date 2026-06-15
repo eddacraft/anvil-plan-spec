@@ -7,6 +7,7 @@ use clap::{Parser, Subcommand};
 use eddacraft_tui as _;
 
 mod config;
+mod doctor;
 mod lint;
 mod next;
 mod parser;
@@ -106,6 +107,8 @@ enum Command {
         #[arg(long, value_name = "DIR")]
         plans: Option<String>,
     },
+    /// Diagnose migration state (global binary, cli_version, leftover CLI)
+    Doctor,
 }
 
 fn main() {
@@ -199,6 +202,10 @@ fn main() {
             };
             let code = next::cmd_next(&resolved, module.as_deref().unwrap_or(""));
             std::process::exit(code);
+        }
+        Some(Command::Doctor) => {
+            let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+            std::process::exit(doctor::run(&cwd));
         }
     }
 }

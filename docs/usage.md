@@ -21,6 +21,7 @@ aps start <ID>              # Mark a Ready work item as In Progress
 aps complete <ID>           # Mark an In Progress work item as Complete
 aps graph [module]          # Show work items + dependency arrows
 aps audit [module]          # Audit plan state against reality
+aps doctor                  # Diagnose migration state (global binary vs vendored)
 aps --help                  # Top-level help
 aps <cmd> --help            # Per-command help
 ```
@@ -264,6 +265,30 @@ optional companion to `aps lint`.
 > `--no-run`. **In CI, use `--no-run` for pull-request-triggered jobs** —
 > running with execution enabled on PR-modified plans hands code execution
 > to the PR author. Reserve execution for trusted branches.
+
+### `aps doctor` — diagnose migration state
+
+`aps doctor` checks whether a project is cleanly on the global binary or still
+carries a vendored bash CLI. It is read-only and prints one line per check:
+
+```text
+$ aps doctor
+aps doctor — migration diagnostics
+
+  [ok  ] global binary: aps 0.4.0 at /home/you/.aps/bin/aps
+  [warn] cli_version: project pins 0.3.0 but this binary is 0.4.0 — install the pinned release or update the pin
+  [warn] vendored CLI: leftover vendored CLI under /repo: bin/aps, lib — run `aps upgrade` to back up and remove
+  [ok  ] global runtime: /home/you/.aps/lib is complete
+  [warn] direnv: /repo/.envrc still adds ./bin to PATH — drop it once you run on the global binary
+```
+
+Checks: global binary presence/version, `cli_version` match, leftover vendored
+CLI trees (`bin/aps`, `lib/`, `.aps/bin`, `.aps/lib` — only when the bash CLI
+marker is present, so an unrelated project `lib/` is never flagged), an
+incomplete global `~/.aps/lib/` runtime (a missing file such as `audit.sh` is a
+**problem** → non-zero exit), and a stale direnv `PATH_add bin` entry. See
+[Migrating to the Global Binary](installation.md#migrating-to-the-global-binary)
+for the full walkthrough.
 
 ### Driving a plan from end to end
 
