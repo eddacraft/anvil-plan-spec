@@ -395,15 +395,29 @@ install_setup() {
 # The full schema lives in lib/scaffold.sh's write_config; the curl bootstrap
 # has no bash lib to source, so it writes the bare required shape here.
 write_min_config() {
-  local today
+  local today cli_version
   today="$(date +%Y-%m-%d)"
+  # VERSION is a git ref ("main") by default; only use it as the contract pin
+  # when it is an explicit semver. Otherwise fall back to the release version.
+  case "$VERSION" in
+    v[0-9]*|[0-9]*) cli_version="${VERSION#v}" ;;
+    *)              cli_version="0.3.0" ;;
+  esac
   mkdir -p "$TARGET/.aps"
   touch "$TARGET/.aps/.gitignore"
   grep -qxF 'context/' "$TARGET/.aps/.gitignore" || printf 'context/\n' >> "$TARGET/.aps/.gitignore"
   cat > "$TARGET/.aps/config.yml" <<EOF
 # .aps/config.yml — written by installer, read by updater
+
+# Project contract (INSTALL-014 / D-035): toolchain pin + runtime path
+# defaults the global 'aps' binary discovers by walking up from cwd.
+cli_version: "$cli_version"
+plans_dir: plans/
+docs_dir: docs/
+tooling_root: .aps/
+
 aps:
-  version: "$VERSION"
+  version: "0.3.0"
   config_schema: 1
   installed: "$today"
   updated: "$today"

@@ -1,0 +1,19 @@
+# Fixture: a project contract pinning a non-default plans_dir (INSTALL-014/016).
+# Replayable with `aps init --from` and discoverable by runtime config lookup.
+cli_version: 1.2.3
+profile: team
+shape: monorepo
+plans_dir: docs/plans/
+docs_dir: docs/
+tooling_root: .aps/
+templates:
+  - module
+  - monorepo-index
+components:
+  - lint-rules
+  - aps-rules
+tools:
+  - name: claude-code
+    agents: true
+    hooks: minimal
+    model: opus

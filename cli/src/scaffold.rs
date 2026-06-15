@@ -185,7 +185,14 @@ pub struct Selections {
     pub docs_dir: String,
     pub tooling_root: String,
     pub components: Vec<Component>,
+    /// Semver of the toolchain this project pins (`.aps/config.yml` contract).
+    /// `None` while building; serialization stamps the running binary's
+    /// version when unset. See INSTALL-014 / D-035.
+    pub cli_version: Option<String>,
 }
+
+/// Semver of the running `aps` binary, stamped into `.aps/config.yml` on init.
+pub const CLI_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 impl Selections {
     fn plans_path(&self) -> PathBuf {
@@ -487,6 +494,13 @@ pub fn hooks_step() -> ScaffoldStep {
 /// shape is small and stable, not worth a serde dependency.
 pub fn config_yaml(selections: &Selections) -> String {
     let mut out = String::from("# APS init configuration (replay with `aps init --from`)\n");
+    // Project contract (INSTALL-014 / D-035): the toolchain pin and runtime
+    // path defaults the global `aps` binary discovers by walking up from cwd.
+    let _ = writeln!(
+        out,
+        "cli_version: {}",
+        selections.cli_version.as_deref().unwrap_or(CLI_VERSION)
+    );
     let _ = writeln!(out, "profile: {}", profile_key(selections.profile));
     let _ = writeln!(out, "shape: {}", shape_key(selections.shape));
     let _ = writeln!(
@@ -816,6 +830,7 @@ mod tests {
                 Component::DesignsDir,
                 Component::DecisionsDir,
             ],
+            cli_version: None,
         }
     }
 

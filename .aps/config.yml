@@ -1,0 +1,9 @@
+# APS project contract (.aps/config.yml) — INSTALL-014 / D-035
+#
+# The toolchain pin and runtime path defaults the global `aps` binary
+# discovers by walking up from cwd. Explicit flags (--plans, ...) override.
+cli_version: 0.4.0-dev
+profile: solo
+plans_dir: plans/
+docs_dir: docs/
+tooling_root: .aps/

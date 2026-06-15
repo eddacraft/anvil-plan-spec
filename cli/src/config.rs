@@ -117,6 +117,7 @@ pub fn parse_config(text: &str) -> Result<Selections, String> {
         docs_dir: "docs/".to_string(),
         tooling_root: ".aps/".to_string(),
         components: Vec::new(),
+        cli_version: None,
     };
     let mut section = Section::Top;
 
@@ -138,6 +139,7 @@ pub fn parse_config(text: &str) -> Result<Selections, String> {
             match key {
                 "profile" => selections.profile = profile_from_key(value).map_err(err)?,
                 "shape" => selections.shape = shape_from_key(value).map_err(err)?,
+                "cli_version" => selections.cli_version = Some(value.to_string()),
                 "plans_dir" => selections.plans_dir = value.to_string(),
                 "docs_dir" => selections.docs_dir = value.to_string(),
                 "tooling_root" => selections.tooling_root = value.to_string(),
@@ -273,6 +275,7 @@ pub fn build_selections(base: Option<Selections>, flags: &InitFlags) -> Result<S
         docs_dir: "docs/".to_string(),
         tooling_root: ".aps/".to_string(),
         components: ALL_COMPONENTS.to_vec(),
+        cli_version: None,
     });
 
     if let Some(profile) = &flags.profile {
@@ -328,6 +331,19 @@ pub fn build_selections(base: Option<Selections>, flags: &InitFlags) -> Result<S
         if flags.no_agents {
             config.install_agents = false;
         }
+    }
+
+    // Stamp the toolchain pin (D-035). A replayed config keeps its own
+    // cli_version; an older config that predates the field inherits the
+    // running binary's version, with a warning.
+    if selections.cli_version.is_none() {
+        if from_config {
+            eprintln!(
+                "warning: source config has no cli_version; stamping {}",
+                crate::scaffold::CLI_VERSION
+            );
+        }
+        selections.cli_version = Some(crate::scaffold::CLI_VERSION.to_string());
     }
 
     Ok(selections)
@@ -404,6 +420,7 @@ mod tests {
             docs_dir: "docs".to_string(),
             tooling_root: ".aps".to_string(),
             components: vec![Component::LintRules, Component::ApsRules],
+            cli_version: Some("9.9.9".to_string()),
         }
     }
 
@@ -413,6 +430,38 @@ mod tests {
         let parsed = parse_config(&config_yaml(&original)).unwrap();
 
         assert_eq!(parsed, original);
+    }
+
+    #[test]
+    fn parses_alternate_plans_dir_fixture() {
+        let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../test/fixtures/config/alt-plans-dir.yml");
+        let text =
+            fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
+        let parsed = parse_config(&text).unwrap();
+        assert_eq!(parsed.plans_dir, "docs/plans/");
+        assert_eq!(parsed.cli_version.as_deref(), Some("1.2.3"));
+        assert_eq!(parsed.shape, ProjectShape::Monorepo);
+        // Replaying it preserves the pinned toolchain version.
+        let replayed = build_selections(Some(parsed), &InitFlags::default()).unwrap();
+        assert_eq!(replayed.cli_version.as_deref(), Some("1.2.3"));
+        assert_eq!(replayed.plans_dir, "docs/plans/");
+    }
+
+    #[test]
+    fn cli_version_is_stamped_and_replayed() {
+        // A config without cli_version inherits the running binary's version.
+        let stamped = build_selections(None, &InitFlags::default()).unwrap();
+        assert_eq!(
+            stamped.cli_version.as_deref(),
+            Some(crate::scaffold::CLI_VERSION)
+        );
+
+        // An explicit cli_version round-trips and is preserved on replay.
+        let pinned = parse_config("cli_version: 1.2.3\nprofile: solo\n").unwrap();
+        assert_eq!(pinned.cli_version.as_deref(), Some("1.2.3"));
+        let replayed = build_selections(Some(pinned), &InitFlags::default()).unwrap();
+        assert_eq!(replayed.cli_version.as_deref(), Some("1.2.3"));
     }
 
     #[test]

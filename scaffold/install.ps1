@@ -401,10 +401,21 @@ if (-not (Test-Path -LiteralPath $gitignore) -or -not ((Get-Content -LiteralPath
     Add-Content -LiteralPath $gitignore -Value "context/"
 }
 $today = (Get-Date -Format "yyyy-MM-dd")
+# $Version is a git ref ("main") by default; only pin it as cli_version when
+# it is an explicit semver, else fall back to the release version.
+if ($Version -match '^v?[0-9]') { $cliVersion = $Version -replace '^v', '' } else { $cliVersion = "0.3.0" }
 $configBody = @"
 # .aps/config.yml — written by installer, read by updater
+
+# Project contract (INSTALL-014 / D-035): toolchain pin + runtime path
+# defaults the global 'aps' binary discovers by walking up from cwd.
+cli_version: "$cliVersion"
+plans_dir: plans/
+docs_dir: docs/
+tooling_root: .aps/
+
 aps:
-  version: "$Version"
+  version: "0.3.0"
   config_schema: 1
   installed: "$today"
   updated: "$today"

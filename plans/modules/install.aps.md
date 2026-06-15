@@ -558,7 +558,20 @@ Notes on schema:
 - **Dependencies:** INSTALL-002, TUI-005
 - **Files:** cli/src/scaffold.rs, cli/src/config.rs, lib/scaffold.sh,
   docs/installation.md, test/fixtures/
-- **Status:** Draft
+- **Status:** Complete: 2026-06-15
+- **Results:** `Selections` gained a `cli_version` field (cli/src/scaffold.rs)
+  plus a `CLI_VERSION = env!("CARGO_PKG_VERSION")` constant; `config_yaml`
+  emits `cli_version` first, `parse_config` reads it, and `build_selections`
+  stamps the running binary's version (warning when an older `--from` config
+  predates the field, preserving an explicit pin otherwise). The bash
+  `write_config` and both curl installers' `write_min_config` now emit the same
+  top-level contract keys: `cli_version`, `plans_dir`, `docs_dir`,
+  `tooling_root`. Fixture `test/fixtures/config/alt-plans-dir.yml` pins an
+  alternate `plans_dir`; new Rust tests cover round-trip, stamp/replay, and the
+  fixture; bash Test 37 asserts the contract keys. This repo now dogfoods
+  `.aps/config.yml`; `aps lint plans/` stays clean. Unknown keys remain ignored
+  for forward compatibility. cargo test (82) + bash suite green; fmt + clippy +
+  markdownlint clean.
 
 ### INSTALL-015: Ship global binary-first install channels
 
