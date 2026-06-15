@@ -6,6 +6,7 @@
 #   aps init [dir]        Create APS structure in a new project (v2 layout)
 #   aps update [dir]      Update templates, skill, and tool files
 #   aps migrate [dir]     Convert v1 layout to v2
+#   aps setup [comp]      Add optional integrations (cli, hooks, tools, all)
 #   aps lint [file|dir]   Validate APS documents (default: plans/)
 #   aps lint --json       Output as JSON
 #   aps next [module]     Show the next ready work item
@@ -49,6 +50,7 @@ Usage:
   aps init [dir]        Create APS structure in a new project (v2 layout)
   aps update [dir]      Update templates, skill, and tool files
   aps migrate [dir]     Convert v1 layout to v2 (.aps/ consolidation)
+  aps setup [comp]      Add optional integrations (cli, hooks, tools, all)
   aps lint [file|dir]   Validate APS documents
   aps lint --json       Output results as JSON
   aps next [module]     Show the next ready work item
@@ -100,6 +102,10 @@ main() {
     migrate)
       shift
       cmd_migrate "$@"
+      ;;
+    setup)
+      shift
+      cmd_setup "$@"
       ;;
     lint)
       shift

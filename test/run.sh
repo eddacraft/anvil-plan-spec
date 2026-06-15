@@ -276,7 +276,9 @@ pass
 
 # Test 32: Each mode flag dispatches to its own path (marker in output)
 echo -n "Test: installer mode dispatch... "
-out=$(bash "$INSTALL" --setup foo </dev/null 2>&1 || true)
+# Run from a temp dir so no project-local ./bin/aps is discovered; the setup
+# gate must report no setup-capable CLI when none is on PATH or in TARGET.
+out=$(cd "$(mktemp -d)" && PATH=/usr/bin:/bin bash "$INSTALL" --setup foo </dev/null 2>&1 || true)
 echo "$out" | grep -qi "Add integration: foo" || fail "--setup did not reach setup path"
 echo "$out" | grep -qi "setup is not available" || fail "--setup should gate on a setup-capable CLI"
 # --upgrade against a dir with no plans/ fails fast before any network use
@@ -301,6 +303,39 @@ for flag in --local-cli --hooks; do
 done
 # The vendored CLI must only land under .aps/ now (not root bin/), gated by the flag
 grep -q 'USE_LOCAL_CLI' "$INSTALL" || fail "install missing USE_LOCAL_CLI gate"
+pass
+
+# Test 34: aps setup shortcuts and confirmation gating (INSTALL-012)
+echo -n "Test: aps setup shortcuts... "
+SETUP_DIR=$(mktemp -d)
+APS_LOCAL="$PROJECT_ROOT" $APS init "$SETUP_DIR" --non-interactive >/dev/null 2>&1 || fail "init for setup failed"
+# setup help advertises components
+$APS setup --help 2>&1 | grep -qi "aps setup" || fail "setup help missing"
+# Bare 'aps setup' with no terminal must not silently write — it errors out
+if APS_LOCAL="$PROJECT_ROOT" $APS setup "$SETUP_DIR" </dev/null >/dev/null 2>&1; then
+  fail "bare 'aps setup' should fail without a terminal"
+fi
+# hooks shortcut installs only hook scripts (no tools, no CLI)
+APS_LOCAL="$PROJECT_ROOT" $APS setup hooks "$SETUP_DIR" </dev/null >/dev/null 2>&1 || fail "setup hooks failed"
+[[ -d "$SETUP_DIR/.aps/scripts" ]] || fail "setup hooks did not install scripts"
+[[ ! -d "$SETUP_DIR/.aps/lib" ]] || fail "setup hooks pulled in the CLI"
+[[ ! -d "$SETUP_DIR/.claude/skills" ]] || fail "setup hooks pulled in a tool skill"
+# tool shortcut installs only that tool's skill + agents
+APS_LOCAL="$PROJECT_ROOT" $APS setup claude-code "$SETUP_DIR" </dev/null >/dev/null 2>&1 || fail "setup claude-code failed"
+[[ -f "$SETUP_DIR/.claude/skills/aps-planning/SKILL.md" ]] || fail "setup claude-code missing skill"
+[[ -f "$SETUP_DIR/.claude/agents/aps-planner.md" ]] || fail "setup claude-code missing agents"
+# unknown target exits non-zero
+if APS_LOCAL="$PROJECT_ROOT" $APS setup bogus "$SETUP_DIR" </dev/null >/dev/null 2>&1; then
+  fail "unknown setup target should exit non-zero"
+fi
+# 'all' without --yes and without a terminal aborts (default no) — writes no CLI
+APS_LOCAL="$PROJECT_ROOT" $APS setup all "$SETUP_DIR" </dev/null >/dev/null 2>&1 || true
+[[ ! -d "$SETUP_DIR/.aps/lib" ]] || fail "setup all wrote CLI without confirmation"
+# 'all --yes' installs the full footprint
+APS_LOCAL="$PROJECT_ROOT" $APS setup all --yes "$SETUP_DIR" </dev/null >/dev/null 2>&1 || fail "setup all --yes failed"
+[[ -f "$SETUP_DIR/.aps/lib/orchestrate.sh" ]] || fail "setup all --yes missing CLI"
+[[ -d "$SETUP_DIR/.aps/scripts" ]] || fail "setup all --yes missing hooks"
+rm -rf "$SETUP_DIR"
 pass
 
 echo ""
