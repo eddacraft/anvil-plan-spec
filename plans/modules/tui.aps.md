@@ -1,8 +1,8 @@
 # TUI Onboarding Module
 
-| ID  | Owner  | Status                  |
-| --- | ------ | ----------------------- |
-| TUI | @aneki | Complete                |
+| ID  | Owner  | Status   |
+| --- | ------ | -------- |
+| TUI | @aneki | Complete |
 
 **Last reviewed:** 2026-06-09
 
@@ -281,7 +281,7 @@ shared theme, keyboard conventions). APS consumes this as a crate dependency.
   runners, darwin x64/arm64 on macOS, windows x64 via mingw-w64 — native
   runners replaced `cross`/`cargo-zigbuild` since GitHub now provides arm64
   runners), smoke-tests native builds, and publishes tar.gz/zip assets with
-  SHA256SUMS on v* tags. Release profile (lto, strip) yields ~1.3 MB
+  SHA256SUMS on v\* tags. Release profile (lto, strip) yields ~1.3 MB
   binaries. `scaffold/install --binary` downloads the matching release
   asset and falls back to the bash CLI on any failure. First release tag
   after merge will exercise the workflow end-to-end.

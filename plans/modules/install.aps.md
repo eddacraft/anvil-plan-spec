@@ -537,7 +537,7 @@ Notes on schema:
 - **Validation:** Smoke `aps --version` and `aps lint --help` on all five
   TUI-006 targets; `cargo publish --dry-run` clean; Scoop manifest install in
   CI or documented manual check; `VERSION=x.y.z curl …/install | bash -s --
-  --global --binary` installs exactly that release
+--global --binary` installs exactly that release
 - **Confidence:** medium
 - **Dependencies:** TUI-006, INSTALL-010
 - **Files:** scaffold/install, scaffold/install.ps1, cli/Cargo.toml,

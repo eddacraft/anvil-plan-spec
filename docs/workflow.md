@@ -221,10 +221,10 @@ You've finished all work items in a module. Now what?
 
    ### Auth & Sessions
 
-   | Task     | Module  | Description     | Status   |
-   | -------- | ------- | --------------- | -------- |
-   | AUTH-001 | auth    | Login flow      | Complete |
-   | AUTH-002 | auth    | Session refresh | Complete |
+   | Task     | Module | Description     | Status   |
+   | -------- | ------ | --------------- | -------- |
+   | AUTH-001 | auth   | Login flow      | Complete |
+   | AUTH-002 | auth   | Session refresh | Complete |
    ```
 
    For long-form implementation notes — wave reports, post-mortems, deep dives —
@@ -234,11 +234,11 @@ You've finished all work items in a module. Now what?
 
 5. **Decide on archival of the module spec itself:**
 
-   | Approach                            | When to Use                                |
-   | ----------------------------------- | ------------------------------------------ |
-   | **Keep in `plans/modules/`**        | Ongoing reference, may need updates        |
+   | Approach                             | When to Use                                 |
+   | ------------------------------------ | ------------------------------------------- |
+   | **Keep in `plans/modules/`**         | Ongoing reference, may need updates         |
    | **Move to `plans/archive/modules/`** | Historical record, unlikely to be revisited |
-   | **Delete**                          | Ephemeral work, no long-term value         |
+   | **Delete**                           | Ephemeral work, no long-term value          |
 
    Most teams keep specs indefinitely — they're lightweight and provide context
    for future work. Move them to `plans/archive/modules/` only when the active
@@ -557,12 +557,12 @@ to learn from. Bullet points, not essays.
 
 ### How it interacts with the other archives
 
-| Artifact                  | Question it answers                              |
-| ------------------------- | ------------------------------------------------ |
-| `CHANGELOG.md`            | What changed in this version? (terse, for users) |
-| `plans/releases/<v>.md`   | Why this release? Theme, criteria, risks         |
-| `plans/completed.aps.md`  | Which work items shipped, grouped by release     |
-| `plans/completed/<v>-<m>.md` | Wave-level implementation notes (optional)    |
+| Artifact                     | Question it answers                              |
+| ---------------------------- | ------------------------------------------------ |
+| `CHANGELOG.md`               | What changed in this version? (terse, for users) |
+| `plans/releases/<v>.md`      | Why this release? Theme, criteria, risks         |
+| `plans/completed.aps.md`     | Which work items shipped, grouped by release     |
+| `plans/completed/<v>-<m>.md` | Wave-level implementation notes (optional)       |
 
 Cross-link liberally. The CHANGELOG entry should point to the release doc;
 the release doc should point back to the completed roll-up and the module

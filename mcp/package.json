@@ -2,12 +2,9 @@
   "name": "aps-mcp",
   "version": "0.1.0",
   "private": true,
-  "type": "module",
   "description": "MCP server exposing the APS CLI command surface to MCP-capable agents",
   "license": "Apache-2.0",
-  "engines": {
-    "node": ">=22.18"
-  },
+  "type": "module",
   "scripts": {
     "start": "node src/index.ts",
     "test": "node --test test/"
@@ -19,5 +16,8 @@
   "devDependencies": {
     "@types/node": "^25.9.2",
     "typescript": "^6.0.3"
+  },
+  "engines": {
+    "node": ">=22.18"
   }
 }

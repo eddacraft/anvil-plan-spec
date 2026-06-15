@@ -1,11 +1,11 @@
 # Orchestration CLI Design — ORCH Module
 
-| Field   | Value                                                |
-| ------- | ---------------------------------------------------- |
-| Date    | 2026-06-08                                           |
-| Status  | As-built (normalised from module spec)               |
-| Modules | [orchestrate](../modules/orchestrate.aps.md)         |
-| Scope   | ORCH-001 through ORCH-006                            |
+| Field   | Value                                        |
+| ------- | -------------------------------------------- |
+| Date    | 2026-06-08                                   |
+| Status  | As-built (normalised from module spec)       |
+| Modules | [orchestrate](../modules/orchestrate.aps.md) |
+| Scope   | ORCH-001 through ORCH-006                    |
 
 > This design was originally embedded in `orchestrate.aps.md` as a "Concept
 > Design" section. It was extracted to comply with APS layering rules (module

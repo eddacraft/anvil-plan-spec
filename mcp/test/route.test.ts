@@ -48,20 +48,19 @@ test("direct: unsafe arguments rejected", () => {
 });
 
 test("natural language: next ready item", () => {
-  assert.deepEqual(
-    argvOf("What's the next ready work item in the auth module?"),
-    ["next", "auth"],
-  );
+  assert.deepEqual(argvOf("What's the next ready work item in the auth module?"), ["next", "auth"]);
   assert.deepEqual(argvOf("what is ready to work on"), ["next"]);
 });
 
 test("natural language: start and complete", () => {
   assert.deepEqual(argvOf("please start AUTH-003"), ["start", "AUTH-003"]);
   assert.deepEqual(argvOf("mark AUTH-003 as done"), ["complete", "AUTH-003"]);
-  assert.deepEqual(
-    argvOf('complete AUTH-003 with learning: "retry on 5xx"'),
-    ["complete", "AUTH-003", "--learning", "retry on 5xx"],
-  );
+  assert.deepEqual(argvOf('complete AUTH-003 with learning: "retry on 5xx"'), [
+    "complete",
+    "AUTH-003",
+    "--learning",
+    "retry on 5xx",
+  ]);
 });
 
 test("natural language: graph", () => {

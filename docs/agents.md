@@ -6,11 +6,11 @@ GitHub Copilot, OpenCode, and Gemini — pick the variant for your tool below.
 
 ## Agents Overview
 
-| Agent              | Purpose                                                 | Model  | Invocation                         |
-| ------------------ | ------------------------------------------------------- | ------ | ---------------------------------- |
-| **APS Planner**    | Planning, scoping modules, drafting work items          | Opus   | `@aps-planner` or Task dispatch    |
-| **APS Conductor**  | Driving execution of Ready work items, wave coordination | Opus   | `@aps-conductor` or Task dispatch  |
-| **APS Librarian**  | Archiving, cross-refs, orphan detection, repo hygiene   | Sonnet | `@aps-librarian` or Task dispatch  |
+| Agent             | Purpose                                                  | Model  | Invocation                        |
+| ----------------- | -------------------------------------------------------- | ------ | --------------------------------- |
+| **APS Planner**   | Planning, scoping modules, drafting work items           | Opus   | `@aps-planner` or Task dispatch   |
+| **APS Conductor** | Driving execution of Ready work items, wave coordination | Opus   | `@aps-conductor` or Task dispatch |
+| **APS Librarian** | Archiving, cross-refs, orphan detection, repo hygiene    | Sonnet | `@aps-librarian` or Task dispatch |
 
 ### APS Planner
 

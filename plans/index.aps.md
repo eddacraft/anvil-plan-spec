@@ -41,18 +41,18 @@ APS needs continued development to:
 
 ### Shipped (v0.3 — Distribution)
 
-| Module                              | Purpose                                         | Status                  |
-| ----------------------------------- | ----------------------------------------------- | ----------------------- |
+| Module                              | Purpose                                                   | Status                  |
+| ----------------------------------- | --------------------------------------------------------- | ----------------------- |
 | [install](./modules/install.aps.md) | Global binary install, project config contract, migration | In Progress (follow-up) |
-| [agents](./modules/agents.aps.md)   | APS Planner + Librarian agents, multi-harness   | Complete                |
+| [agents](./modules/agents.aps.md)   | APS Planner + Librarian agents, multi-harness             | Complete                |
 
 ### In Progress (v0.4 — Orchestration & UX)
 
-| Module                                      | Purpose                                                 | Status      |
-| ------------------------------------------- | ------------------------------------------------------- | ----------- |
-| [orchestrate](./modules/orchestrate.aps.md) | CLI orchestration, dependency resolution, state machine | Complete    |
-| [tui](./modules/tui.aps.md)                 | Ratatui TUI customization wizard for project setup      | Complete    |
-| [dogfood](./modules/dogfood.aps.md)         | Keep this repo's own APS plans accurate and validated   | Complete    |
+| Module                                      | Purpose                                                 | Status   |
+| ------------------------------------------- | ------------------------------------------------------- | -------- |
+| [orchestrate](./modules/orchestrate.aps.md) | CLI orchestration, dependency resolution, state machine | Complete |
+| [tui](./modules/tui.aps.md)                 | Ratatui TUI customization wizard for project setup      | Complete |
+| [dogfood](./modules/dogfood.aps.md)         | Keep this repo's own APS plans accurate and validated   | Complete |
 
 ### Conductor / Crosscutting (Trialing)
 
@@ -72,14 +72,14 @@ release narratives live in [`plans/releases/`](./releases/).
 
 ### Near Term
 
-| Module                                        | Purpose                                                          | Status |
-| --------------------------------------------- | ---------------------------------------------------------------- | ------ |
-| [spec](./modules/spec.aps.md)                 | Canonical vocabulary + schema (status reconciliation)            | Draft  |
-| [tasks](./modules/tasks.aps.md)               | Claude Code Tasks integration                                    | Complete |
-| [examples](./modules/examples.aps.md)         | Additional worked examples                                       | Draft  |
-| [prompts](./modules/prompts.aps.md)           | Tool-specific prompt variants                                    | Draft  |
-| [integrations](./modules/integrations.aps.md) | JSON export, GitHub sync                                         | Draft  |
-| [monorepo](./modules/monorepo.aps.md)         | Nested index.aps.md plans, federated lint + orchestration        | Draft  |
+| Module                                        | Purpose                                                   | Status   |
+| --------------------------------------------- | --------------------------------------------------------- | -------- |
+| [spec](./modules/spec.aps.md)                 | Canonical vocabulary + schema (status reconciliation)     | Draft    |
+| [tasks](./modules/tasks.aps.md)               | Claude Code Tasks integration                             | Complete |
+| [examples](./modules/examples.aps.md)         | Additional worked examples                                | Draft    |
+| [prompts](./modules/prompts.aps.md)           | Tool-specific prompt variants                             | Draft    |
+| [integrations](./modules/integrations.aps.md) | JSON export, GitHub sync                                  | Draft    |
+| [monorepo](./modules/monorepo.aps.md)         | Nested index.aps.md plans, federated lint + orchestration | Draft    |
 
 ### Long Term
 

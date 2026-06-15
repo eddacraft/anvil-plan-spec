@@ -39,7 +39,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - **W003 resolves across the plan tree** (DOGFOOD-002) — dependency
-  references to work items and decisions in *other* module files (and the
+  references to work items and decisions in _other_ module files (and the
   index) no longer warn; only IDs missing from the entire plan are flagged.
   Message changed from "not found in this file" to "not found in plan".
 - **E005 exempts terminal work items** — `aps lint` no longer requires the

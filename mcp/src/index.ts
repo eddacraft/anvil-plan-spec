@@ -43,11 +43,7 @@ function runAps(argv: string[]): Promise<CliResult> {
       args,
       { timeout: 30_000, maxBuffer: 4 * 1024 * 1024 },
       (error, stdout, stderr) => {
-        const exitCode = error
-          ? typeof error.code === "number"
-            ? error.code
-            : 1
-          : 0;
+        const exitCode = error ? (typeof error.code === "number" ? error.code : 1) : 0;
         const output = [stdout, stderr].filter(Boolean).join("\n").trim();
         resolve({
           exitCode,
@@ -69,9 +65,7 @@ server.registerTool(
       "graph, lint) or a natural-language request like " +
       '"what\'s the next ready work item in the auth module?".',
     inputSchema: {
-      request: z
-        .string()
-        .describe("Direct aps command or natural-language request"),
+      request: z.string().describe("Direct aps command or natural-language request"),
     },
   },
   async ({ request }: { request: string }) => {
@@ -83,9 +77,7 @@ server.registerTool(
       };
     }
     const result = await runAps(routed.argv);
-    const text =
-      `$ aps ${routed.argv.join(" ")}\n${result.output}`.trim() ||
-      "(no output)";
+    const text = `$ aps ${routed.argv.join(" ")}\n${result.output}`.trim() || "(no output)";
     return {
       content: [{ type: "text" as const, text }],
       isError: result.exitCode !== 0,

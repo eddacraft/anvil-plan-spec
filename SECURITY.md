@@ -8,12 +8,12 @@ of anvil-plan-spec are supported and how to report a vulnerability responsibly.
 anvil-plan-spec is an open-source specification and tooling repository. Security
 fixes are provided for the latest public release and the current `main` branch.
 
-| Version / Branch | Supported |
-| --- | --- |
-| Latest public release | Yes |
-| `main` | Yes |
-| Older releases | Best effort |
-| Unreleased experimental branches | No |
+| Version / Branch                 | Supported   |
+| -------------------------------- | ----------- |
+| Latest public release            | Yes         |
+| `main`                           | Yes         |
+| Older releases                   | Best effort |
+| Unreleased experimental branches | No          |
 
 Users should upgrade to the latest public release when a security update is
 published.

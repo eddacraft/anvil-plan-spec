@@ -14,11 +14,11 @@
 
 ## Waves
 
-| Wave | Actions | Gate                                          |
-| ---- | ------- | --------------------------------------------- |
-| 1    | 1, 2    | Static lint checks pass against fixtures      |
-| 2    | 3, 4    | `aps audit` detects all four finding classes  |
-| 3    | 5, 6    | PowerShell parity + docs; full suite green    |
+| Wave | Actions | Gate                                         |
+| ---- | ------- | -------------------------------------------- |
+| 1    | 1, 2    | Static lint checks pass against fixtures     |
+| 2    | 3, 4    | `aps audit` detects all four finding classes |
+| 3    | 5, 6    | PowerShell parity + docs; full suite green   |
 
 ## Actions
 

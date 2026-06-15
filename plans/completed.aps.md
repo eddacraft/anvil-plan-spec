@@ -30,19 +30,19 @@ the active roadmap._
 
 ### Compound-Engineering Library
 
-| Task         | Module   | Description                                | Status                |
-| ------------ | -------- | ------------------------------------------ | --------------------- |
-| COMPOUND-001 | compound | Solution library workflow                  | Complete: 2026-05-15  |
-| COMPOUND-002 | compound | Completed-work archive pattern             | Complete: 2026-05-22  |
-| COMPOUND-003 | compound | Release narrative convention               | Complete: 2026-05-22  |
+| Task         | Module   | Description                    | Status               |
+| ------------ | -------- | ------------------------------ | -------------------- |
+| COMPOUND-001 | compound | Solution library workflow      | Complete: 2026-05-15 |
+| COMPOUND-002 | compound | Completed-work archive pattern | Complete: 2026-05-22 |
+| COMPOUND-003 | compound | Release narrative convention   | Complete: 2026-05-22 |
 
 ### Dogfood (plan hygiene)
 
-| Task        | Module  | Description                                  | Status               |
-| ----------- | ------- | -------------------------------------------- | -------------------- |
-| DOGFOOD-001 | dogfood | Reconcile roadmap module links               | Complete: 2026-06-07 |
-| DOGFOOD-002 | dogfood | Plan hygiene lint checks + `aps audit`       | Complete: 2026-06-08 |
-| DOGFOOD-003 | dogfood | Contribution guidance for APS plan updates   | Complete: 2026-06-08 |
+| Task        | Module  | Description                                | Status               |
+| ----------- | ------- | ------------------------------------------ | -------------------- |
+| DOGFOOD-001 | dogfood | Reconcile roadmap module links             | Complete: 2026-06-07 |
+| DOGFOOD-002 | dogfood | Plan hygiene lint checks + `aps audit`     | Complete: 2026-06-08 |
+| DOGFOOD-003 | dogfood | Contribution guidance for APS plan updates | Complete: 2026-06-08 |
 
 ### Orchestration
 
@@ -78,14 +78,14 @@ criteria, and risks._
 
 ### Multi-Agent Distribution
 
-| Task      | Module | Description                                  | Status                |
-| --------- | ------ | -------------------------------------------- | --------------------- |
-| AGENT-001 | agents | APS Planner agent (Claude Code)              | Complete: 2026-02-21  |
-| AGENT-002 | agents | APS Librarian agent (Claude Code)            | Complete: 2026-02-21  |
-| AGENT-003 | agents | Port agents to Codex format                  | Complete: 2026-02-21  |
-| AGENT-004 | agents | Port agents to Copilot, OpenCode, Gemini     | Complete: 2026-02-21  |
-| AGENT-005 | agents | Agent documentation                          | Complete: 2026-03-24  |
-| AGENT-006 | agents | Cross-harness testing                        | Complete: 2026-03-28  |
+| Task      | Module | Description                              | Status               |
+| --------- | ------ | ---------------------------------------- | -------------------- |
+| AGENT-001 | agents | APS Planner agent (Claude Code)          | Complete: 2026-02-21 |
+| AGENT-002 | agents | APS Librarian agent (Claude Code)        | Complete: 2026-02-21 |
+| AGENT-003 | agents | Port agents to Codex format              | Complete: 2026-02-21 |
+| AGENT-004 | agents | Port agents to Copilot, OpenCode, Gemini | Complete: 2026-02-21 |
+| AGENT-005 | agents | Agent documentation                      | Complete: 2026-03-24 |
+| AGENT-006 | agents | Cross-harness testing                    | Complete: 2026-03-28 |
 
 ---
 
@@ -96,22 +96,22 @@ release that turned the idea into a usable convention._
 
 ### Templates & Scaffolding
 
-| Task         | Module    | Description                                | Status   |
-| ------------ | --------- | ------------------------------------------ | -------- |
+| Task         | Module    | Description                                 | Status   |
+| ------------ | --------- | ------------------------------------------- | -------- |
 | TPL-001      | templates | Mark optional fields and simplify templates | Complete |
-| SCAFFOLD-001 | scaffold  | Create starter plan scaffold               | Complete |
+| SCAFFOLD-001 | scaffold  | Create starter plan scaffold                | Complete |
 
 ### Validation
 
-| Task    | Module     | Description                  | Status   |
-| ------- | ---------- | ---------------------------- | -------- |
-| VAL-001 | validation | Implement APS lint command   | Complete |
+| Task    | Module     | Description                | Status   |
+| ------- | ---------- | -------------------------- | -------- |
+| VAL-001 | validation | Implement APS lint command | Complete |
 
 ### Documentation
 
-| Task     | Module | Description                       | Status   |
-| -------- | ------ | --------------------------------- | -------- |
-| DOCS-001 | docs   | Publish onboarding documentation  | Complete |
+| Task     | Module | Description                      | Status   |
+| -------- | ------ | -------------------------------- | -------- |
+| DOCS-001 | docs   | Publish onboarding documentation | Complete |
 
 ---
 

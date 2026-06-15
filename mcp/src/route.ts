@@ -21,8 +21,18 @@ const DANGEROUS_RE = /[;&|$`<>\\!*?(){}[\]~#]/;
 
 // Words that look like a module reference but aren't one
 const MODULE_STOPWORDS = new Set([
-  "the", "this", "that", "plan", "plans", "project", "repo", "repository",
-  "module", "item", "items", "work",
+  "the",
+  "this",
+  "that",
+  "plan",
+  "plans",
+  "project",
+  "repo",
+  "repository",
+  "module",
+  "item",
+  "items",
+  "work",
 ]);
 
 export const HELP = `Could not route request. Send a direct command or a natural-language request.
@@ -92,9 +102,7 @@ function routeDirect(tokens: string[]): Route | null {
 // Extract a module reference from natural language: "in the auth module",
 // "for auth", or a bare lowercase module token after the verb.
 function extractModule(text: string): string | null {
-  const match = text.match(
-    /\b(?:in|for|of)\s+(?:the\s+)?([A-Za-z][A-Za-z0-9_-]*)(?:\s+module)?/i,
-  );
+  const match = text.match(/\b(?:in|for|of)\s+(?:the\s+)?([A-Za-z][A-Za-z0-9_-]*)(?:\s+module)?/i);
   if (match && !MODULE_STOPWORDS.has(match[1].toLowerCase())) return match[1];
   return null;
 }

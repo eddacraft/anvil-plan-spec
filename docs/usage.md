@@ -57,7 +57,7 @@ Errors cause a non-zero exit code. Warnings are informational.
 | Code | Scope          | Description                                                                                                             |
 | ---- | -------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | W001 | Work Item      | ID does not match `PREFIX-NNN` pattern (e.g., `AUTH-001`)                                                               |
-| W003 | Work Item      | Dependency references an ID not found anywhere in the plan tree (work items and decisions both resolve cross-file)     |
+| W003 | Work Item      | Dependency references an ID not found anywhere in the plan tree (work items and decisions both resolve cross-file)      |
 | W004 | Module / Index | Section exists but is empty (`## Purpose`, `## In Scope`, `## Overview`, `## Problem & Success Criteria`, `## Modules`) |
 | W005 | Module         | Status is `Ready` but no work items are defined                                                                         |
 | W010 | Issues         | Issue entry missing `Status`, `Discovered`, or `Severity` field                                                         |
@@ -223,12 +223,12 @@ Findings:
 Findings: 4 (23 items audited)
 ```
 
-| Code | Meaning                                                                |
-| ---- | ---------------------------------------------------------------------- |
-| A001 | Overstated — `Complete` item whose `Validation` command fails          |
-| A002 | Understated — `Draft` item whose `Files` already exist with content    |
-| A003 | Stale — `Ready` item in a module with no recent `**Last reviewed:**`   |
-| A004 | Broken link — index `## Modules` link points to a non-existent file    |
+| Code | Meaning                                                              |
+| ---- | -------------------------------------------------------------------- |
+| A001 | Overstated — `Complete` item whose `Validation` command fails        |
+| A002 | Understated — `Draft` item whose `Files` already exist with content  |
+| A003 | Stale — `Ready` item in a module with no recent `**Last reviewed:**` |
+| A004 | Broken link — index `## Modules` link points to a non-existent file  |
 
 Options: `--json` for machine-readable output, `--no-run` to skip executing
 validation commands (verification reports `PARTIAL`; no A001 findings),

@@ -41,10 +41,10 @@ best for this release). One table per area.
 
 Short framing sentence about the area.
 
-| Area         | Detail                                  |
-| ------------ | --------------------------------------- |
-| [Subsection] | One-line description of the capability  |
-| [Subsection] | Another capability                      |
+| Area         | Detail                                 |
+| ------------ | -------------------------------------- |
+| [Subsection] | One-line description of the capability |
+| [Subsection] | Another capability                     |
 
 **APS modules:** [MODULE-ID] (X/Y work items done), [MODULE-ID] (…)
 

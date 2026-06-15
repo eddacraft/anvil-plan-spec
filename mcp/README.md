@@ -31,13 +31,13 @@ Environment:
 
 ## Example requests
 
-| Request                                            | Routed to                              |
-| -------------------------------------------------- | -------------------------------------- |
-| `next auth`                                        | `aps next auth`                        |
-| `what's the next ready work item in auth?`         | `aps next auth`                        |
-| `start AUTH-003`                                   | `aps start AUTH-003`                   |
-| `complete AUTH-003 with learning: "retry on 5xx"`  | `aps complete AUTH-003 --learning ...` |
-| `show the dependency graph for auth`               | `aps graph auth`                       |
+| Request                                           | Routed to                              |
+| ------------------------------------------------- | -------------------------------------- |
+| `next auth`                                       | `aps next auth`                        |
+| `what's the next ready work item in auth?`        | `aps next auth`                        |
+| `start AUTH-003`                                  | `aps start AUTH-003`                   |
+| `complete AUTH-003 with learning: "retry on 5xx"` | `aps complete AUTH-003 --learning ...` |
+| `show the dependency graph for auth`              | `aps graph auth`                       |
 
 Unroutable requests return the command help as a tool error — the transport
 stays up.
