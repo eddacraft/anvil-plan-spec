@@ -126,7 +126,7 @@ update_global() {
 
   step "Updating APS CLI at $aps_home"
 
-  for f in bin/aps bin/aps.ps1 lib/output.sh lib/Output.psm1 lib/lint.sh lib/Lint.psm1 lib/orchestrate.sh lib/scaffold.sh lib/Scaffold.psm1 lib/rules/common.sh lib/rules/Common.psm1 lib/rules/module.sh lib/rules/Module.psm1 lib/rules/index.sh lib/rules/Index.psm1 lib/rules/workitem.sh lib/rules/WorkItem.psm1 lib/rules/issues.sh lib/rules/Issues.psm1; do
+  for f in bin/aps bin/aps.ps1 lib/output.sh lib/Output.psm1 lib/lint.sh lib/Lint.psm1 lib/orchestrate.sh lib/audit.sh lib/scaffold.sh lib/Scaffold.psm1 lib/rules/common.sh lib/rules/Common.psm1 lib/rules/module.sh lib/rules/Module.psm1 lib/rules/index.sh lib/rules/Index.psm1 lib/rules/workitem.sh lib/rules/WorkItem.psm1 lib/rules/issues.sh lib/rules/Issues.psm1; do
     download_root "$f" "$aps_home/$f"
   done
   chmod +x "$aps_home/bin/aps"
@@ -165,7 +165,7 @@ mkdir -p "$PLANS_DIR/decisions"
 
 # Update CLI
 step "Updating APS CLI"
-for f in bin/aps bin/aps.ps1 lib/output.sh lib/Output.psm1 lib/lint.sh lib/Lint.psm1 lib/orchestrate.sh lib/scaffold.sh lib/Scaffold.psm1 lib/rules/common.sh lib/rules/Common.psm1 lib/rules/module.sh lib/rules/Module.psm1 lib/rules/index.sh lib/rules/Index.psm1 lib/rules/workitem.sh lib/rules/WorkItem.psm1 lib/rules/issues.sh lib/rules/Issues.psm1 lib/rules/design.sh lib/rules/Design.psm1; do
+for f in bin/aps bin/aps.ps1 lib/output.sh lib/Output.psm1 lib/lint.sh lib/Lint.psm1 lib/orchestrate.sh lib/audit.sh lib/scaffold.sh lib/Scaffold.psm1 lib/rules/common.sh lib/rules/Common.psm1 lib/rules/module.sh lib/rules/Module.psm1 lib/rules/index.sh lib/rules/Index.psm1 lib/rules/workitem.sh lib/rules/WorkItem.psm1 lib/rules/issues.sh lib/rules/Issues.psm1 lib/rules/design.sh lib/rules/Design.psm1; do
   download_root "$f" "$TARGET/$f"
 done
 chmod +x "$TARGET/bin/aps"

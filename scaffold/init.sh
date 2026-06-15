@@ -114,6 +114,8 @@ install_cli() {
     "bin/aps"
     "lib/output.sh"
     "lib/lint.sh"
+    "lib/orchestrate.sh"
+    "lib/audit.sh"
     "lib/scaffold.sh"
     "lib/rules/common.sh"
     "lib/rules/issues.sh"

@@ -163,6 +163,7 @@ function Update-ApsGlobal {
         "lib/output.sh", "lib/Output.psm1",
         "lib/lint.sh", "lib/Lint.psm1",
         "lib/orchestrate.sh",
+        "lib/audit.sh",
         "lib/scaffold.sh", "lib/Scaffold.psm1",
         "lib/rules/common.sh", "lib/rules/Common.psm1",
         "lib/rules/module.sh", "lib/rules/Module.psm1",
@@ -220,6 +221,7 @@ $cliFilesBash = @(
     "lib/output.sh"
     "lib/lint.sh"
     "lib/orchestrate.sh"
+    "lib/audit.sh"
     "lib/scaffold.sh"
     "lib/rules/common.sh"
     "lib/rules/module.sh"

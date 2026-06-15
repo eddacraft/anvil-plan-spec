@@ -269,7 +269,7 @@ install_global() {
   if [[ "$USE_BINARY" == true ]] && install_binary "$aps_home/bin"; then
     : # native binary installed; bash CLI not needed
   else
-    for f in bin/aps lib/output.sh lib/lint.sh lib/orchestrate.sh lib/scaffold.sh lib/rules/common.sh lib/rules/module.sh lib/rules/index.sh lib/rules/workitem.sh lib/rules/issues.sh lib/rules/design.sh; do
+    for f in bin/aps lib/output.sh lib/lint.sh lib/orchestrate.sh lib/audit.sh lib/scaffold.sh lib/rules/common.sh lib/rules/module.sh lib/rules/index.sh lib/rules/workitem.sh lib/rules/issues.sh lib/rules/design.sh; do
       download_root "$f" "$aps_home/$f"
     done
     chmod +x "$aps_home/bin/aps"
@@ -411,7 +411,7 @@ step "Installing APS CLI"
 if [[ "$USE_BINARY" == true ]] && install_binary "$TARGET/bin"; then
   : # native binary installed; bash CLI not needed
 else
-  for f in bin/aps lib/output.sh lib/lint.sh lib/orchestrate.sh lib/scaffold.sh lib/rules/common.sh lib/rules/module.sh lib/rules/index.sh lib/rules/workitem.sh lib/rules/issues.sh lib/rules/design.sh; do
+  for f in bin/aps lib/output.sh lib/lint.sh lib/orchestrate.sh lib/audit.sh lib/scaffold.sh lib/rules/common.sh lib/rules/module.sh lib/rules/index.sh lib/rules/workitem.sh lib/rules/issues.sh lib/rules/design.sh; do
     download_root "$f" "$TARGET/$f"
   done
   chmod +x "$TARGET/bin/aps"
