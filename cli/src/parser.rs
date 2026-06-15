@@ -388,9 +388,18 @@ pub fn normalize_status(raw: &str, fallback: &str) -> String {
         .skip_while(|c| !c.is_ascii_alphabetic())
         .collect();
 
-    for known in ["Complete", "In Progress", "Ready", "Draft", "Blocked"] {
-        if stripped.starts_with(known) {
-            return known.to_string();
+    const ALIASES: &[(&str, &str)] = &[
+        ("Complete", "Complete"),
+        ("Done", "Complete"),
+        ("In Progress", "In Progress"),
+        ("Ready", "Ready"),
+        ("Proposed", "Draft"),
+        ("Draft", "Draft"),
+        ("Blocked", "Blocked"),
+    ];
+    for (prefix, canonical) in ALIASES {
+        if stripped.starts_with(prefix) {
+            return canonical.to_string();
         }
     }
     "Unknown".to_string()
@@ -544,7 +553,10 @@ mod tests {
     #[test]
     fn status_normalization_matches_bash() {
         assert_eq!(normalize_status("Complete 2026-04-26", "Ready"), "Complete");
+        assert_eq!(normalize_status("Done 2026-04-26", "Ready"), "Complete");
         assert_eq!(normalize_status("— Complete", "Ready"), "Complete");
+        assert_eq!(normalize_status("— Done", "Ready"), "Complete");
+        assert_eq!(normalize_status("Proposed", "Ready"), "Draft");
         assert_eq!(normalize_status("In Progress", "Ready"), "In Progress");
         assert_eq!(normalize_status("", "Draft"), "Draft");
         assert_eq!(normalize_status("Shipped", "Ready"), "Unknown");

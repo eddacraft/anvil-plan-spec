@@ -80,6 +80,21 @@ Work items are **execution authority** — permission to make changes.
 - **Expected Outcome:** Testable/observable result
 - **Validation:** Command to verify completion
 
+### Status Vocabulary
+
+Canonical values: `Draft`, `Ready`, `In Progress`, `Complete`, `Blocked`.
+
+Accepted aliases (tools normalize these internally; do not rewrite your files):
+
+- `Proposed` → `Draft` (not yet actionable)
+- `Done` → `Complete` (terminal / compacted items)
+
+Terminal compaction may also use `Merged`, `Released`, or `Shipped`; lint treats
+them like `Complete`/`Done` for required-field exemptions.
+
+Flow: `Draft` → `Ready` → `In Progress` → `Complete`. Only `aps start` and
+`aps complete` change status; edit manually to reset or block.
+
 ### Optional Fields
 
 - **Scope/Non-scope:** What will and won't change
