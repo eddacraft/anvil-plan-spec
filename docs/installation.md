@@ -160,15 +160,18 @@ Your specs are preserved -- the updater only replaces templates, rules,
 the CLI, and skill files. It does not touch your `index.aps.md`, module
 specs, or action steps.
 
-**Updated files:**
+**Updated files** (only those a project actually has — a minimal install has no
+vendored CLI to refresh):
 
-- `bin/aps` + `lib/` (CLI: lint, init, update, migrate, next, start, complete, graph)
 - `plans/aps-rules.md` (agent guidance — APS-managed)
 - `plans/modules/.module.template.md`, `.simple.template.md`, `.index-monorepo.template.md`
 - `plans/execution/.actions.template.md`
-- `aps-planning/` (skill + scripts)
-- Agent definitions for any AI tools you selected during `aps init`
-  (`.claude/agents/`, `.github/agents/`, `.opencode/agents/`, etc.)
+- The vendored CLI (`.aps/bin/aps` + `.aps/lib/`) **only if** you installed it
+  with `--local-cli`; otherwise the global `aps` binary is updated separately
+  (see [Global Install](#global-install))
+- `aps-planning/` skill + scripts, and agent definitions for any AI tools you
+  added (`.claude/agents/`, `.github/agents/`, `.opencode/agents/`, etc.) —
+  only when present
 
 **Preserved:** your `plans/index.aps.md`, module specs, `plans/project-context.md`,
 `plans/issues.md`, action plans, and anything under `plans/decisions/` or
@@ -239,27 +242,28 @@ Or follow the [Manual Setup](#manual-setup) steps below.
 
 ## Manual Setup
 
-If you prefer to set things up by hand:
+If you prefer to set things up by hand (binary-first, the same shape `aps init`
+produces):
 
-1. Copy `bin/aps` and `lib/` into your project (or `aps-install --global`)
+1. Install the global `aps` binary (see [Release Channels](#release-channels)),
+   or vendor the bash CLI by copying `bin/aps` + `lib/` into `.aps/` only if you
+   need an air-gapped / pinned toolchain
 2. Copy the contents of `scaffold/plans/` into your project's `plans/`
-3. Copy `scaffold/aps-planning/` for the Claude Code skill
-4. Copy agent definitions from `scaffold/agents/<tool>/` for any AI tools you use
-5. Edit `plans/index.aps.md` to define your plan's scope and modules
-6. Create modules by copying templates (remove the leading dot from filenames)
-7. Add Work Items when a module is ready for implementation
+3. Add `.aps/config.yml` with `cli_version`, `plans_dir`, `docs_dir`, and
+   `tooling_root` (the project contract — see above)
+4. Edit `plans/index.aps.md` to define your plan's scope and modules
+5. Create modules by copying templates (remove the leading dot from filenames)
+6. Add Work Items when a module is ready for implementation
+7. Add tool skills/agents (Claude Code, Codex, …) later with `aps setup <tool>`
 
 ## What Gets Installed
 
-The install script creates the following structure in your project:
+`aps init` is **binary-first and minimal** (D-034 / INSTALL-018): the global
+`aps` binary on your PATH is the CLI, so a fresh project gets only planning
+content plus the project contract — no vendored CLI tree, no root `bin/` or
+`lib/`:
 
 ```text
-bin/
-└── aps                              # CLI (lint, init, update, migrate,
-                                     #      next, start, complete, graph)
-
-lib/                                 # CLI internals (parsers, rules, output)
-
 plans/
 ├── aps-rules.md                     # Agent guidance (APS-managed)
 ├── project-context.md               # Project-specific context (you own this)
@@ -271,20 +275,27 @@ plans/
 │   └── .index-monorepo.template.md  # Index for monorepos
 ├── execution/
 │   └── .actions.template.md         # Action plan template
-└── decisions/                       # ADRs (optional, empty by default)
+├── decisions/                       # ADRs (optional, empty by default)
+└── designs/                         # Technical designs (optional)
 
-aps-planning/
-├── SKILL.md                         # Planning skill (core rules)
-├── reference.md                     # APS format reference
-├── examples.md                      # Real-world examples
-├── hooks.md                         # Hook configuration guide
-└── scripts/                         # Hook install + session scripts
+.aps/
+└── config.yml                       # Project contract (cli_version, paths) — required
 ```
 
-`aps init` may additionally install agent definitions for each AI tool you
-opt into (`.claude/agents/`, `.github/agents/`, `.opencode/agents/`,
-`.codex/config.toml` overlays, or Gemini skills) — the prompt during `init`
-controls this.
+Everything else is **opt-in** — a default `aps init` writes none of it:
+
+```text
+.aps/bin/aps + .aps/lib/   # Vendored bash CLI — only with --local-cli / --bash
+                           #   (air-gapped or pinned toolchains)
+.aps/scripts/              # Hook scripts — only with --hooks
+.claude/skills/, .claude/agents/, .github/agents/, .opencode/agents/,
+.codex/config.toml, .gemini/ …   # Tool integrations — via `aps setup <tool>`
+```
+
+Add any of these after init with `aps setup` (see
+[Add Integrations](#add-integrations-aps-setup)). `.aps/config.yml` is the only
+required `.aps/` file; `.aps/bin/` is optional and present only when you vendor
+the CLI.
 
 `.aps/context/` is created on first `aps start` and holds ephemeral context
 packages — it's added to `.gitignore` automatically.

@@ -486,5 +486,24 @@ for kw in 'crates.io' 'Scoop' 'binstall'; do
 done
 pass
 
+# Test 40: binary-first project init — docs + picker reflect no default vendoring (INSTALL-018)
+echo -n "Test: binary-first project init... "
+DOCS="$PROJECT_ROOT/docs/installation.md"
+INSTALL="$PROJECT_ROOT/scaffold/install"
+# "What Gets Installed" leads with binary-first minimal, marks .aps/config.yml required
+grep -qi 'binary-first and minimal' "$DOCS" || fail "docs missing binary-first minimal framing"
+grep -q 'config.yml.*required\|required.*config.yml' "$DOCS" || fail "docs do not mark config.yml required"
+# Vendored CLI is documented as opt-in (--local-cli), not default
+grep -q 'only with --local-cli' "$DOCS" || fail "docs do not mark vendored CLI opt-in"
+# Manual setup no longer tells users to copy bin/ + lib/ as the default step
+grep -q 'Copy .bin/aps. and .lib/. into your project' "$DOCS" \
+  && fail "manual setup still defaults to vendoring bin/ + lib/"
+# TTY picker + non-interactive next-steps offer the global CLI before repo init
+cli_line=$(grep -n 'Install the APS CLI on this machine' "$INSTALL" | head -1 | cut -d: -f1)
+init_line=$(grep -n 'Initialize APS planning in this repository' "$INSTALL" | head -1 | cut -d: -f1)
+[[ -n "$cli_line" && -n "$init_line" && "$cli_line" -lt "$init_line" ]] \
+  || fail "picker should offer CLI install before repo init"
+pass
+
 echo ""
 echo -e "${GREEN}All tests passed!${NC}"

@@ -689,7 +689,20 @@ Notes on schema:
 - **Dependencies:** INSTALL-011, INSTALL-014, INSTALL-015
 - **Files:** scaffold/install, lib/scaffold.sh, cli/src/scaffold.rs,
   docs/installation.md, test/run.sh
-- **Status:** Draft
+- **Status:** Complete: 2026-06-15
+- **Results:** The binary-first mechanics were already delivered by INSTALL-011
+  (minimal bash `aps init` — no root `bin/`/`lib/`, vendoring gated behind
+  `--local-cli`/`--bash`) and INSTALL-015 (binary-first global install). The
+  Rust path never vendored a CLI tree (`scaffold.rs` writes plans + config
+  only; `deselected_components_are_not_written` covers it), and `aps setup cli`
+  already copies the running binary to `~/.aps/bin`. The installer picker and
+  non-interactive next-steps already offer "Install the APS CLI" before
+  "Initialize APS planning". This item reconciled the lagging documentation:
+  `docs/installation.md` "What Gets Installed" now leads with the binary-first
+  minimal layout (`plans/` + required `.aps/config.yml`; `.aps/bin/` optional),
+  "Manual Setup" leads with the global binary, and the update file list marks
+  the vendored CLI as `--local-cli`-only. Test 40 asserts the docs + picker
+  reflect no default vendoring. Full suite + markdownlint green.
 
 ## Execution Strategy
 
