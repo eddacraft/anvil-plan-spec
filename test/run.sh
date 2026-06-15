@@ -420,5 +420,30 @@ grep -qE '^cli_version:' "$FIX" || fail "fixture lacks cli_version"
 grep -qE '^cli_version:' "$PROJECT_ROOT/.aps/config.yml" || fail "repo .aps/config.yml missing cli_version"
 pass
 
+# Test 38: runtime project config discovery — alternate plans_dir + --strict (INSTALL-016)
+echo -n "Test: runtime config discovery... "
+DISC=$(mktemp -d)
+mkdir -p "$DISC/docs/plans" "$DISC/.aps"
+cp "$PROJECT_ROOT/scaffold/plans/index.aps.md" "$DISC/docs/plans/index.aps.md"
+printf 'cli_version: %s\nplans_dir: docs/plans/\n' "${APS_CLI_VERSION:-0.3.0}" > "$DISC/.aps/config.yml"
+# `aps lint` with no args discovers plans_dir and lints the alternate tree
+( cd "$DISC" && "$APS" lint >/dev/null 2>&1 ) || fail "lint did not discover alternate plans_dir"
+# Mismatched cli_version: warns but succeeds without --strict, fails with it
+printf 'cli_version: 9.9.9\nplans_dir: docs/plans/\n' > "$DISC/.aps/config.yml"
+disc_warn=$( cd "$DISC" && "$APS" lint 2>&1 || true )
+echo "$disc_warn" | grep -qi "pins cli_version 9.9.9" || fail "no cli_version mismatch warning"
+( cd "$DISC" && "$APS" lint >/dev/null 2>&1 ) || fail "non-strict mismatch should still pass"
+if ( cd "$DISC" && "$APS" lint --strict >/dev/null 2>&1 ); then
+  fail "--strict should fail on cli_version mismatch"
+fi
+# APS_PLANS overrides discovery (MCP/manual escape hatch)
+( cd "$DISC" && APS_PLANS=docs/plans "$APS" lint >/dev/null 2>&1 ) || fail "APS_PLANS override failed"
+# A bare repo with no config falls back to plans/
+NOCFG=$(mktemp -d); mkdir -p "$NOCFG/plans"
+cp "$PROJECT_ROOT/scaffold/plans/index.aps.md" "$NOCFG/plans/index.aps.md"
+( cd "$NOCFG" && "$APS" lint >/dev/null 2>&1 ) || fail "fallback to plans/ failed"
+rm -rf "$DISC" "$NOCFG"
+pass
+
 echo ""
 echo -e "${GREEN}All tests passed!${NC}"

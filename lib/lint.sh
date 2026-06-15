@@ -147,14 +147,19 @@ lint_file() {
 
 # Main lint command
 cmd_lint() {
-  local target="plans"
+  local target=""
   local json_output=false
+  local strict=false
 
   # Parse arguments
   while [[ $# -gt 0 ]]; do
     case $1 in
       --json)
         json_output=true
+        shift
+        ;;
+      --strict)
+        strict=true
         shift
         ;;
       --help|-h)
@@ -168,6 +173,7 @@ Arguments:
 
 Options:
   --json      Output results in JSON format
+  --strict    Fail on a cli_version mismatch with .aps/config.yml
   --help      Show this help
 
 Exit codes:
@@ -192,6 +198,12 @@ EOF
         ;;
     esac
   done
+
+  # Default to the discovered plans_dir (INSTALL-016); explicit target wins.
+  if [[ -z "$target" ]]; then
+    target="$(aps_default_plans)"
+    aps_check_cli_version "$strict"
+  fi
 
   # Validate target exists
   if [[ ! -e "$target" ]]; then

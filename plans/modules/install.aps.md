@@ -615,7 +615,23 @@ Notes on schema:
 - **Files:** cli/src/config.rs, cli/src/lint.rs, cli/src/next.rs, cli/src/main.rs,
   lib/lint.sh, lib/orchestrate.sh, lib/audit.sh, lib/rules/common.sh,
   docs/usage.md, test/fixtures/, test/run.sh
-- **Status:** Draft
+- **Status:** Complete: 2026-06-15
+- **Results:** Shared discovery walks up from cwd for `.aps/config.yml` and
+  defaults the plan root to its `plans_dir` (fallback `plans/`); explicit
+  `--plans`/target and `APS_PLANS` still win, in that order. Rust:
+  `config::{discover_project, default_plans, check_cli_version}` plus a global
+  `--strict` flag wired into `lint` and `next` (the only project-scoped Rust
+  commands today). Bash: `aps_find_config`/`aps_config_get`/`aps_default_plans`/
+  `aps_check_cli_version` in `lib/rules/common.sh`, wired into `lint`, `next`,
+  `start`, `complete`, `graph`, and `audit` with a `--strict` flag each. A
+  `cli_version` pin mismatch warns; `--strict` (or `APS_STRICT=1`) exits
+  non-zero (Rust code 2, bash 1) for CI. The top-scalar reader tolerates both
+  the flat and nested config shapes. New Rust tests (discover/strict/nested)
+  and bash Test 38 cover alternate `plans_dir`, the version warning, `--strict`
+  failure, the `APS_PLANS` override, and the bare-repo fallback. docs/usage.md
+  documents the resolution order. cargo test (85) + bash suite green; fmt +
+  clippy + markdownlint clean. Monorepo package-local nested-index discovery
+  remains a MONO-module follow-up.
 
 ### INSTALL-017: Migration path from vendored CLI to global binary
 

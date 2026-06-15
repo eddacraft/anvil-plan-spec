@@ -305,7 +305,7 @@ orch_context_package() {
 }
 
 cmd_next() {
-  local plan_root="plans"
+  local plan_root="" strict=false
   local module_filter=""
 
   while [[ $# -gt 0 ]]; do
@@ -314,6 +314,10 @@ cmd_next() {
         plan_root="${2:-}"
         [[ -n "$plan_root" ]] || { error "--plans requires a directory"; return 1; }
         shift 2
+        ;;
+      --strict)
+        strict=true
+        shift
         ;;
       --help|-h)
         cat <<EOF
@@ -340,6 +344,11 @@ EOF
         ;;
     esac
   done
+
+  if [[ -z "$plan_root" ]]; then
+    plan_root="$(aps_default_plans)"
+    aps_check_cli_version "$strict"
+  fi
 
   if [[ ! -d "$plan_root" ]]; then
     error "Path not found: $plan_root"
@@ -497,7 +506,7 @@ orch_append_learning() {
 }
 
 cmd_start() {
-  local plan_root="plans"
+  local plan_root="" strict=false
   local id=""
 
   while [[ $# -gt 0 ]]; do
@@ -506,6 +515,10 @@ cmd_start() {
         plan_root="${2:-}"
         [[ -n "$plan_root" ]] || { error "--plans requires a directory"; return 1; }
         shift 2
+        ;;
+      --strict)
+        strict=true
+        shift
         ;;
       --help|-h)
         cat <<EOF
@@ -539,6 +552,11 @@ EOF
   done
 
   [[ -n "$id" ]] || { error "Usage: aps start <ID>"; return 1; }
+
+  if [[ -z "$plan_root" ]]; then
+    plan_root="$(aps_default_plans)"
+    aps_check_cli_version "$strict"
+  fi
 
   if [[ ! -d "$plan_root" ]]; then
     error "Path not found: $plan_root"
@@ -611,7 +629,7 @@ EOF
 }
 
 cmd_complete() {
-  local plan_root="plans"
+  local plan_root="" strict=false
   local id=""
   local learning=""
 
@@ -621,6 +639,10 @@ cmd_complete() {
         plan_root="${2:-}"
         [[ -n "$plan_root" ]] || { error "--plans requires a directory"; return 1; }
         shift 2
+        ;;
+      --strict)
+        strict=true
+        shift
         ;;
       --learning)
         learning="${2:-}"
@@ -659,6 +681,11 @@ EOF
   done
 
   [[ -n "$id" ]] || { error "Usage: aps complete <ID>"; return 1; }
+
+  if [[ -z "$plan_root" ]]; then
+    plan_root="$(aps_default_plans)"
+    aps_check_cli_version "$strict"
+  fi
 
   if [[ ! -d "$plan_root" ]]; then
     error "Path not found: $plan_root"
@@ -709,7 +736,7 @@ EOF
 }
 
 cmd_graph() {
-  local plan_root="plans"
+  local plan_root="" strict=false
   local module_filter=""
 
   while [[ $# -gt 0 ]]; do
@@ -718,6 +745,10 @@ cmd_graph() {
         plan_root="${2:-}"
         [[ -n "$plan_root" ]] || { error "--plans requires a directory"; return 1; }
         shift 2
+        ;;
+      --strict)
+        strict=true
+        shift
         ;;
       --help|-h)
         cat <<EOF
@@ -745,6 +776,11 @@ EOF
         ;;
     esac
   done
+
+  if [[ -z "$plan_root" ]]; then
+    plan_root="$(aps_default_plans)"
+    aps_check_cli_version "$strict"
+  fi
 
   if [[ ! -d "$plan_root" ]]; then
     error "Path not found: $plan_root"
