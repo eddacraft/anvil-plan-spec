@@ -74,7 +74,7 @@ release narratives live in [`plans/releases/`](./releases/).
 
 | Module                                        | Purpose                                                   | Status   |
 | --------------------------------------------- | --------------------------------------------------------- | -------- |
-| [spec](./modules/spec.aps.md)                 | Canonical vocabulary + schema (status reconciliation)     | Draft    |
+| [spec](./modules/spec.aps.md)                 | Canonical vocabulary + schema (status reconciliation)     | Complete |
 | [tasks](./modules/tasks.aps.md)               | Claude Code Tasks integration                             | Complete |
 | [examples](./modules/examples.aps.md)         | Additional worked examples                                | Draft    |
 | [prompts](./modules/prompts.aps.md)           | Tool-specific prompt variants                             | Draft    |
@@ -132,7 +132,8 @@ These are explicitly out of scope:
 - **D-023:** Commands fully dropped — _decided: yes, skills only, no `.claude/commands/` shipped_
 - **D-024:** aps-rules.md split — _decided: `aps-rules.md` (APS-managed) + `project-context.md` (user-owned)_
 - **D-025:** designs/ and issues.md into plans/ — _decided: single planning content root_
-- **D-026:** Promote `spec` module from Long Term to Near Term — _decided: yes, status vocabulary divergence with anvil-001 needs formal resolution; see [spec.aps.md](./modules/spec.aps.md) D-026 for the open Draft↔Proposed / Complete↔Done question_
+- **D-026:** Promote `spec` module from Long Term to Near Term — _decided: yes; status vocabulary resolved via SPEC-001 (see D-037)_
+- **D-037:** Status vocabulary aliases — _decided 2026-06-15: Approach A — canonical `Draft / Ready / In Progress / Complete / Blocked`; accept `Proposed→Draft` and `Done→Complete` as aliases without rewriting files. See [spec.aps.md](./modules/spec.aps.md)_
 - **D-027:** Promote `compound` from Draft to Ready — _decided: yes, anvil-001 surveyed prior art (completed/ archive, releases/ narrative, completed-index roll-up) makes the work concrete; see [compound.aps.md](./modules/compound.aps.md)_
 - **D-028:** Add release planning as an APS addon — _decided: yes, extract pattern from anvil-001 trial (`plans/releases/v0.3.0-beta.md`); see `release-planning.aps.md`_
 - **D-029:** Introduce conductor / crosscutting module type — _trialing. Release planning is the first use case; revisit after trial_

@@ -72,8 +72,10 @@ orch_normalize_status() {
 
   case "$raw" in
     Complete*) echo "Complete" ;;
+    Done*) echo "Complete" ;;
     "In Progress"*) echo "In Progress" ;;
     Ready*) echo "Ready" ;;
+    Proposed*) echo "Draft" ;;
     Draft*) echo "Draft" ;;
     Blocked*) echo "Blocked" ;;
     *) echo "Unknown" ;;

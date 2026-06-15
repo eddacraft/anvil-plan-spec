@@ -154,4 +154,18 @@ if output=$("$APS" graph nope --plans "$WORK_PLANS" 2>&1); then
 fi
 assert_contains "$output" "No work items found for module: nope"
 
+# --- status vocabulary aliases (SPEC-001 / D-026 Approach A) ---
+
+# Proposed module status maps to Draft — not actionable even with Ready items
+if output=$("$APS" next proposed --plans "$PLANS" 2>&1); then
+  printf 'Expected proposed module lookup to fail\n' >&2
+  exit 1
+fi
+assert_contains "$output" "No ready work item found for module: proposed"
+
+# Done dependency maps to Complete — unblocks the next Ready item
+output=$("$APS" next zstatus --plans "$PLANS")
+assert_contains "$output" "ZSTAT-002: Ready item behind Done dependency"
+assert_contains "$output" "Dependencies: ZSTAT-001"
+
 printf 'orchestrate tests passed\n'

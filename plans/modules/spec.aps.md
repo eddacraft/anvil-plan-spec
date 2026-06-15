@@ -2,9 +2,9 @@
 
 | ID   | Owner  | Priority | Status |
 | ---- | ------ | -------- | ------ |
-| SPEC | @aneki | medium   | Draft  |
+| SPEC | @aneki | medium   | Complete |
 
-**Last reviewed:** 2026-05-12
+**Last reviewed:** 2026-06-15
 
 ## Purpose
 
@@ -72,22 +72,11 @@ incremental — both vocabularies exist side-by-side today.
 
 ## Decisions
 
-- **D-026:** Status vocabulary — **unresolved.** Two viable options:
-  - **A. Accept both vocabularies as aliases.** Canonical APS continues to be
-    `Draft / Ready / In Progress / Complete / Blocked`. Lint and orchestrate
-    accept `Proposed → Draft` and `Done → Complete` as synonyms and never
-    rewrite the form the author chose. Lowest disruption to existing users
-    and to anvil-001 (which already aliases the other direction). Cost: the
-    "two ways to say the same thing" surface persists indefinitely.
-  - **B. Migrate canonical to `Proposed / Done`.** Templates, lint, CLI,
-    tests, `aps-rules.md`, and `orch_normalize_status` all switch. Provide
-    an `aps migrate --status-vocab` flag for in-place rewrites. anvil-001
-    drops their aliases entirely once migrated. Cleaner long-term, breaks
-    every published spec that uses the legacy form.
-
-  Recommendation: **A** for v0.x (low cost, unblocks anvil-001 alignment),
-  with a follow-up review when the spec hits v1.0 and we can take a more
-  opinionated stance.
+- **D-026:** Status vocabulary — _decided 2026-06-15: **Approach A** — canonical
+  APS remains `Draft / Ready / In Progress / Complete / Blocked`. Lint and
+  orchestrate accept `Proposed → Draft` and `Done → Complete` as aliases and
+  never rewrite the form the author chose. Revisit at v1.0 for a more
+  opinionated stance._
 
 - **D-027:** `Last reviewed:` metadata — **proposed.** Make the field
   optional but documented. Lint warns when a module has been in `Ready` or
@@ -115,12 +104,16 @@ incremental — both vocabularies exist side-by-side today.
 - **Dependencies:** D-026
 - **Files:** lib/orchestrate.sh, lib/rules/module.sh, lib/rules/workitem.sh,
   scaffold/plans/aps-rules.md, docs/usage.md, test/fixtures/, CHANGELOG.md
+- **Status:** Complete: 2026-06-15 — D-026 Approach A. `orch_normalize_status`
+  and Rust `normalize_status` map `Proposed→Draft`, `Done→Complete`; docs and
+  `scaffold/plans/aps-rules.md` document canonical + alias set; orchestrate
+  fixture tests cover Proposed modules and Done dependencies.
 
 ## Ready Checklist
 
 - [x] Purpose and scope are clear
 - [x] Dependencies identified
-- [ ] D-026 resolved (Approach A or B)
+- [x] D-026 resolved (Approach A)
 - [ ] D-027 resolved (`Last reviewed:` semantics)
 - [x] Work items defined with validation
 

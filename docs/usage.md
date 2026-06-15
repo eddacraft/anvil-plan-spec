@@ -127,6 +127,21 @@ Draft ──→ Ready ──→ In Progress ──→ Complete
               └───────────┘  (reset only by manual edit)
 ```
 
+**Canonical status vocabulary:** `Draft`, `Ready`, `In Progress`, `Complete`,
+`Blocked`.
+
+**Accepted aliases** (normalized internally, never rewritten in your files):
+
+| Alias      | Canonical | Notes                                      |
+| ---------- | --------- | ------------------------------------------ |
+| `Proposed` | `Draft`   | anvil-001 and other adopters               |
+| `Done`     | `Complete`| Terminal / compacted items                 |
+
+Lint also treats `Merged`, `Released`, and `Shipped` as terminal completion
+states (see work-item compaction). Orchestration maps `Done` to `Complete` for
+dependency checks; `Proposed` maps to `Draft` (module not actionable until
+`Ready`).
+
 | Command        | Transition enforced                                     |
 | -------------- | ------------------------------------------------------- |
 | `aps next`     | None — read-only                                        |
@@ -153,7 +168,8 @@ $ aps next --plans docs/plans
 `next` walks every work item across every module, picks the first whose status
 is `Ready` and whose dependencies (work-item IDs _and_ module IDs) all resolve
 to Complete. Decision dependencies (`D-NNN`) are treated as resolved inline in
-the plan text. Items in `Complete`, `Draft`, or `Blocked` modules are skipped.
+the plan text. Items in `Complete`, `Draft` (including `Proposed`), or
+`Blocked` modules are skipped.
 
 ### `aps start <ID>` — claim a work item
 
