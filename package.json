@@ -22,5 +22,6 @@
     "*.sh": [
       "bash -n"
     ]
-  }
+  },
+  "packageManager": "pnpm@11.6.0+sha256.a0162949d1ab19e12e8b3cd9f0f59ef02d7be74a28b806cf7f49fb7f4c07e5ce"
 }
