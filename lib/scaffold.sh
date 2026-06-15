@@ -280,6 +280,11 @@ write_config() {
   local config_dir="$target/.aps"
   mkdir -p "$config_dir"
 
+  # Ignore ephemeral CLI-generated context regardless of whether a local CLI
+  # was vendored (the global binary writes here too).
+  touch "$config_dir/.gitignore"
+  grep -qxF 'context/' "$config_dir/.gitignore" || printf 'context/\n' >> "$config_dir/.gitignore"
+
   local project_type="simple"
   local monorepo_tool="~"
   if [[ "$scope" == "monorepo" ]]; then
@@ -671,6 +676,7 @@ prompt_hooks() {
 cmd_init() {
   local target="."
   local opt_profile="" opt_scope="" opt_tools="" non_interactive=false
+  local local_cli=false install_hooks=false
 
   while [[ $# -gt 0 ]]; do
     case $1 in
@@ -679,6 +685,8 @@ cmd_init() {
       --scope) opt_scope="$2"; shift 2 ;;
       --tools) opt_tools="$2"; shift 2 ;;
       --non-interactive) non_interactive=true; shift ;;
+      --local-cli|--bash) local_cli=true; shift ;;
+      --hooks) install_hooks=true; shift ;;
       *) target="$1"; shift ;;
     esac
   done
@@ -765,35 +773,44 @@ cmd_init() {
 
   echo ""
 
-  # --- Step 4: Scaffold ---
+  # --- Step 4: Scaffold (minimal by default — INSTALL-011) ---
 
-  # CLI
-  v2_install_cli "$target"
-  info ".aps/bin/aps + .aps/lib/ (CLI)"
-
-  # Plans
+  # Plans (always — the irreducible core of an APS project)
   v2_install_plans "$target"
   v2_install_index "$target"
   info "plans/ (templates, rules, project-context, designs)"
 
-  # Hook scripts
-  v2_install_scripts "$target"
-  info ".aps/scripts/ (hook scripts)"
+  # CLI runtime — opt-in only. Default is the global `aps` binary on PATH;
+  # vendoring bash bin/ + lib/ into every project is no longer the default.
+  if $local_cli; then
+    v2_install_cli "$target"
+    info ".aps/bin/aps + .aps/lib/ (vendored bash CLI)"
+  fi
 
-  # Tool-specific files
+  # Hook scripts — opt-in only. Add later with `aps setup hooks`.
+  if $install_hooks; then
+    v2_install_scripts "$target"
+    info ".aps/scripts/ (hook scripts)"
+  fi
+
+  # Tool-specific files (skills/agents) — installed only for selected tools
   v2_install_tools "$target" "${selected_tools[@]}"
 
-  # Config
+  # Config (always — the per-project contract)
   write_config "$target" "$profile" "$scope" "${selected_tools[@]}"
   info ".aps/config.yml (install configuration)"
 
   # Print layout
   echo ""
   echo "  .aps/"
-  echo "  ├── config.yml                       <- Install configuration"
-  echo "  ├── bin/aps                           <- CLI (lint, init, update, migrate)"
-  echo "  ├── lib/                              <- CLI internals"
-  echo "  └── scripts/                          <- Hook scripts"
+  echo "  ├── config.yml                       <- Project contract (cli_version, paths)"
+  if $local_cli; then
+    echo "  ├── bin/aps                           <- Vendored CLI (lint, init, update)"
+    echo "  ├── lib/                              <- CLI internals"
+  fi
+  if $install_hooks; then
+    echo "  └── scripts/                          <- Hook scripts"
+  fi
   echo ""
   echo "  plans/"
   echo "  ├── aps-rules.md                      <- Agent guidance (APS-managed)"
@@ -818,8 +835,16 @@ cmd_init() {
     info "Next: edit plans/project-context.md with your project details"
   fi
 
-  # PATH setup
-  v2_setup_path "$target"
+  if ! $local_cli; then
+    echo ""
+    info "This repo uses the global 'aps' binary. Add hooks, agents, or a"
+    echo "  vendored CLI later with: aps setup"
+  fi
+
+  # PATH setup (only relevant when a project-local CLI was vendored)
+  if $local_cli; then
+    v2_setup_path "$target"
+  fi
 
   # --- Step 6: Verify ---
   echo ""
@@ -850,13 +875,18 @@ aps init - Create APS structure in a new project (v2 layout)
 Usage:
   aps init [target-dir] [options]
 
-Creates .aps/ tooling root, plans/, and tool-specific files via an
-interactive wizard. Non-interactive mode available via flags.
+Creates minimal planning content (plans/ + .aps/config.yml) via an
+interactive wizard. By default it does NOT vendor a project-local CLI or
+install hooks — the global 'aps' binary on PATH drives the repo. Add those
+later with 'aps setup'. Non-interactive mode available via flags.
 
 Options:
   --profile PROFILE     solo | team | agent
   --scope SCOPE         small | module | multi | monorepo
   --tools TOOLS         Comma-separated: claude-code,copilot,codex,opencode,gemini,generic
+  --local-cli, --bash   Also vendor the bash CLI into .aps/bin + .aps/lib
+                        (for air-gapped or pinned-toolchain projects)
+  --hooks               Also install hook scripts into .aps/scripts
   --non-interactive     Use defaults for any unspecified options
   --help                Show this help
 
@@ -867,7 +897,8 @@ Examples:
   aps init                                        # Interactive wizard
   aps init --profile solo --scope small --tools claude-code  # Non-interactive
   aps init ./my-project                           # Init in a subdirectory
-  aps init --non-interactive                      # All defaults (solo, small, generic)
+  aps init --non-interactive                      # Minimal default (solo, small, generic)
+  aps init --non-interactive --local-cli          # Also vendor the bash CLI
 EOF
 }
 

@@ -100,13 +100,35 @@ $APS lint "$PROJECT_ROOT/plans/" > /dev/null 2>&1 && pass || fail "our own plans
 echo -n "Test: orchestrate (next/start/complete)... "
 bash "$SCRIPT_DIR/orchestrate.sh" > /dev/null 2>&1 && pass || fail "orchestrate tests failed"
 
-# Test 17: Init installs CLI support files and ignores generated context
-echo -n "Test: init installs orchestration support... "
+# Test 17: Minimal init by default; --local-cli opts into vendored runtime (INSTALL-011)
+echo -n "Test: init is minimal by default... "
 INIT_DIR=$(mktemp -d)
 trap 'rm -rf "$INIT_DIR"' EXIT
 APS_LOCAL="$PROJECT_ROOT" $APS init "$INIT_DIR" --profile solo --scope small --tools generic > /dev/null 2>&1 || fail "init failed"
-[[ -f "$INIT_DIR/.aps/lib/orchestrate.sh" ]] || fail "orchestrate lib not installed"
+# Core planning content + project contract are always present
+[[ -f "$INIT_DIR/plans/index.aps.md" ]] || fail "plans/index.aps.md missing"
+[[ -f "$INIT_DIR/plans/aps-rules.md" ]] || fail "plans/aps-rules.md missing"
+[[ -f "$INIT_DIR/plans/project-context.md" ]] || fail "plans/project-context.md missing"
+[[ -f "$INIT_DIR/.aps/config.yml" ]] || fail ".aps/config.yml missing"
 grep -qF 'context/' "$INIT_DIR/.aps/.gitignore" || fail "context ignore missing"
+# Minimal footprint: no vendored CLI, no hooks, no v1 scatter
+[[ ! -d "$INIT_DIR/.aps/lib" ]] || fail ".aps/lib/ vendored without --local-cli"
+[[ ! -d "$INIT_DIR/.aps/bin" ]] || fail ".aps/bin/ vendored without --local-cli"
+[[ ! -d "$INIT_DIR/.aps/scripts" ]] || fail "hooks installed without --hooks"
+[[ ! -d "$INIT_DIR/bin" ]] || fail "root bin/ created"
+[[ ! -d "$INIT_DIR/lib" ]] || fail "root lib/ created"
+[[ ! -d "$INIT_DIR/aps-planning" ]] || fail "root aps-planning/ created"
+[[ ! -d "$INIT_DIR/.claude/commands" ]] || fail ".claude/commands/ created"
+pass
+
+# Test 17b: --local-cli vendors the bash runtime; --hooks installs hook scripts
+echo -n "Test: init --local-cli vendors runtime... "
+LOCALCLI_DIR=$(mktemp -d)
+APS_LOCAL="$PROJECT_ROOT" $APS init "$LOCALCLI_DIR" --profile solo --scope small --tools generic --local-cli --hooks > /dev/null 2>&1 || fail "init --local-cli failed"
+[[ -f "$LOCALCLI_DIR/.aps/lib/orchestrate.sh" ]] || fail "orchestrate lib not installed under --local-cli"
+[[ -x "$LOCALCLI_DIR/.aps/bin/aps" ]] || fail ".aps/bin/aps not installed under --local-cli"
+[[ -d "$LOCALCLI_DIR/.aps/scripts" ]] || fail "hooks not installed under --hooks"
+rm -rf "$LOCALCLI_DIR"
 pass
 
 # Test 18: Generated agent artifacts and install include conductor
@@ -260,6 +282,25 @@ echo "$out" | grep -qi "setup is not available" || fail "--setup should gate on 
 # --upgrade against a dir with no plans/ fails fast before any network use
 out=$(cd "$(mktemp -d)" && bash "$INSTALL" --upgrade </dev/null 2>&1 || true)
 echo "$out" | grep -qi "nothing to upgrade" || fail "--upgrade did not reach upgrade path"
+pass
+
+# Test 33: curl installers init is minimal by default (INSTALL-011)
+echo -n "Test: curl installer init is minimal... "
+INSTALL="$PROJECT_ROOT/scaffold/install"
+INSTALL_PS1="$PROJECT_ROOT/scaffold/install.ps1"
+# No v1 scatter shipped by default: skill + legacy commands must be gone
+grep -qE 'commands/plan|aps-planning/SKILL' "$INSTALL" && fail "install still ships skill/commands by default"
+grep -qE 'commands/plan|aps-planning/SKILL' "$INSTALL_PS1" && fail "install.ps1 still ships skill/commands by default"
+# The project contract is written
+grep -q 'write_min_config' "$INSTALL" || fail "install missing write_min_config"
+grep -qF 'config.yml' "$INSTALL_PS1" || fail "install.ps1 missing config.yml"
+# Opt-in footprint flags exist on both
+for flag in --local-cli --hooks; do
+  grep -qF -- "$flag" "$INSTALL" || fail "install missing $flag"
+  grep -qF -- "$flag" "$INSTALL_PS1" || fail "install.ps1 missing $flag"
+done
+# The vendored CLI must only land under .aps/ now (not root bin/), gated by the flag
+grep -q 'USE_LOCAL_CLI' "$INSTALL" || fail "install missing USE_LOCAL_CLI gate"
 pass
 
 echo ""

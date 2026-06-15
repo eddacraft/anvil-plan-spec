@@ -26,11 +26,19 @@ curl -fsSL .../scaffold/install | bash -s -- --upgrade   # upgrade in place
 curl -fsSL .../scaffold/install | bash -s -- --setup claude-code   # add one integration
 ```
 
-`--init` is the full scaffold — plans, templates, skill, and a local copy of
-the CLI. After it, run `aps init` to launch the Ratatui-based onboarding
-wizard: it scaffolds your first plan, picks which AI agent ports to install
-(Claude Code / Codex / Copilot / OpenCode / Gemini), and writes
-`plans/project-context.md`.
+`--init` is **minimal by default**: it writes planning content (`plans/` with
+rules, templates, `project-context.md`, `issues.md`) and the `.aps/config.yml`
+project contract — nothing else. The global `aps` binary on your PATH drives
+the repo. Opt into a heavier footprint with flags:
+
+```bash
+curl -fsSL .../scaffold/install | bash -s -- --init --local-cli   # also vendor the bash CLI into .aps/
+curl -fsSL .../scaffold/install | bash -s -- --init --hooks       # also install hook scripts
+```
+
+Add hooks, agents, or tool skills any time after init with `aps setup`
+(see [usage](usage.md)). To pick AI agent ports interactively, run `aps init`
+from the installed CLI for the Ratatui onboarding wizard.
 
 ## Global Install
 
@@ -75,9 +83,11 @@ curl -fsSL https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaf
 curl -fsSL https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install | VERSION=v0.3.0 bash
 ```
 
-The installer prompts you to set up Claude Code hooks and PATH
-configuration. In non-interactive mode (piped without a terminal), it
-uses sensible defaults.
+By default `--init` does not install hooks or a project-local CLI. Pass
+`--hooks` to add hook scripts under `.aps/scripts/`, or `--local-cli`
+(alias `--bash`) to vendor the bash CLI into `.aps/bin` + `.aps/lib` for
+air-gapped or pinned-toolchain projects. In non-interactive mode (piped
+without a terminal), the minimal default is used.
 
 ## Update Existing Project
 
