@@ -1,0 +1,33 @@
+{
+    "version": "0.0.0",
+    "description": "Anvil Plan Spec — native CLI and TUI wizard for AI-assisted planning",
+    "homepage": "https://github.com/EddaCraft/anvil-plan-spec",
+    "license": "Apache-2.0",
+    "notes": [
+        "version + hash are placeholders until the first tagged release.",
+        "On release (see docs/installation.md 'Release channels' checklist):",
+        "  run 'scoop update aps' or 'autoupdate' against the new tag, which",
+        "  fills version from checkver and hash from the release SHA256SUMS.",
+        "One semver across all channels (D-036): the Scoop version must match",
+        "the GitHub release tag and the published cli_version."
+    ],
+    "architecture": {
+        "64bit": {
+            "url": "https://github.com/EddaCraft/anvil-plan-spec/releases/download/v0.0.0/aps-x86_64-pc-windows-gnu.zip",
+            "hash": "0000000000000000000000000000000000000000000000000000000000000000",
+            "bin": "aps.exe"
+        }
+    },
+    "checkver": "github",
+    "autoupdate": {
+        "architecture": {
+            "64bit": {
+                "url": "https://github.com/EddaCraft/anvil-plan-spec/releases/download/v$version/aps-x86_64-pc-windows-gnu.zip",
+                "hash": {
+                    "url": "https://github.com/EddaCraft/anvil-plan-spec/releases/download/v$version/SHA256SUMS",
+                    "regex": "$sha256\\s+aps-x86_64-pc-windows-gnu\\.zip"
+                }
+            }
+        }
+    }
+}

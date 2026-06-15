@@ -52,9 +52,11 @@ curl -fsSL https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaf
 & ([scriptblock]::Create((irm https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install.ps1))) --global
 ```
 
-This installs only the CLI (`bin/aps` + `lib/`) to `~/.aps/` and adds it
-to your shell PATH. No project files are created -- use `aps init` inside
-a project directory for that.
+This is **binary-first** (D-034): `--cli` installs the prebuilt native
+`aps` binary to `~/.aps/bin` and adds it to your shell PATH. It falls back to
+the bash/PowerShell CLI (`bin/aps` + `lib/`) only when no release binary exists
+for your platform, the download fails, or you force it with `--bash`. No
+project files are created -- use `aps init` inside a project directory for that.
 
 To use a custom location, set `APS_HOME`:
 
@@ -72,6 +74,40 @@ aps update --global
 ```
 
 To uninstall: remove `~/.aps/` and the PATH line from your shell config.
+
+## Release Channels
+
+The native `aps` binary is built for five targets (Linux x86_64/aarch64,
+macOS x86_64/aarch64, Windows x86_64) and published to GitHub releases. Every
+channel references the **same semver** as the release tag (D-036), and a
+project pins its toolchain with `cli_version` in `.aps/config.yml` — not a
+channel-specific pin.
+
+```bash
+# 1. Install script (binary-first) — pin an exact release with VERSION:
+VERSION=0.4.0 curl -fsSL .../scaffold/install | bash -s -- --cli
+
+# 2. cargo-binstall — fetch the prebuilt binary from GitHub releases (no build):
+cargo binstall aps-cli
+
+# 3. cargo install — build from source (requires the Rust toolchain):
+cargo install aps-cli            # once published to crates.io (see below)
+```
+
+On Windows, install via the script (`--cli` pulls `aps.exe`) or **Scoop**:
+
+```powershell
+scoop install https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/packaging/scoop/aps.json
+```
+
+> **crates.io status:** `cargo install aps-cli` / `cargo binstall aps-cli`
+> resolution from crates.io is **pending**. The crate depends on
+> `eddacraft-tui` via git, and crates.io requires every dependency to be
+> published there first. Until that lands, use the install script or Scoop;
+> `cargo binstall` also works directly from a tag once a release exists.
+
+Maintainers: the release bump checklist (tag → GitHub assets → crates.io →
+Scoop) lives in the header of `.github/workflows/release.yml`.
 
 ## Install Options
 

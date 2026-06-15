@@ -143,6 +143,59 @@ function Request-YesNo {
 
 # --- Global install functions ---
 
+function Get-ApsReleaseTarget {
+    <#
+    .SYNOPSIS
+        Map this machine to a published release target triple, or $null when
+        no Windows binary is available (caller falls back to the PowerShell CLI).
+    #>
+    $arch = $env:PROCESSOR_ARCHITECTURE
+    switch ($arch) {
+        "AMD64" { return "x86_64-pc-windows-gnu" }
+        default { return $null }
+    }
+}
+
+function Install-ApsBinary {
+    <#
+    .SYNOPSIS
+        Download the prebuilt aps.exe from GitHub releases into $DestDir.
+    .OUTPUTS
+        $true on success, $false on any failure (so callers can fall back).
+    #>
+    param([string]$DestDir)
+
+    $target = Get-ApsReleaseTarget
+    if (-not $target) {
+        Write-Warn "No release binary for $env:PROCESSOR_ARCHITECTURE; falling back to PowerShell CLI"
+        return $false
+    }
+
+    if ($Version -eq "main") {
+        $url = "https://github.com/EddaCraft/anvil-plan-spec/releases/latest/download/aps-$target.zip"
+    } else {
+        $v = $Version.TrimStart("v")
+        $url = "https://github.com/EddaCraft/anvil-plan-spec/releases/download/v$v/aps-$target.zip"
+    }
+
+    $tmp = Join-Path ([System.IO.Path]::GetTempPath()) ("aps-" + [System.IO.Path]::GetRandomFileName())
+    New-Item -ItemType Directory -Path $tmp -Force | Out-Null
+    try {
+        $zip = Join-Path $tmp "aps.zip"
+        Invoke-WebRequest -Uri $url -OutFile $zip -UseBasicParsing
+        Expand-Archive -Path $zip -DestinationPath $tmp -Force
+        New-Item -ItemType Directory -Path $DestDir -Force | Out-Null
+        Move-Item -Path (Join-Path $tmp "aps.exe") -Destination (Join-Path $DestDir "aps.exe") -Force
+        Write-Info "aps native binary ($target) installed to $DestDir\aps.exe"
+        return $true
+    } catch {
+        Write-Warn "Failed to download release binary from $url; falling back to PowerShell CLI"
+        return $false
+    } finally {
+        Remove-Item -Path $tmp -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
+
 function Set-ApsGlobalPath {
     <#
     .SYNOPSIS
@@ -189,33 +242,56 @@ function Install-ApsGlobal {
 
     Write-Step "Installing APS CLI to $ApsHome"
 
-    $cliAll = @(
-        "bin/aps.ps1",
-        "lib/Output.psm1",
-        "lib/Lint.psm1",
-        "lib/Scaffold.psm1",
-        "lib/rules/Common.psm1",
-        "lib/rules/Module.psm1",
-        "lib/rules/Index.psm1",
-        "lib/rules/WorkItem.psm1",
-        "lib/rules/Issues.psm1",
-        "lib/rules/Design.psm1"
-    )
-
-    foreach ($f in $cliAll) {
-        Invoke-DownloadRoot -Path $f -Destination (Join-Path $ApsHome $f)
+    # Binary-first (D-034 / INSTALL-015): install the native release binary by
+    # default; fall back to the PowerShell CLI when no binary is available or
+    # --bash is given.
+    $kind = "powershell"
+    $installedBinary = $false
+    if (-not $UseLocalCli) {
+        $installedBinary = Install-ApsBinary -DestDir (Join-Path $ApsHome "bin")
     }
 
-    Write-Info "bin/aps.ps1 + lib/ installed to $ApsHome"
+    if ($installedBinary) {
+        $kind = "binary"
+    } elseif ($UseBinary -and -not $UseLocalCli) {
+        # --binary requires the prebuilt binary: do not silently fall back.
+        Write-Err "--binary requested but no release binary is available for $env:PROCESSOR_ARCHITECTURE"
+        Write-Host "  Re-run without --binary to use the PowerShell CLI fallback."
+        exit 1
+    } else {
+        $cliAll = @(
+            "bin/aps.ps1",
+            "lib/Output.psm1",
+            "lib/Lint.psm1",
+            "lib/Scaffold.psm1",
+            "lib/rules/Common.psm1",
+            "lib/rules/Module.psm1",
+            "lib/rules/Index.psm1",
+            "lib/rules/WorkItem.psm1",
+            "lib/rules/Issues.psm1",
+            "lib/rules/Design.psm1"
+        )
+
+        foreach ($f in $cliAll) {
+            Invoke-DownloadRoot -Path $f -Destination (Join-Path $ApsHome $f)
+        }
+
+        Write-Info "bin/aps.ps1 + lib/ installed to $ApsHome"
+    }
 
     Set-ApsGlobalPath -ApsHome $ApsHome
 
     Write-Host ""
     Write-Step "Global installation complete"
     Write-Host ""
-    Write-Host "  $ApsHome\"
-    Write-Host "  +-- bin\aps.ps1      <- CLI (PowerShell)"
-    Write-Host "  +-- lib\             <- CLI libraries"
+    if ($kind -eq "binary") {
+        Write-Host "  $ApsHome\"
+        Write-Host "  +-- bin\aps.exe      <- CLI (native release binary)"
+    } else {
+        Write-Host "  $ApsHome\"
+        Write-Host "  +-- bin\aps.ps1      <- CLI (PowerShell)"
+        Write-Host "  +-- lib\             <- CLI libraries"
+    }
     Write-Host ""
     Write-Info "To create a new APS project:"
     Write-Host "  cd your-project; aps init"
