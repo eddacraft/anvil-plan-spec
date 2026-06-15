@@ -226,6 +226,50 @@ removed path is copied to `.aps/backup/<timestamp>/` first. Hook paths in
 APS-generated (e.g. a `lib/` mixing APS and your own scripts) are listed for
 manual review and left untouched.
 
+## Migrating to the Global Binary
+
+Projects that adopted APS before the binary-first model carry a vendored bash
+CLI (root `bin/` + `lib/`, or `.aps/bin` + `.aps/lib`) and often a direnv
+`PATH_add bin` entry. Move them onto the single global `aps` binary like so:
+
+1. **Diagnose** — `aps doctor` reports the global binary version, whether the
+   project's `cli_version` matches, any leftover vendored CLI trees, an
+   incomplete `~/.aps/lib/` (e.g. a runtime missing `audit.sh`), and stale
+   direnv entries. It only reads — safe to run anywhere.
+
+   ```bash
+   aps doctor
+   ```
+
+2. **Install the global binary** (if not already on PATH) — see
+   [Release Channels](#release-channels):
+
+   ```bash
+   curl -fsSL .../scaffold/install | bash -s -- --cli     # binary-first
+   ```
+
+3. **Pin the toolchain** — add `cli_version` to `.aps/config.yml` so the repo
+   declares the release it expects (see
+   [Project Config Contract](#project-config-contract-apsconfigyml)). `aps init`
+   stamps it on new projects; for older configs, add it by hand.
+
+4. **Remove the vendored bloat** — run `aps upgrade` (dry-run first), which
+   backs up and removes root `bin/`, `lib/`, and `.aps/lib/` per the rules
+   above.
+
+5. **Drop direnv activation (optional)** — once `aps` resolves from PATH, delete
+   the `PATH_add bin` line from `.envrc` and re-run `direnv allow`.
+
+**Bash-only / air-gapped users** can stay on the vendored runtime: keep it
+fresh with `scaffold/update --global` (or `aps update --global`), and re-run
+`aps doctor` — an incomplete `~/.aps/lib/` is reported as a problem.
+
+**CI** can switch from a git-SHA checkout of the bash CLI to a pinned release:
+install the binary for the `cli_version` in `.aps/config.yml`, then run `aps`
+directly (config discovery finds `plans_dir` — no `--plans` needed). Add
+`--strict` to fail the job on toolchain drift. See
+[usage → CI Integration](usage.md#ci-integration).
+
 ## Windows (PowerShell)
 
 ```powershell
