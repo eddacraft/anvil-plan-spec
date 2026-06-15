@@ -5,12 +5,34 @@ edition = "2024"
 license = "Apache-2.0"
 description = "Anvil Plan Spec — native Rust CLI and TUI wizard"
 repository = "https://github.com/EddaCraft/anvil-plan-spec"
+homepage = "https://github.com/EddaCraft/anvil-plan-spec"
+documentation = "https://github.com/EddaCraft/anvil-plan-spec/blob/main/docs/usage.md"
 readme = "../README.md"
+keywords = ["planning", "spec", "cli", "agents", "tui"]
+categories = ["command-line-utilities", "development-tools"]
+# BLOCKED (INSTALL-015): crates.io publish requires every dependency to carry a
+# crates.io version. `eddacraft-tui` is a git dependency that is not yet
+# published, so `cargo publish` / `cargo publish --dry-run` cannot succeed.
+# Flip to `true` once eddacraft-tui ships to crates.io (see docs/installation.md
+# "Release channels"). Until then, distribution is GitHub release binaries +
+# `cargo binstall` (configured below), which need no crates.io source publish.
 publish = false
 
 [[bin]]
 name = "aps"
 path = "src/main.rs"
+
+# cargo-binstall: fetch the prebuilt binary from GitHub releases instead of
+# compiling. Asset layout matches .github/workflows/release.yml
+# (aps-<target>.tar.gz on unix, aps-<target>.zip on Windows; binary at archive
+# root). One semver across channels — { version } is the release tag (D-036).
+[package.metadata.binstall]
+pkg-url = "{ repo }/releases/download/v{ version }/aps-{ target }.{ archive-format }"
+bin-dir = "{ bin }{ binary-ext }"
+pkg-fmt = "tgz"
+
+[package.metadata.binstall.overrides.x86_64-pc-windows-gnu]
+pkg-fmt = "zip"
 
 [dependencies]
 clap = { version = "4", features = ["derive"] }

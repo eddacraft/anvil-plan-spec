@@ -150,8 +150,13 @@ install_binary() {
     return 1
   fi
 
-  mkdir -p "$dest_dir"
-  mv "$tmp/aps" "$dest_dir/aps"
+  # Guard the install so a failure here cleans up $tmp and falls back to bash
+  # rather than aborting the whole script under `set -e`.
+  if ! mkdir -p "$dest_dir" || ! mv "$tmp/aps" "$dest_dir/aps"; then
+    warn "Failed to install release binary; falling back to bash CLI"
+    rm -rf "$tmp"
+    return 1
+  fi
   chmod +x "$dest_dir/aps"
   rm -rf "$tmp"
   info "aps native binary ($target) installed to $dest_dir/aps"
@@ -261,9 +266,14 @@ setup_global_path() {
   fi
 }
 
-# Global install: CLI only, add to shell PATH
+# Global install: CLI only, add to shell PATH.
+# Binary-first (D-034 / INSTALL-015): the global install ships the prebuilt
+# release binary by default. The bash CLI is the fallback — used when no
+# release binary exists for this platform, the download fails, or the user
+# forces it with --bash / --local-cli.
 install_global() {
   local aps_home="${APS_HOME:-$HOME/.aps}"
+  local kind="bash"
 
   echo ""
   echo -e "${BOLD}Anvil Plan Spec (APS)${NC}"
@@ -272,8 +282,13 @@ install_global() {
 
   step "Installing APS CLI to $aps_home"
 
-  if [[ "$USE_BINARY" == true ]] && install_binary "$aps_home/bin"; then
-    : # native binary installed; bash CLI not needed
+  if [[ "$USE_LOCAL_CLI" != true ]] && install_binary "$aps_home/bin"; then
+    kind="binary" # native release binary installed; bash CLI not needed
+  elif [[ "$USE_BINARY" == true && "$USE_LOCAL_CLI" != true ]]; then
+    # --binary requires the prebuilt binary: do not silently fall back.
+    error "--binary requested but no release binary is available for $(uname -s)/$(uname -m)"
+    echo "       Re-run without --binary to use the bash CLI fallback." >&2
+    exit 1
   else
     for f in bin/aps lib/output.sh lib/lint.sh lib/orchestrate.sh lib/audit.sh lib/scaffold.sh lib/rules/common.sh lib/rules/module.sh lib/rules/index.sh lib/rules/workitem.sh lib/rules/issues.sh lib/rules/design.sh; do
       download_root "$f" "$aps_home/$f"
@@ -287,9 +302,14 @@ install_global() {
   echo ""
   step "Global installation complete"
   echo ""
-  echo "  $aps_home/"
-  echo "  ├── bin/aps          <- CLI (bash)"
-  echo "  └── lib/             <- CLI libraries"
+  if [[ "$kind" == "binary" ]]; then
+    echo "  $aps_home/"
+    echo "  └── bin/aps          <- CLI (native release binary)"
+  else
+    echo "  $aps_home/"
+    echo "  ├── bin/aps          <- CLI (bash)"
+    echo "  └── lib/             <- CLI libraries"
+  fi
   echo ""
   info "To create a new APS project:"
   echo "  cd your-project && aps init"
@@ -554,10 +574,15 @@ Modes:
   --setup <tool>     Add a tool integration (claude-code, copilot, codex, ...)
 
 Options:
-  --binary           Prefer a prebuilt binary over the bash CLI
+  --binary           Require the prebuilt release binary (cli mode: no fallback)
+  --bash, --local-cli  Force the bash CLI: cli mode skips the binary; init mode
+                       vendors the bash CLI into .aps/bin + .aps/lib
   -g, --global       Alias for --cli
-  --local-cli, --bash  (init) Also vendor the bash CLI into .aps/bin + .aps/lib
   --hooks            (init) Also install hook scripts into .aps/scripts
+
+--cli is binary-first (D-034): it installs the native release binary and
+falls back to the bash CLI only when no binary exists for this platform or
+--bash is given.
 
 By default --init writes only planning content + .aps/config.yml; the global
 'aps' binary drives the repo. Add hooks/agents/tool skills with 'aps setup'.

@@ -592,8 +592,26 @@ Notes on schema:
 - **Confidence:** medium
 - **Dependencies:** TUI-006, INSTALL-010
 - **Files:** scaffold/install, scaffold/install.ps1, cli/Cargo.toml,
-  `.github/workflows/release.yml`, docs/installation.md
-- **Status:** Draft
+  `.github/workflows/release.yml`, docs/installation.md, packaging/scoop/aps.json,
+  test/run.sh
+- **Status:** In Progress (crates.io channel blocked) — 2026-06-15
+- **Results:** Binary-first global install shipped on both entrypoints:
+  `scaffold/install` `--cli` installs the native release binary by default and
+  falls back to the bash CLI only on unsupported platforms / `--bash`;
+  `install.ps1` mirrors it (`Install-ApsBinary` → User PATH + `aps.exe`). Added
+  `cargo binstall` metadata + crates.io metadata (keywords/categories) to
+  `cli/Cargo.toml`, a Scoop manifest (`packaging/scoop/aps.json`, checkver +
+  autoupdate from `SHA256SUMS`), and the release bump checklist (tag → GitHub
+  assets → crates.io → Scoop) in `release.yml`. Bash `lib/` fallback manifest
+  already includes `audit.sh`. Test 39 covers all of the above; full suite +
+  markdownlint green.
+- **Blocker:** `cargo publish --dry-run` cannot pass — `eddacraft-tui` is a git
+  dependency with no crates.io version, and crates.io forbids git deps. The
+  crates.io channel (and `cargo install aps-cli` from crates.io) is gated on
+  `eddacraft-tui` being published there first; `publish = false` carries a TODO.
+  Binary distribution (install script, GitHub releases, `cargo binstall`, Scoop)
+  is unaffected. Cross-target `aps --version` smoke also needs a real tagged
+  release to verify on all five TUI-006 targets.
 
 ### INSTALL-016: Runtime project config discovery (alternate `plans_dir`)
 

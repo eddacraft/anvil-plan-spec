@@ -445,5 +445,46 @@ cp "$PROJECT_ROOT/scaffold/plans/index.aps.md" "$NOCFG/plans/index.aps.md"
 rm -rf "$DISC" "$NOCFG"
 pass
 
+# Test 39: global binary-first install channels (INSTALL-015)
+echo -n "Test: global binary-first install channels... "
+INSTALL="$PROJECT_ROOT/scaffold/install"
+INSTALL_PS1="$PROJECT_ROOT/scaffold/install.ps1"
+# Bash cli install is binary-first: prefers the release binary unless --bash
+grep -q 'USE_LOCAL_CLI.*!=.*true.*&&.*install_binary' "$INSTALL" \
+  || fail "install_global is not binary-first"
+grep -qF -- '--bash' "$INSTALL" || fail "install missing --bash force"
+# --binary requires the binary (no silent bash fallback)
+grep -q 'binary requested but no release binary' "$INSTALL" \
+  || fail "install --binary should hard-fail without fallback"
+grep -q 'binary requested but no release binary' "$INSTALL_PS1" \
+  || fail "install.ps1 --binary should hard-fail without fallback"
+# Bash lib fallback manifest still ships the full set incl. audit.sh
+grep -q 'lib/audit.sh' "$INSTALL" || fail "global lib manifest missing audit.sh"
+# PowerShell mirror: binary install path + User PATH + aps.exe
+grep -q 'Install-ApsBinary' "$INSTALL_PS1" || fail "install.ps1 missing binary install"
+grep -q 'aps.exe' "$INSTALL_PS1" || fail "install.ps1 missing aps.exe"
+grep -q 'Get-ApsReleaseTarget' "$INSTALL_PS1" || fail "install.ps1 missing target detection"
+# Cargo.toml: binstall metadata + crates.io readiness, publish blocker documented
+CARGO="$PROJECT_ROOT/cli/Cargo.toml"
+grep -q 'package.metadata.binstall' "$CARGO" || fail "Cargo.toml missing binstall metadata"
+grep -q '^keywords' "$CARGO" || fail "Cargo.toml missing crates.io keywords"
+grep -qi 'eddacraft-tui' "$CARGO" && grep -qi 'BLOCKED' "$CARGO" \
+  || fail "Cargo.toml missing crates.io publish blocker note"
+# Scoop manifest is valid JSON with the Windows asset + autoupdate
+SCOOP="$PROJECT_ROOT/packaging/scoop/aps.json"
+[[ -f "$SCOOP" ]] || fail "scoop manifest missing"
+if command -v python3 >/dev/null 2>&1; then
+  python3 -c "import json,sys; json.load(open('$SCOOP'))" || fail "scoop manifest is not valid JSON"
+fi
+grep -q 'aps-x86_64-pc-windows-gnu.zip' "$SCOOP" || fail "scoop manifest missing windows asset"
+grep -q 'autoupdate' "$SCOOP" || fail "scoop manifest missing autoupdate"
+# Release workflow documents the bump checklist (tag -> assets -> crates.io -> Scoop)
+REL="$PROJECT_ROOT/.github/workflows/release.yml"
+grep -qi 'bump checklist' "$REL" || fail "release.yml missing bump checklist"
+for kw in 'crates.io' 'Scoop' 'binstall'; do
+  grep -qi "$kw" "$REL" || fail "release.yml checklist missing $kw"
+done
+pass
+
 echo ""
 echo -e "${GREEN}All tests passed!${NC}"
