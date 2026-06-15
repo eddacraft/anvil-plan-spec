@@ -72,6 +72,13 @@ Errors cause a non-zero exit code. Warnings are informational.
 | E005 | Work Item | Missing required field (`**Intent:**`, `**Expected Outcome:**`, or `**Validation:**`) |
 | E010 | Issues    | Missing `## Issues` section                                                           |
 | E011 | Issues    | Missing `## Questions` section                                                        |
+| R001 | Release   | Release file is not named `v<version>.md` (e.g., `v0.3.0.md`)                         |
+| R002 | Release   | Missing release header table with `Target` and `Status` fields                        |
+| R003 | Release   | Missing `## Release Theme` section                                                    |
+| R004 | Release   | Missing `## What Ships` section                                                       |
+
+Release rules apply to files under `plans/releases/` (the `v<version>.md`
+narratives). `README.md` and the `.release.template.md` are not linted.
 
 #### Warning codes
 

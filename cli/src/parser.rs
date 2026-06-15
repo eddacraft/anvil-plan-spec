@@ -20,6 +20,7 @@ pub enum FileType {
     Actions,
     Module,
     Simple,
+    Release,
     Unknown,
 }
 
@@ -34,9 +35,15 @@ impl FileType {
             Self::Actions => "actions",
             Self::Module => "module",
             Self::Simple => "simple",
+            Self::Release => "release",
             Self::Unknown => "unknown",
         }
     }
+}
+
+/// True when `path` sits anywhere under a `releases/` directory.
+pub fn in_releases_dir(path: &str) -> bool {
+    path.contains("/releases/") || path.starts_with("releases/")
 }
 
 pub fn file_type(path: &str) -> FileType {
@@ -60,6 +67,12 @@ pub fn file_type(path: &str) -> FileType {
         FileType::Design
     } else if path.contains("/execution/") && basename.ends_with(".actions.md") {
         FileType::Actions
+    } else if in_releases_dir(path) && basename.ends_with(".md") && basename != "README.md" {
+        // Release narratives live in releases/ as `v<version>.md`. README.md
+        // is the directory guide, and `.`-prefixed templates were already
+        // classified above. Anything else here is a (possibly misnamed)
+        // release file — R001 flags the naming.
+        FileType::Release
     } else if dirname.ends_with("/modules") || dirname.contains("/modules/") {
         FileType::Module
     } else if basename.ends_with(".aps.md") {
@@ -90,12 +103,16 @@ pub fn find_aps_files(dir: &Path) -> Vec<String> {
             if name.starts_with('.') {
                 continue;
             }
+            let path_str = path.to_string_lossy();
             if name.ends_with(".aps.md")
                 || name.ends_with(".actions.md")
                 || name.ends_with(".design.md")
                 || name == "issues.md"
+                // Release narratives (`v<version>.md`) live under releases/.
+                // README.md is the dir guide; dotfiles are already skipped.
+                || (in_releases_dir(&path_str) && name.ends_with(".md") && name != "README.md")
             {
-                files.push(path.to_string_lossy().into_owned());
+                files.push(path_str.into_owned());
             }
         }
     }
@@ -498,6 +515,46 @@ mod tests {
             FileType::Template
         );
         assert_eq!(file_type("README.md"), FileType::Unknown);
+    }
+
+    #[test]
+    fn in_releases_dir_matches_both_anchors() {
+        assert!(in_releases_dir("plans/releases/v0.3.0.md")); // nested
+        assert!(in_releases_dir("releases/v0.3.0.md")); // repo-relative root
+        assert!(!in_releases_dir("plans/modules/auth.aps.md"));
+        assert!(!in_releases_dir("releases.md")); // not a dir segment
+    }
+
+    #[test]
+    fn classifies_release_files() {
+        // Versioned narratives are releases; so are misnamed siblings (so
+        // R001 can flag them).
+        assert_eq!(file_type("plans/releases/v0.3.0.md"), FileType::Release);
+        assert_eq!(file_type("plans/releases/draft.md"), FileType::Release);
+        // The directory guide and dotfile template are not release files.
+        assert_eq!(file_type("plans/releases/README.md"), FileType::Unknown);
+        assert_eq!(
+            file_type("plans/releases/.release.template.md"),
+            FileType::Template
+        );
+    }
+
+    #[test]
+    fn find_aps_files_includes_releases_excludes_readme() {
+        let root = std::env::temp_dir().join(format!("aps-find-rel-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        let releases = root.join("releases");
+        fs::create_dir_all(&releases).unwrap();
+        fs::write(releases.join("v0.3.0.md"), "# r\n").unwrap();
+        fs::write(releases.join("README.md"), "# guide\n").unwrap();
+        fs::write(releases.join(".release.template.md"), "# t\n").unwrap();
+
+        let found = find_aps_files(&root);
+        assert!(found.iter().any(|f| f.ends_with("releases/v0.3.0.md")));
+        assert!(!found.iter().any(|f| f.ends_with("README.md")));
+        assert!(!found.iter().any(|f| f.contains(".release.template.md")));
+
+        let _ = fs::remove_dir_all(&root);
     }
 
     #[test]

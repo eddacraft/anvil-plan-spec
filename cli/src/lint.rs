@@ -174,6 +174,7 @@ fn lint_file(report: &mut LintReport, path: &str, tree_ids: &HashSet<String>) {
         FileType::Module | FileType::Simple => lint_module(report, &plan, tree_ids),
         FileType::Issues => lint_issues(report, &plan),
         FileType::Design => lint_design(report, &plan),
+        FileType::Release => lint_release(report, &plan),
         FileType::Actions | FileType::Archive | FileType::Template => {}
         FileType::Unknown => {
             report.add(
@@ -878,6 +879,68 @@ fn lint_design(report: &mut LintReport, plan: &PlanFile) {
     }
 }
 
+// --- Release rules -------------------------------------------------------------
+
+/// Validate a release narrative under `plans/releases/` (REL-003). Release
+/// files are versioned narratives, so the rules are structural: a versioned
+/// filename, a header table that records the target and status, and the
+/// Release Theme + What Ships sections that carry the narrative.
+fn lint_release(report: &mut LintReport, plan: &PlanFile) {
+    let basename = plan.path.rsplit('/').next().unwrap_or(&plan.path);
+    if !is_release_filename(basename) {
+        report.add(
+            &plan.path,
+            Severity::Error,
+            "R001",
+            "Release file must be named v<version>.md (e.g. v0.3.0.md)",
+            None,
+        );
+    }
+
+    // Header table: require the rows that drive the release — Target (which
+    // version) and Status (where it is in the lifecycle).
+    let head = plan.lines.iter().take(20);
+    let has_target = head.clone().any(|l| table_row_starts_with(l, "Target"));
+    let has_status = head.clone().any(|l| table_row_starts_with(l, "Status"));
+    if !(has_target && has_status) {
+        report.add(
+            &plan.path,
+            Severity::Error,
+            "R002",
+            "Missing release header table with Target and Status fields",
+            None,
+        );
+    }
+
+    if !plan.has_section("## Release Theme") {
+        report.add(
+            &plan.path,
+            Severity::Error,
+            "R003",
+            "Missing ## Release Theme section",
+            None,
+        );
+    }
+    if !plan.has_section("## What Ships") {
+        report.add(
+            &plan.path,
+            Severity::Error,
+            "R004",
+            "Missing ## What Ships section",
+            None,
+        );
+    }
+}
+
+/// A release filename is `v<digit>…​.md` — `v0.3.0.md`, `v1.2.0-beta.md`.
+fn is_release_filename(basename: &str) -> bool {
+    let Some(stem) = basename.strip_suffix(".md") else {
+        return false;
+    };
+    let mut chars = stem.chars();
+    chars.next() == Some('v') && chars.next().is_some_and(|c| c.is_ascii_digit())
+}
+
 fn table_row_starts_with(line: &str, cell: &str) -> bool {
     line.strip_prefix('|')
         .map(|rest| rest.trim_start_matches(' '))
@@ -1072,6 +1135,7 @@ mod tests {
             FileType::Index => lint_index(&mut report, &plan),
             FileType::Issues => lint_issues(&mut report, &plan),
             FileType::Design => lint_design(&mut report, &plan),
+            FileType::Release => lint_release(&mut report, &plan),
             _ => lint_module(&mut report, &plan, &tree_ids),
         }
         report
@@ -1130,6 +1194,66 @@ mod tests {
         // Missing Discovered + Severity; header is line 2 of the section content.
         assert_eq!(w010.len(), 2);
         assert!(w010.iter().all(|f| f.line == Some(2)));
+    }
+
+    const VALID_RELEASE: &str = "\
+# Release Plan: v0.3.0\n\n\
+| Field  | Value   |\n| ------ | ------- |\n\
+| Target | v0.3.0  |\n| Status | Shipped |\n\n\
+## Release Theme\n\n\
+**Theme** — narrative.\n\n\
+## What Ships\n\n\
+| Area | Detail |\n| ---- | ------ |\n| x | y |\n";
+
+    #[test]
+    fn valid_release_file_passes() {
+        let report = lint_text("plans/releases/v0.3.0.md", VALID_RELEASE);
+        assert!(
+            codes(&report).is_empty(),
+            "unexpected: {:?}",
+            codes(&report)
+        );
+    }
+
+    #[test]
+    fn malformed_release_flags_all_codes() {
+        // Wrong name, no header table, no sections.
+        let report = lint_text("plans/releases/notes.md", "# Notes\n\nnothing\n");
+        let mut found = codes(&report);
+        found.sort_unstable();
+        assert_eq!(found, vec!["R001", "R002", "R003", "R004"]);
+    }
+
+    #[test]
+    fn release_naming_is_the_only_flag_when_structure_is_sound() {
+        // Valid body, but the file is not named v<version>.md.
+        let report = lint_text("plans/releases/draft.md", VALID_RELEASE);
+        assert_eq!(codes(&report), vec!["R001"]);
+    }
+
+    #[test]
+    fn release_rules_are_errors_not_warnings() {
+        // Valid v-name, empty body → exactly R002 + R003 + R004 (no R001).
+        let report = lint_text("plans/releases/v1.0.0.md", "# Empty\n");
+        assert_eq!(report.errors(), 3);
+        assert_eq!(report.warnings(), 0);
+    }
+
+    #[test]
+    fn release_filename_validation() {
+        for ok in ["v0.3.0.md", "v1.2.0-beta.md", "v10.0.0.md"] {
+            assert!(is_release_filename(ok), "{ok} should be valid");
+        }
+        for bad in [
+            "vfoo.md",
+            "v.md",
+            "version-1.md",
+            "V1.0.0.md",
+            "notes.md",
+            "v1.0.0",
+        ] {
+            assert!(!is_release_filename(bad), "{bad} should be invalid");
+        }
     }
 
     #[test]
