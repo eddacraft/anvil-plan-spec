@@ -28,6 +28,26 @@ aps <cmd> --help            # Per-command help
 Every command accepts `--plans <dir>` if your plans aren't at the default
 `plans/` location.
 
+### Project config discovery
+
+Project-scoped commands (`lint`, `next`, `start`, `complete`, `graph`,
+`audit`) resolve their plan root automatically. When you don't pass `--plans`
+(or a lint target), `aps` walks up from the current directory for the nearest
+`.aps/config.yml` and uses its `plans_dir` — so a repo with
+`plans_dir: docs/plans/` just works from any subdirectory, no flag needed.
+
+Resolution order: explicit `--plans` / target → `APS_PLANS` environment
+variable (the MCP/manual override) → discovered `plans_dir` → `plans/`.
+
+`aps` also compares the project's `cli_version` pin to the running binary and
+prints a warning on a mismatch. Add `--strict` (or set `APS_STRICT=1`) to turn
+that mismatch into a non-zero exit — useful in CI to enforce the pinned
+toolchain:
+
+```bash
+aps lint --strict          # fail CI if the toolchain version drifts
+```
+
 ## Authoring
 
 ### `aps lint`

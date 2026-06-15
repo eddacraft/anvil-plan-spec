@@ -6,7 +6,7 @@
 //! parser covers exactly that emitted shape — a deliberate subset of
 //! YAML — so no serde dependency is needed.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use crate::scaffold::{self, ScaffoldRun, Selections, StepStatus};
 use crate::wizard::{
@@ -355,6 +355,95 @@ pub fn wants_tui(non_interactive: bool, from: Option<&Path>, flags: &InitFlags, 
     !non_interactive && from.is_none() && flags.is_empty() && tty
 }
 
+// --- Runtime project config discovery (INSTALL-016) --------------------------
+
+/// A project contract discovered by walking up for `.aps/config.yml`.
+pub struct ProjectConfig {
+    pub root: PathBuf,
+    pub plans_dir: Option<String>,
+    pub cli_version: Option<String>,
+}
+
+/// Read a top-level `key: value` scalar, ignoring indented keys and comments.
+/// Tolerant of both the flat (Rust) and nested (bash) config shapes.
+fn read_top_scalar(text: &str, key: &str) -> Option<String> {
+    for line in text.lines() {
+        if line.starts_with(char::is_whitespace) || line.starts_with('#') {
+            continue;
+        }
+        if let Some((k, v)) = line.split_once(':')
+            && k.trim() == key
+        {
+            let v = v.trim().trim_matches(['"', '\'']).trim();
+            if !v.is_empty() {
+                return Some(v.to_string());
+            }
+        }
+    }
+    None
+}
+
+/// Walk up from `start` for the nearest `.aps/config.yml` and read its
+/// contract fields. Returns `None` when no project config is found.
+pub fn discover_project(start: &Path) -> Option<ProjectConfig> {
+    let mut dir = Some(start);
+    while let Some(current) = dir {
+        let candidate = current.join(".aps/config.yml");
+        if candidate.is_file() {
+            let text = std::fs::read_to_string(&candidate).unwrap_or_default();
+            return Some(ProjectConfig {
+                root: current.to_path_buf(),
+                plans_dir: read_top_scalar(&text, "plans_dir"),
+                cli_version: read_top_scalar(&text, "cli_version"),
+            });
+        }
+        dir = current.parent();
+    }
+    None
+}
+
+/// Resolve the effective plans directory for a project-scoped command:
+///   APS_PLANS (MCP/manual override) > discovered plans_dir > "plans".
+pub fn default_plans(start: &Path) -> String {
+    if let Ok(env) = std::env::var("APS_PLANS")
+        && !env.is_empty()
+    {
+        return env.trim_end_matches('/').to_string();
+    }
+    if let Some(project) = discover_project(start)
+        && let Some(plans) = project.plans_dir
+    {
+        let plans = plans.trim_end_matches('/');
+        return if project.root == start {
+            plans.to_string()
+        } else {
+            project.root.join(plans).to_string_lossy().into_owned()
+        };
+    }
+    "plans".to_string()
+}
+
+/// Warn when the project's `cli_version` pin differs from this binary. Under
+/// `strict`, a mismatch returns `Err` so callers can exit non-zero (CI).
+pub fn check_cli_version(start: &Path, strict: bool) -> Result<(), String> {
+    let Some(project) = discover_project(start) else {
+        return Ok(());
+    };
+    let Some(pin) = project.cli_version else {
+        return Ok(());
+    };
+    if pin != crate::scaffold::CLI_VERSION {
+        eprintln!(
+            "warning: project pins cli_version {pin} but this CLI is {}",
+            crate::scaffold::CLI_VERSION
+        );
+        if strict {
+            return Err("cli_version mismatch under --strict".to_string());
+        }
+    }
+    Ok(())
+}
+
 /// Run the scaffold to completion, printing one line per step. Returns
 /// an error summary when any step failed.
 pub fn run_scaffold_console(root: &Path, selections: &Selections) -> Result<(), String> {
@@ -446,6 +535,72 @@ mod tests {
         let replayed = build_selections(Some(parsed), &InitFlags::default()).unwrap();
         assert_eq!(replayed.cli_version.as_deref(), Some("1.2.3"));
         assert_eq!(replayed.plans_dir, "docs/plans/");
+    }
+
+    fn discovery_root(tag: &str) -> PathBuf {
+        let root = std::env::temp_dir().join(format!(
+            "aps-discover-{tag}-{}-{}",
+            std::process::id(),
+            tag.len()
+        ));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(root.join(".aps")).unwrap();
+        root
+    }
+
+    #[test]
+    fn discovers_plans_dir_and_version_walking_up() {
+        let root = discovery_root("plansdir");
+        fs::write(
+            root.join(".aps/config.yml"),
+            "cli_version: 1.2.3\nplans_dir: docs/plans/\n",
+        )
+        .unwrap();
+        let nested = root.join("packages/app");
+        fs::create_dir_all(&nested).unwrap();
+
+        let project = discover_project(&nested).expect("config discovered by walking up");
+        assert_eq!(project.cli_version.as_deref(), Some("1.2.3"));
+        assert_eq!(project.plans_dir.as_deref(), Some("docs/plans/"));
+
+        // From the project root, the plans dir is returned as-is.
+        assert_eq!(default_plans(&root), "docs/plans");
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn check_cli_version_respects_strict() {
+        let root = discovery_root("strict");
+        fs::write(root.join(".aps/config.yml"), "cli_version: 9.9.9\n").unwrap();
+        // Non-strict warns but succeeds; strict fails.
+        assert!(check_cli_version(&root, false).is_ok());
+        assert!(check_cli_version(&root, true).is_err());
+
+        // A matching pin never fails, even strict.
+        fs::write(
+            root.join(".aps/config.yml"),
+            format!("cli_version: {}\n", crate::scaffold::CLI_VERSION),
+        )
+        .unwrap();
+        assert!(check_cli_version(&root, true).is_ok());
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn read_top_scalar_tolerates_nested_bash_shape() {
+        // The bash installer writes a nested aps:/project: shape; the top-level
+        // contract keys must still be readable.
+        let text = "cli_version: \"0.3.0\"\nplans_dir: plans/\naps:\n  version: \"0.3.0\"\n";
+        assert_eq!(
+            read_top_scalar(text, "cli_version").as_deref(),
+            Some("0.3.0")
+        );
+        assert_eq!(
+            read_top_scalar(text, "plans_dir").as_deref(),
+            Some("plans/")
+        );
+        // Indented keys are not treated as top-level.
+        assert_eq!(read_top_scalar(text, "version"), None);
     }
 
     #[test]

@@ -299,7 +299,8 @@ audit_print_json() {
 }
 
 cmd_audit() {
-  local plan_root="plans"
+  local plan_root=""
+  local strict=false
   local module_filter=""
   local json_output=false
   local run_validation=true
@@ -312,6 +313,10 @@ cmd_audit() {
         plan_root="${2:-}"
         [[ -n "$plan_root" ]] || { error "--plans requires a directory"; return 1; }
         shift 2
+        ;;
+      --strict)
+        strict=true
+        shift
         ;;
       --json)
         json_output=true
@@ -368,6 +373,11 @@ EOF
         ;;
     esac
   done
+
+  if [[ -z "$plan_root" ]]; then
+    plan_root="$(aps_default_plans)"
+    aps_check_cli_version "$strict"
+  fi
 
   if [[ ! -d "$plan_root" ]]; then
     error "Path not found: $plan_root"

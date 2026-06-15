@@ -24,6 +24,10 @@ mod wizard;
 struct Cli {
     #[command(subcommand)]
     command: Option<Command>,
+    /// Fail (exit non-zero) when the project's cli_version pin differs from
+    /// this binary. Applies to project-scoped commands (lint, next).
+    #[arg(long, global = true)]
+    strict: bool,
 }
 
 // Init carries the whole non-interactive wizard surface (~290 bytes); the
@@ -166,14 +170,34 @@ fn main() {
             }
         }
         Some(Command::Lint { target, json }) => {
-            let code = lint::cmd_lint(target.as_deref().unwrap_or("plans"), json);
+            let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+            // Explicit target wins; otherwise discover the project's plans_dir.
+            let resolved = match target {
+                Some(t) => t,
+                None => {
+                    if let Err(err) = config::check_cli_version(&cwd, cli.strict) {
+                        eprintln!("aps lint: {err}");
+                        std::process::exit(2);
+                    }
+                    config::default_plans(&cwd)
+                }
+            };
+            let code = lint::cmd_lint(&resolved, json);
             std::process::exit(code);
         }
         Some(Command::Next { module, plans }) => {
-            let code = next::cmd_next(
-                plans.as_deref().unwrap_or("plans"),
-                module.as_deref().unwrap_or(""),
-            );
+            let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+            let resolved = match plans {
+                Some(p) => p,
+                None => {
+                    if let Err(err) = config::check_cli_version(&cwd, cli.strict) {
+                        eprintln!("aps next: {err}");
+                        std::process::exit(2);
+                    }
+                    config::default_plans(&cwd)
+                }
+            };
+            let code = next::cmd_next(&resolved, module.as_deref().unwrap_or(""));
             std::process::exit(code);
         }
     }
