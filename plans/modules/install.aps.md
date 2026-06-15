@@ -493,7 +493,18 @@ Notes on schema:
 - **Dependencies:** INSTALL-010
 - **Related:** TUI-007 provides the richer picker frontend for this command.
 - **Files:** bin/aps, lib/scaffold.sh, cli/src/, docs/installation.md
-- **Status:** Ready
+- **Status:** Complete: 2026-06-15
+- **Results:** The native `aps setup` (cli/src/setup.rs, TUI-007/008) already
+  shipped the Ratatui picker, shortcut keys (`cli`/`init`/`agent`/`hooks`/
+  `upgrade`/`all` + tool names), and confirmation gating for `all`/`upgrade`.
+  This work brings the bash CLI to parity: new `cmd_setup` in lib/scaffold.sh
+  plus `bin/aps` dispatch provides a numbered picker when no component is
+  named, the same shortcut keys, and `setup all` confirmation (skippable with
+  `--yes`). Each shortcut writes only its component (verified by Test 34:
+  hooks pulls no CLI/skill; a tool key installs only that skill+agents; an
+  unknown target exits non-zero; `all` without confirmation writes nothing).
+  Bare `aps setup` errors clearly when non-interactive. docs/installation.md
+  gains an "Add Integrations" section. Full suite green; markdownlint clean.
 
 ### INSTALL-013: Add safe upgrade cleanup for existing projects
 

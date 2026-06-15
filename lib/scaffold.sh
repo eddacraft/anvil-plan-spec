@@ -1355,3 +1355,207 @@ Examples:
   aps migrate ./my-project # Migrate a subdirectory
 EOF
 }
+
+# --- aps setup (INSTALL-012) ---
+#
+# Adds optional integrations to a project after the minimal `aps init`.
+# Bare `aps setup` opens a numbered picker (the Rust CLI ships a richer
+# Ratatui frontend — TUI-007); shortcuts install exactly one component.
+
+# True when "$1" is a recognised AI tool key.
+is_tool_key() {
+  local k="$1" t
+  for t in "${TOOL_NAMES[@]}"; do
+    [[ "$t" == "$k" ]] && return 0
+  done
+  return 1
+}
+
+# Write the agent bootstrap next-steps file (mirrors scaffold/install --agent).
+write_agent_next_steps() {
+  local target="$1"
+  mkdir -p "$target/plans"
+  cat > "$target/plans/agent-next-steps.md" <<'EOF'
+# APS Agent Bootstrap — Next Steps
+
+This repository was just initialized with a minimal APS planning layer
+for an AI agent. Before implementing anything:
+
+1. Read `plans/aps-rules.md` for the planning conventions.
+2. Ask the operator for the project intent — what is being built and why.
+3. Populate `plans/project-context.md` with that durable background.
+4. Draft `plans/index.aps.md` (problem, outcomes, scope, modules).
+5. Wait for an approved work item before writing any implementation code.
+
+No hooks, agents, or tool integrations were installed. Run `aps setup`
+to add them when needed.
+EOF
+}
+
+setup_cli() {
+  local target="$1"
+  info "Vendoring the APS CLI into $target/.aps/"
+  v2_install_cli "$target"
+  info ".aps/bin/aps + .aps/lib/"
+  v2_setup_path "$target"
+}
+
+setup_hooks() {
+  local target="$1"
+  v2_install_scripts "$target"
+  info ".aps/scripts/ (hook scripts installed)"
+  if [[ -f "$target/.aps/scripts/install-hooks.sh" ]]; then
+    if ask_yn "Wire hooks into .claude/settings.local.json now?" "n"; then
+      (cd "$target" && bash .aps/scripts/install-hooks.sh)
+    else
+      info "Run .aps/scripts/install-hooks.sh when you're ready"
+    fi
+  fi
+}
+
+setup_tools() {
+  local target="$1"; shift
+  local tools=("$@")
+  [[ -d "$target/plans" ]] || warn "no plans/ here yet — run 'aps init' first"
+  v2_install_tools "$target" "${tools[@]}"
+}
+
+setup_agent() {
+  local target="$1"
+  if [[ ! -d "$target/plans" ]]; then
+    v2_install_plans "$target"
+    v2_install_index "$target"
+    info "plans/ (minimal planning content)"
+  fi
+  write_agent_next_steps "$target"
+  info "plans/agent-next-steps.md"
+}
+
+setup_upgrade() {
+  local target="$1"
+  info "Refreshing templates and runtime via update"
+  cmd_update "$target"
+}
+
+setup_all() {
+  local target="$1" assume_yes="$2"
+  if [[ "$assume_yes" != true ]]; then
+    if ! ask_yn "Install the full APS footprint (CLI, hooks, Claude Code skill + agents)?" "n"; then
+      info "Aborted — nothing was written."
+      return 0
+    fi
+  fi
+  if [[ ! -d "$target/plans" ]]; then
+    v2_install_plans "$target"
+    v2_install_index "$target"
+  fi
+  v2_install_cli "$target"
+  v2_install_scripts "$target"
+  v2_install_tools "$target" claude-code
+  write_config "$target" "solo" "small" claude-code
+  info "Full footprint installed."
+}
+
+cmd_setup() {
+  local target="." key="" assume_yes=false
+  local extra_tools=()
+
+  while [[ $# -gt 0 ]]; do
+    case $1 in
+      --help|-h) cmd_setup_help; exit 0 ;;
+      --yes|-y) assume_yes=true; shift ;;
+      -*) error "Unknown option: $1"; echo "Run 'aps setup --help' for usage."; exit 1 ;;
+      *) if [[ -z "$key" ]]; then key="$1"; else target="$1"; fi; shift ;;
+    esac
+  done
+
+  # No shortcut → interactive picker; fail clearly when non-interactive.
+  if [[ -z "$key" ]]; then
+    if ! [[ -t 0 ]]; then
+      error "aps setup needs a target when non-interactive"
+      echo "  e.g. aps setup hooks | claude-code | agent | all" >&2
+      exit 1
+    fi
+    local choice
+    choice=$(prompt_select "What would you like to set up?" \
+      "Vendor the APS CLI into this repo (.aps/)" \
+      "Initialize minimal APS planning in this repo" \
+      "Initialize this repo for an AI agent" \
+      "Add a tool integration (skill + agents)" \
+      "Configure hooks" \
+      "Upgrade an existing APS project" \
+      "Install the full APS footprint")
+    case "$choice" in
+      1) key="cli" ;;
+      2) key="init" ;;
+      3) key="agent" ;;
+      4) key="tools" ;;
+      5) key="hooks" ;;
+      6) key="upgrade" ;;
+      7) key="all" ;;
+      *) error "invalid choice"; exit 1 ;;
+    esac
+    if [[ "$key" == "tools" ]]; then
+      local choices idx
+      choices=$(prompt_multi "Which AI tools? (comma-separated, e.g. 1,3)" "${TOOL_LABELS[@]}")
+      local _idx
+      IFS=',' read -ra _idx <<< "$choices"
+      for idx in "${_idx[@]}"; do
+        idx="${idx// /}"
+        [[ -n "$idx" ]] && extra_tools+=("${TOOL_NAMES[$((idx - 1))]}")
+      done
+      [[ ${#extra_tools[@]} -gt 0 ]] || { error "no tools selected"; exit 1; }
+    fi
+  fi
+
+  # Tool shortcut: `aps setup claude-code`
+  if is_tool_key "$key"; then
+    extra_tools=("$key")
+    key="tools"
+  fi
+
+  case "$key" in
+    cli)     setup_cli "$target" ;;
+    init)    cmd_init "$target" --non-interactive ;;
+    agent)   setup_agent "$target" ;;
+    tools)   setup_tools "$target" "${extra_tools[@]}" ;;
+    hooks)   setup_hooks "$target" ;;
+    upgrade) setup_upgrade "$target" ;;
+    all)     setup_all "$target" "$assume_yes" ;;
+    *)
+      error "unknown setup target '$key'"
+      echo "  expected: cli, init, agent, hooks, upgrade, all, or a tool name" >&2
+      echo "  tools: ${TOOL_NAMES[*]}" >&2
+      exit 1
+      ;;
+  esac
+}
+
+cmd_setup_help() {
+  cat <<EOF
+aps setup - Add optional integrations to an APS project
+
+Usage:
+  aps setup [target] [options]   # interactive picker
+  aps setup <component> [target] # install one component directly
+
+Components:
+  cli            Vendor the bash CLI into .aps/bin + .aps/lib
+  init           Initialize minimal planning content (delegates to 'aps init')
+  agent          Minimal plans + agent next-steps file
+  hooks          Install hook scripts into .aps/scripts
+  <tool>         Skill + agents for one tool:
+                 ${TOOL_NAMES[*]}
+  all            Full footprint (CLI + hooks + Claude Code) — asks first
+
+Options:
+  --yes, -y      Skip the confirmation prompt for 'all'
+  --help         Show this help
+
+Examples:
+  aps setup                 # interactive picker
+  aps setup hooks           # install hook scripts only
+  aps setup claude-code     # add the Claude Code skill + agents
+  aps setup all --yes       # full footprint without prompting
+EOF
+}

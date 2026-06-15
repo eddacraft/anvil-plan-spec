@@ -89,6 +89,28 @@ By default `--init` does not install hooks or a project-local CLI. Pass
 air-gapped or pinned-toolchain projects. In non-interactive mode (piped
 without a terminal), the minimal default is used.
 
+## Add Integrations (`aps setup`)
+
+After the minimal `aps init`, add optional pieces with `aps setup`. Run it
+with no argument for an interactive picker, or name a component to install
+exactly one thing:
+
+```bash
+aps setup                 # interactive picker
+aps setup cli             # vendor the bash CLI into .aps/bin + .aps/lib
+aps setup hooks           # install hook scripts into .aps/scripts
+aps setup agent           # minimal plans + agent next-steps file
+aps setup claude-code     # add a tool integration (skill + agents)
+aps setup all --yes       # full footprint (CLI + hooks + Claude Code)
+```
+
+Tool names accepted by `aps setup <tool>`: `claude-code`, `copilot`,
+`codex`, `opencode`, `gemini`, `generic`. The `all` flow installs a bulky
+footprint and asks for confirmation first (skip it with `--yes`). Every
+other shortcut writes only the component you name. The native `aps` binary
+ships a Ratatui picker for the same flows; the bash CLI uses a numbered
+prompt.
+
 ## Update Existing Project
 
 If you already have APS installed and want to pull the latest templates,
