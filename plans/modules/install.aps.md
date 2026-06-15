@@ -524,7 +524,22 @@ Notes on schema:
 - **Dependencies:** INSTALL-008, INSTALL-010
 - **Files:** lib/scaffold.sh, scaffold/upgrade, docs/installation.md,
   test/run.sh
-- **Status:** Ready
+- **Status:** Complete: 2026-06-15
+- **Results:** New `cmd_upgrade` in lib/scaffold.sh (+ `bin/aps` dispatch) and
+  a self-contained `scaffold/upgrade` curl entrypoint. Both dry-run by default
+  and detect generated bloat: root `bin/aps` + `lib/`, v1 `aps-planning/`,
+  `.claude/commands/plan*.md`, and superseded `.aps/bin` + `.aps/lib`. On
+  `--apply` every removed path is copied to `.aps/backup/<timestamp>/` first;
+  `plans/**`, `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, and settings are never
+  deleted, and hook paths in `settings.local.json` are rewritten
+  `aps-planning/scripts/` -> `.aps/scripts/` (with a backup) when kept. A
+  `lib/` mixing APS and non-APS files is reported ambiguous and left
+  untouched. The curl entrypoint refuses to modify non-interactively without
+  `--yes`, so its dry run is agent-safe. A `set -e` foot-gun (a scan function
+  returning the status of a trailing `&&` short-circuit) was fixed with an
+  explicit `return 0`. Tests 35–36 cover dry-run, backup-before-remove,
+  protections, hook rewrite, ambiguity, and the curl entrypoint. docs updated;
+  full suite green; markdownlint clean.
 
 ### INSTALL-014: Extend `.aps/config.yml` as the project contract
 
