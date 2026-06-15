@@ -138,6 +138,31 @@ specs, or action steps.
 `plans/issues.md`, action plans, and anything under `plans/decisions/` or
 `plans/designs/`.
 
+## Upgrade (Remove Generated Bloat)
+
+Older or heavier installs scatter generated files across the repo (root
+`bin/` + `lib/`, a v1 `aps-planning/` skill dir, `.claude/commands/`, and a
+vendored `.aps/bin` + `.aps/lib`). `aps upgrade` removes that bloat safely so
+the repo can run on the global `aps` binary instead.
+
+```bash
+aps upgrade            # dry run — shows what would be backed up and removed
+aps upgrade --apply    # back up to .aps/backup/<timestamp>/, then remove
+aps upgrade --apply --yes   # non-interactive
+
+# Or via curl, without a local CLI (the dry run is agent-safe — it writes nothing):
+curl -fsSL https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/upgrade | bash
+curl -fsSL .../scaffold/upgrade | bash -s -- --apply --yes
+```
+
+`upgrade` **dry-runs by default** and never deletes user content: `plans/**`,
+`AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, and settings files are protected. Every
+removed path is copied to `.aps/backup/<timestamp>/` first. Hook paths in
+`.claude/settings.local.json` are rewritten from `aps-planning/scripts/` to
+`.aps/scripts/` (with a backup) when kept. Files that can't be classified as
+APS-generated (e.g. a `lib/` mixing APS and your own scripts) are listed for
+manual review and left untouched.
+
 ## Windows (PowerShell)
 
 ```powershell

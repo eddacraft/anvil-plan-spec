@@ -1559,3 +1559,208 @@ Examples:
   aps setup all --yes       # full footprint without prompting
 EOF
 }
+
+# --- aps upgrade (INSTALL-013) ---
+#
+# Safely removes generated v1/bulky-v2 bloat from an existing project. Always
+# dry-runs first; on --apply it backs every removal up to .aps/backup/<ts>/
+# before deleting. Never touches user planning content or instruction files.
+
+# Known APS bash-lib filenames (relative to a lib/ dir). Used to decide whether
+# a root lib/ is purely APS-owned (safe to remove) or mixed (ambiguous).
+APS_LIB_FILES=(
+  output.sh lint.sh orchestrate.sh audit.sh scaffold.sh
+  rules/common.sh rules/module.sh rules/index.sh
+  rules/workitem.sh rules/issues.sh rules/design.sh
+)
+
+# True when every file under "$1" is a known APS lib file.
+_dir_only_aps_lib() {
+  local d="$1" rel f known=false
+  while IFS= read -r f; do
+    rel="${f#"$d"/}"
+    known=false
+    local k
+    for k in "${APS_LIB_FILES[@]}"; do
+      [[ "$rel" == "$k" ]] && { known=true; break; }
+    done
+    $known || return 1
+  done < <(find "$d" -type f)
+  return 0
+}
+
+# Populate UPGRADE_REMOVE / UPGRADE_AMBIGUOUS (relative paths) for "$1".
+_upgrade_scan() {
+  local target="$1" f
+  UPGRADE_REMOVE=()
+  UPGRADE_AMBIGUOUS=()
+
+  # Legacy Claude commands (single files)
+  for f in ".claude/commands/plan.md" ".claude/commands/plan-status.md"; do
+    [[ -e "$target/$f" ]] && UPGRADE_REMOVE+=("$f")
+  done
+
+  # v1 vendored CLI entry at the repo root
+  [[ -f "$target/bin/aps" ]] && UPGRADE_REMOVE+=("bin/aps")
+
+  # Root lib/ — only when it is the APS bash lib
+  if [[ -d "$target/lib" && -f "$target/lib/lint.sh" ]]; then
+    if _dir_only_aps_lib "$target/lib"; then
+      UPGRADE_REMOVE+=("lib")
+    else
+      UPGRADE_AMBIGUOUS+=("lib/ (mixed APS + non-APS files)")
+    fi
+  fi
+
+  # v1 skill directory (SKILL.md / hooks.md / scripts)
+  if [[ -d "$target/aps-planning" ]]; then
+    if [[ -f "$target/aps-planning/SKILL.md" || -f "$target/aps-planning/hooks.md" ]]; then
+      UPGRADE_REMOVE+=("aps-planning")
+    else
+      UPGRADE_AMBIGUOUS+=("aps-planning/ (unrecognised contents)")
+    fi
+  fi
+
+  # Superseded vendored v2 CLI runtime (global binary is the default now)
+  [[ -d "$target/.aps/lib" ]] && UPGRADE_REMOVE+=(".aps/lib")
+  [[ -d "$target/.aps/bin" ]] && UPGRADE_REMOVE+=(".aps/bin")
+
+  # Never let a trailing short-circuit make this function return non-zero,
+  # which would abort the caller under `set -e`.
+  return 0
+}
+
+# Rewrite stale hook paths in settings.local.json (aps-planning/scripts -> .aps/scripts).
+_upgrade_rewrite_hooks() {
+  local target="$1" backup="$2"
+  local settings="$target/.claude/settings.local.json"
+  [[ -f "$settings" ]] || return 0
+  grep -q 'aps-planning/scripts/' "$settings" || return 0
+
+  mkdir -p "$backup/.claude"
+  cp "$settings" "$backup/.claude/settings.local.json"
+  local tmp
+  tmp="$(mktemp)"
+  sed 's#aps-planning/scripts/#.aps/scripts/#g' "$settings" > "$tmp" && mv "$tmp" "$settings"
+  info "Rewrote hook paths (aps-planning/scripts/ -> .aps/scripts/) in settings.local.json"
+}
+
+cmd_upgrade() {
+  local target="." apply=false assume_yes=false
+  while [[ $# -gt 0 ]]; do
+    case $1 in
+      --help|-h) cmd_upgrade_help; exit 0 ;;
+      --apply) apply=true; shift ;;
+      --dry-run) apply=false; shift ;;
+      --yes|-y) assume_yes=true; shift ;;
+      -*) error "Unknown option: $1"; echo "Run 'aps upgrade --help' for usage."; exit 1 ;;
+      *) target="$1"; shift ;;
+    esac
+  done
+
+  if [[ ! -d "$target/plans" ]]; then
+    error "no plans/ directory at $target — nothing to upgrade"
+    exit 1
+  fi
+
+  _upgrade_scan "$target"
+
+  if [[ ${#UPGRADE_REMOVE[@]} -eq 0 && ${#UPGRADE_AMBIGUOUS[@]} -eq 0 ]]; then
+    info "No generated bloat found — this project is already clean."
+    exit 0
+  fi
+
+  echo ""
+  info "APS upgrade for $target"
+  if [[ ${#UPGRADE_REMOVE[@]} -gt 0 ]]; then
+    echo ""
+    echo "Generated files to back up and remove:"
+    local p
+    for p in "${UPGRADE_REMOVE[@]}"; do echo "  - $p"; done
+  fi
+  if [[ ${#UPGRADE_AMBIGUOUS[@]} -gt 0 ]]; then
+    echo ""
+    warn "Ambiguous — left untouched, review manually:"
+    local p
+    for p in "${UPGRADE_AMBIGUOUS[@]}"; do echo "  - $p"; done
+  fi
+  echo ""
+  info "Protected and never removed: plans/, AGENTS.md, CLAUDE.md, GEMINI.md, settings"
+
+  if [[ "$apply" != true ]]; then
+    echo ""
+    info "Dry run — no files changed. Re-run with --apply to perform the cleanup."
+    exit 0
+  fi
+
+  if [[ ${#UPGRADE_REMOVE[@]} -eq 0 ]]; then
+    info "Nothing to remove (only ambiguous items). No changes made."
+    exit 0
+  fi
+
+  if [[ "$assume_yes" != true ]]; then
+    if ! ask_yn "Back up and remove the listed files?" "n"; then
+      info "Aborted — nothing was changed."
+      exit 0
+    fi
+  fi
+
+  local ts backup
+  ts="$(date +%Y%m%d-%H%M%S)"
+  backup="$target/.aps/backup/$ts"
+  mkdir -p "$backup"
+
+  local p src
+  for p in "${UPGRADE_REMOVE[@]}"; do
+    src="$target/$p"
+    [[ -e "$src" ]] || continue
+    mkdir -p "$backup/$(dirname "$p")"
+    cp -R "$src" "$backup/$p"
+    rm -rf "$src"
+    info "Backed up + removed $p"
+  done
+
+  # Prune now-empty generated parent directories
+  rmdir "$target/bin" 2>/dev/null || true
+  rmdir "$target/.claude/commands" 2>/dev/null || true
+
+  # Keep hooks working if the project still uses them
+  _upgrade_rewrite_hooks "$target" "$backup"
+
+  echo ""
+  info "Upgrade complete. Backup saved to .aps/backup/$ts/"
+  info "Your plans/ and instruction files were not modified."
+  if [[ -d "$target/.aps/lib" ]]; then :; else
+    info "The vendored CLI was removed — ensure the global 'aps' binary is on PATH"
+    echo "  (install it with: aps setup cli, or the --cli installer)"
+  fi
+}
+
+cmd_upgrade_help() {
+  cat <<EOF
+aps upgrade - Safely remove generated v1/bulky-v2 bloat
+
+Usage:
+  aps upgrade [target-dir] [options]
+
+Dry-runs by default: detects generated files (root bin/ + lib/, v1
+aps-planning/, .claude/commands/, superseded .aps/bin + .aps/lib) and shows
+what it would back up and remove. Nothing is changed until you pass --apply.
+
+On --apply every removed path is copied to .aps/backup/<timestamp>/ first.
+User content is never touched: plans/, AGENTS.md, CLAUDE.md, GEMINI.md, and
+settings files are protected (hook paths in settings are rewritten in place,
+with a backup, only when kept).
+
+Options:
+  --apply     Perform the cleanup (default is a dry run)
+  --dry-run   Force a dry run (the default)
+  --yes, -y   Skip the confirmation prompt under --apply
+  --help      Show this help
+
+Examples:
+  aps upgrade                 # preview the cleanup for the current project
+  aps upgrade --apply         # back up + remove, with a confirmation prompt
+  aps upgrade --apply --yes   # non-interactive cleanup
+EOF
+}

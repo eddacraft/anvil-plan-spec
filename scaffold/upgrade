@@ -1,0 +1,158 @@
+#!/usr/bin/env bash
+#
+# APS Upgrade — safe cleanup of generated v1/bulky-v2 bloat (INSTALL-013).
+#
+# Self-contained on purpose: a dry run inspects only local files and needs no
+# network, so an agent can run it safely. On --apply every removed path is
+# copied to .aps/backup/<timestamp>/ first. User content is never touched.
+#
+# Usage:
+#   curl -fsSL .../scaffold/upgrade | bash               # dry run (current dir)
+#   curl -fsSL .../scaffold/upgrade | bash -s -- --apply # back up + remove
+#   curl -fsSL .../scaffold/upgrade | bash -s -- ./proj --apply --yes
+#
+
+set -euo pipefail
+
+TARGET="."
+APPLY=false
+ASSUME_YES=false
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --apply)   APPLY=true ;;
+    --dry-run) APPLY=false ;;
+    --yes|-y)  ASSUME_YES=true ;;
+    --help|-h)
+      sed -n '2,16p' "$0" 2>/dev/null || true
+      echo "Options: --apply  --dry-run  --yes  --help"
+      exit 0
+      ;;
+    -*) echo "error: unknown option: $1" >&2; exit 1 ;;
+    *)  TARGET="$1" ;;
+  esac
+  shift
+done
+
+if [[ -z "$TARGET" ]]; then
+  echo "error: TARGET must not be empty." >&2
+  exit 1
+fi
+
+if [[ -t 1 ]]; then
+  GREEN='\033[0;32m'; YELLOW='\033[1;33m'; RED='\033[0;31m'; BOLD='\033[1m'; NC='\033[0m'
+else
+  GREEN='' YELLOW='' RED='' BOLD='' NC=''
+fi
+info() { echo -e "${GREEN}>${NC} $1"; }
+warn() { echo -e "${YELLOW}>${NC} $1"; }
+err()  { echo -e "${RED}error:${NC} $1" >&2; }
+
+if [[ ! -d "$TARGET/plans" ]]; then
+  err "no plans/ directory at $TARGET — nothing to upgrade"
+  exit 1
+fi
+
+# Known APS bash-lib filenames (relative to a lib/ dir).
+APS_LIB_FILES="output.sh lint.sh orchestrate.sh audit.sh scaffold.sh rules/common.sh rules/module.sh rules/index.sh rules/workitem.sh rules/issues.sh rules/design.sh"
+
+dir_only_aps_lib() {
+  local d="$1" rel f
+  while IFS= read -r f; do
+    rel="${f#"$d"/}"
+    case " $APS_LIB_FILES " in
+      *" $rel "*) ;;
+      *) return 1 ;;
+    esac
+  done < <(find "$d" -type f)
+  return 0
+}
+
+REMOVE=()
+AMBIGUOUS=()
+
+for f in ".claude/commands/plan.md" ".claude/commands/plan-status.md"; do
+  [[ -e "$TARGET/$f" ]] && REMOVE+=("$f")
+done
+[[ -f "$TARGET/bin/aps" ]] && REMOVE+=("bin/aps")
+if [[ -d "$TARGET/lib" && -f "$TARGET/lib/lint.sh" ]]; then
+  if dir_only_aps_lib "$TARGET/lib"; then REMOVE+=("lib"); else AMBIGUOUS+=("lib/ (mixed APS + non-APS files)"); fi
+fi
+if [[ -d "$TARGET/aps-planning" ]]; then
+  if [[ -f "$TARGET/aps-planning/SKILL.md" || -f "$TARGET/aps-planning/hooks.md" ]]; then
+    REMOVE+=("aps-planning")
+  else
+    AMBIGUOUS+=("aps-planning/ (unrecognised contents)")
+  fi
+fi
+[[ -d "$TARGET/.aps/lib" ]] && REMOVE+=(".aps/lib")
+[[ -d "$TARGET/.aps/bin" ]] && REMOVE+=(".aps/bin")
+
+if [[ ${#REMOVE[@]} -eq 0 && ${#AMBIGUOUS[@]} -eq 0 ]]; then
+  info "No generated bloat found — this project is already clean."
+  exit 0
+fi
+
+echo ""
+echo -e "${BOLD}APS upgrade for $TARGET${NC}"
+if [[ ${#REMOVE[@]} -gt 0 ]]; then
+  echo ""
+  echo "Generated files to back up and remove:"
+  for p in "${REMOVE[@]}"; do echo "  - $p"; done
+fi
+if [[ ${#AMBIGUOUS[@]} -gt 0 ]]; then
+  echo ""
+  warn "Ambiguous — left untouched, review manually:"
+  for p in "${AMBIGUOUS[@]}"; do echo "  - $p"; done
+fi
+echo ""
+info "Protected and never removed: plans/, AGENTS.md, CLAUDE.md, GEMINI.md, settings"
+
+if [[ "$APPLY" != true ]]; then
+  echo ""
+  info "Dry run — no files changed. Re-run with --apply to perform the cleanup."
+  exit 0
+fi
+
+if [[ ${#REMOVE[@]} -eq 0 ]]; then
+  info "Nothing to remove (only ambiguous items). No changes made."
+  exit 0
+fi
+
+if [[ "$ASSUME_YES" != true ]]; then
+  if [[ -t 0 ]] || { : < /dev/tty; } 2>/dev/null; then
+    printf "Back up and remove the listed files? [y/N] " > /dev/tty 2>/dev/null || printf "Back up and remove the listed files? [y/N] "
+    read -r ans < /dev/tty 2>/dev/null || read -r ans
+    case "$ans" in [Yy]*) ;; *) info "Aborted — nothing was changed."; exit 0 ;; esac
+  else
+    err "refusing to modify files non-interactively without --yes"
+    exit 1
+  fi
+fi
+
+TS="$(date +%Y%m%d-%H%M%S)"
+BACKUP="$TARGET/.aps/backup/$TS"
+mkdir -p "$BACKUP"
+for p in "${REMOVE[@]}"; do
+  src="$TARGET/$p"
+  [[ -e "$src" ]] || continue
+  mkdir -p "$BACKUP/$(dirname "$p")"
+  cp -R "$src" "$BACKUP/$p"
+  rm -rf "$src"
+  info "Backed up + removed $p"
+done
+rmdir "$TARGET/bin" 2>/dev/null || true
+rmdir "$TARGET/.claude/commands" 2>/dev/null || true
+
+settings="$TARGET/.claude/settings.local.json"
+if [[ -f "$settings" ]] && grep -q 'aps-planning/scripts/' "$settings"; then
+  mkdir -p "$BACKUP/.claude"
+  cp "$settings" "$BACKUP/.claude/settings.local.json"
+  tmp="$(mktemp)"
+  sed 's#aps-planning/scripts/#.aps/scripts/#g' "$settings" > "$tmp" && mv "$tmp" "$settings"
+  info "Rewrote hook paths (aps-planning/scripts/ -> .aps/scripts/) in settings.local.json"
+fi
+
+echo ""
+info "Upgrade complete. Backup saved to .aps/backup/$TS/"
+info "Your plans/ and instruction files were not modified."

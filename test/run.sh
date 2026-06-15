@@ -338,5 +338,68 @@ APS_LOCAL="$PROJECT_ROOT" $APS setup all --yes "$SETUP_DIR" </dev/null >/dev/nul
 rm -rf "$SETUP_DIR"
 pass
 
+# Test 35: aps upgrade — safe dry-run, backup-before-remove, protections (INSTALL-013)
+echo -n "Test: aps upgrade cleanup... "
+build_bulky() {
+  local d="$1"
+  mkdir -p "$d/plans/modules" "$d/aps-planning/scripts" "$d/.claude/commands" \
+           "$d/bin" "$d/lib/rules" "$d/.aps/lib" "$d/.aps/bin"
+  echo x > "$d/plans/index.aps.md"; echo r > "$d/plans/aps-rules.md"
+  echo s > "$d/aps-planning/SKILL.md"; echo h > "$d/aps-planning/hooks.md"
+  echo c > "$d/.claude/commands/plan.md"; echo c > "$d/.claude/commands/plan-status.md"
+  echo b > "$d/bin/aps"; echo l > "$d/lib/lint.sh"; echo o > "$d/lib/output.sh"
+  echo or > "$d/.aps/lib/orchestrate.sh"; echo b > "$d/.aps/bin/aps"
+  echo claude > "$d/CLAUDE.md"; echo agents > "$d/AGENTS.md"
+  printf '{"hooks":{"x":"aps-planning/scripts/init-session.sh"}}\n' > "$d/.claude/settings.local.json"
+}
+UP=$(mktemp -d); build_bulky "$UP"
+# Dry run changes nothing and creates no backup
+$APS upgrade "$UP" > /dev/null 2>&1 || fail "upgrade dry-run failed"
+[[ -d "$UP/aps-planning" && -f "$UP/bin/aps" && -d "$UP/.aps/lib" ]] || fail "dry-run removed files"
+[[ ! -d "$UP/.aps/backup" ]] || fail "dry-run created a backup"
+# Apply backs up + removes generated bloat
+$APS upgrade "$UP" --apply --yes > /dev/null 2>&1 || fail "upgrade --apply failed"
+for gone in aps-planning bin/aps lib .aps/lib .aps/bin .claude/commands/plan.md; do
+  [[ -e "$UP/$gone" ]] && fail "upgrade did not remove $gone"
+done
+for keep in plans/index.aps.md plans/aps-rules.md CLAUDE.md AGENTS.md; do
+  [[ -e "$UP/$keep" ]] || fail "upgrade removed protected $keep"
+done
+[[ -n "$(find "$UP/.aps/backup" -name 'hooks.md' 2>/dev/null)" ]] || fail "backup missing removed files"
+grep -q '\.aps/scripts/init-session.sh' "$UP/.claude/settings.local.json" || fail "hook path not rewritten"
+grep -q 'aps-planning/scripts' "$UP/.claude/settings.local.json" && fail "stale hook path remains"
+rm -rf "$UP"
+# Guard: no plans/ -> nothing to upgrade
+NOPLANS=$(mktemp -d)
+$APS upgrade "$NOPLANS" > /dev/null 2>&1 && fail "upgrade should fail with no plans/"
+noplans_out=$($APS upgrade "$NOPLANS" 2>&1 || true)
+echo "$noplans_out" | grep -qi "nothing to upgrade" || fail "missing nothing-to-upgrade message"
+rm -rf "$NOPLANS"
+# Ambiguous lib/ (mixed files) is reported, never removed
+AMB=$(mktemp -d); mkdir -p "$AMB/plans" "$AMB/lib"
+echo x > "$AMB/plans/index.aps.md"; echo l > "$AMB/lib/lint.sh"; echo USER > "$AMB/lib/custom.sh"
+$APS upgrade "$AMB" --apply --yes > /dev/null 2>&1 || true
+[[ -f "$AMB/lib/custom.sh" ]] || fail "upgrade removed an ambiguous lib/"
+rm -rf "$AMB"
+pass
+
+# Test 36: scaffold/upgrade curl entrypoint is dry-run-first and agent-safe
+echo -n "Test: scaffold/upgrade entrypoint... "
+UPSH="$PROJECT_ROOT/scaffold/upgrade"
+[[ -f "$UPSH" ]] || fail "scaffold/upgrade missing"
+bash -n "$UPSH" || fail "scaffold/upgrade has a syntax error"
+grep -q 'APPLY=false' "$UPSH" || fail "scaffold/upgrade is not dry-run by default"
+# Refuses to modify non-interactively without --yes
+SAFE=$(mktemp -d); mkdir -p "$SAFE/plans" "$SAFE/bin"; echo x > "$SAFE/plans/index.aps.md"; echo b > "$SAFE/bin/aps"
+if bash "$UPSH" "$SAFE" --apply </dev/null > /dev/null 2>&1; then
+  fail "scaffold/upgrade applied without --yes non-interactively"
+fi
+[[ -f "$SAFE/bin/aps" ]] || fail "scaffold/upgrade removed files without --yes"
+# Dry run reports the candidate and exits clean
+bash "$UPSH" "$SAFE" </dev/null 2>&1 | grep -qi "dry run" || fail "scaffold/upgrade dry-run missing"
+[[ -f "$SAFE/bin/aps" ]] || fail "scaffold/upgrade dry-run removed files"
+rm -rf "$SAFE"
+pass
+
 echo ""
 echo -e "${GREEN}All tests passed!${NC}"
