@@ -4,7 +4,7 @@
 | ------- | ------ | -------- | ----------------------- |
 | INSTALL | @aneki | high     | In Progress (follow-up) |
 
-**Last reviewed:** 2026-06-14
+**Last reviewed:** 2026-06-15
 
 ## Purpose
 
@@ -51,6 +51,14 @@ minimal repo initialization, agent bootstrap, optional setup, and upgrade.
   `upgrade`)
 - Minimal default repo footprint with bulky integrations opt-in
 - Upgrade cleanup for v1 and bulky v2 project installs
+- Global release binary as the default CLI (Mac, Linux, Windows)
+- Multi-channel distribution aligned to release semver (GitHub releases,
+  install script, crates.io, Scoop)
+- `.aps/config.yml` as the per-project contract (`cli_version`, runtime
+  `plans_dir` / `docs_dir` / `tooling_root`)
+- Runtime config discovery so global `aps` respects project paths without
+  `--plans` or direnv
+- Documented migration from vendored bash CLI + direnv to global binary
 
 ## Out of Scope
 
@@ -58,6 +66,8 @@ minimal repo initialization, agent bootstrap, optional setup, and upgrade.
 - MCP server (separate TASKS module concern)
 - Tool-specific plugin/extension development
 - TUI wizard (future replacement for shell-prompt wizard)
+- `mise` / `asdf` manifest generation (document manual mirroring of
+  `cli_version` for now; optional follow-up)
 
 Follow-up scope note: the TUI remains the richer interactive frontend, but the
 public shell installer must expose the same high-level choices in a lightweight
@@ -88,7 +98,10 @@ picker so users do not have to read documentation before choosing the safe path.
 
 - **D-011:** `.aps/` as tooling root — _decided: yes, consolidate all
   APS-owned files (CLI, scripts, config, ephemeral) under `.aps/`_
-- **D-012:** CLI location — _decided: `.aps/bin/aps` with PATH hint_
+- **D-012:** CLI location — _decided: `.aps/bin/aps` with PATH hint.
+  **Amended by D-034 (2026-06-15):** primary CLI is the global release binary
+  on PATH; `.aps/bin/` is optional for vendored/pinned toolchains only. direnv
+  is optional, not the default activation path._
 - **D-013:** Skill/instruction format per tool — _decided, see below_
 - **D-014:** Agent model defaults — _decided: Planner on Opus, Librarian on
   Sonnet_
@@ -114,6 +127,27 @@ picker so users do not have to read documentation before choosing the safe path.
 - **D-033:** Upgrade safety — _decided: generated legacy files can be removed
   only after backup. Ambiguous or user-owned files are reported for manual
   review._
+- **D-034:** Global binary-first distribution — _decided 2026-06-15: the
+  default install path ships the release `aps` binary to the machine
+  (`~/.aps/bin` or package manager), not a vendored bash `bin/` + `lib/` tree
+  into every project. `aps init` scaffolds planning content and
+  `.aps/config.yml` only. Bash CLI remains an opt-in fallback (`--bash`, air
+  gap, or explicit `--local-cli`). Cross-platform: GitHub release assets
+  (TUI-006), install script, crates.io (`cargo install` / `cargo binstall`),
+  Scoop manifest on Windows. Amends D-012._
+- **D-035:** `.aps/config.yml` project contract — _decided 2026-06-15: the
+  file is the committed per-repo manifest, not init replay metadata only.
+  Required fields for the contract: `cli_version` (semver pin for the global
+  toolchain), `plans_dir`, `docs_dir`, `tooling_root`. The global binary
+  discovers the nearest `.aps/config.yml` by walking up from cwd. Explicit
+  flags (`--plans`, etc.) override config. `cli_version` mismatch warns locally
+  and may fail in `--strict` / CI. `aps init` writes `cli_version` from the
+  running binary._
+- **D-036:** Install-channel version alignment — _decided 2026-06-15: GitHub
+  release tag, install-script `VERSION=`, crates.io publish, and Scoop manifest
+  all reference the same semver. Project pinning is `cli_version` in
+  `.aps/config.yml`, not channel-specific pins. CI installs the pinned release
+  then runs `aps` without extra flags when config is present._
 
 **D-013 Detail: Multi-Tool Skill Compatibility (Researched 2026-02-19)**
 
@@ -469,6 +503,109 @@ Notes on schema:
   test/run.sh
 - **Status:** Ready
 
+### INSTALL-014: Extend `.aps/config.yml` as the project contract
+
+- **Intent:** Formalize per-project toolchain and path pinning so global `aps`
+  knows which release and which directories a repo expects.
+- **Expected Outcome:** `.aps/config.yml` gains `cli_version: "x.y.z"` written
+  by `aps init` from the running binary. `plans_dir`, `docs_dir`, and
+  `tooling_root` are documented as runtime defaults (not init-only). Schema
+  docs cover forward-compatible unknown keys. Bash and Rust init paths write
+  the same shape. `aps init --from` replays `cli_version` when absent in older
+  configs (warn + inherit current binary version).
+- **Validation:** Round-trip parse tests in `cli/src/config.rs`; fixture
+  `test/fixtures/config/` with alternate `plans_dir`; `aps lint plans` passes
+  on this repo after `cli_version` is added to `.aps/config.yml` (if dogfooded)
+- **Confidence:** high
+- **Dependencies:** INSTALL-002, TUI-005
+- **Files:** cli/src/scaffold.rs, cli/src/config.rs, lib/scaffold.sh,
+  docs/installation.md, test/fixtures/
+- **Status:** Draft
+
+### INSTALL-015: Ship global binary-first install channels
+
+- **Intent:** Make the release binary the default way users obtain `aps` on
+  Mac, Linux, and Windows — one semver across all channels.
+- **Expected Outcome:** Install script defaults to `--global --binary` when no
+  project scaffold is requested. `install.ps1` mirrors the behaviour on Windows
+  (User PATH + `aps.exe`). crates.io publishes the `aps-cli` crate with
+  installable binary (`cargo install aps-cli --version …` / `cargo binstall`).
+  Scoop manifest (`aps.json`) installs pinned releases. Release workflow
+  documents the bump checklist (tag → GitHub assets → crates.io → Scoop).
+  Installer file manifests include the full bash `lib/` set (including
+  `audit.sh`) when bash fallback is selected.
+- **Validation:** Smoke `aps --version` and `aps lint --help` on all five
+  TUI-006 targets; `cargo publish --dry-run` clean; Scoop manifest install in
+  CI or documented manual check; `VERSION=x.y.z curl …/install | bash -s --
+  --global --binary` installs exactly that release
+- **Confidence:** medium
+- **Dependencies:** TUI-006, INSTALL-010
+- **Files:** scaffold/install, scaffold/install.ps1, cli/Cargo.toml,
+  `.github/workflows/release.yml`, docs/installation.md
+- **Status:** Draft
+
+### INSTALL-016: Runtime project config discovery (alternate `plans_dir`)
+
+- **Intent:** Let a global `aps` on PATH operate on the correct plan tree and
+  toolchain pin without `--plans`, direnv, or vendored project CLI.
+- **Expected Outcome:** Shared discovery helper: walk up from cwd for
+  `.aps/config.yml` (under `tooling_root`, default `.aps/`). Project-scoped
+  commands (`lint`, `next`, `start`, `complete`, `graph`, `audit`) default
+  `--plans` to `plans_dir` from config (fallback `plans/`). Explicit `--plans`
+  still wins. `cli_version` check: warn on mismatch; `--strict` exits non-zero
+  for CI. Rust and bash implementations share behaviour; bash parity fixtures
+  extended. MCP `APS_PLANS` remains an override for non-standard layouts.
+- **Validation:** Fixture repo with `plans_dir: docs/plans/` — `aps lint` and
+  `aps next` hit the alternate tree without flags; mismatching `cli_version`
+  fails under `--strict`; `./test/run.sh` and `cargo test` green; monorepo
+  package-local config discovery documented as follow-up to MONO module
+- **Confidence:** medium
+- **Dependencies:** INSTALL-014, TUI-009, ORCH-001
+- **Files:** cli/src/config.rs, cli/src/lint.rs, cli/src/next.rs, cli/src/main.rs,
+  lib/lint.sh, lib/orchestrate.sh, lib/audit.sh, lib/rules/common.sh,
+  docs/usage.md, test/fixtures/, test/run.sh
+- **Status:** Draft
+
+### INSTALL-017: Migration path from vendored CLI to global binary
+
+- **Intent:** Give existing users a safe, documented path off root `bin/` +
+  `lib/`, `.aps/bin/` bash copies, and direnv-only activation.
+- **Expected Outcome:** `aps doctor` (or `aps setup doctor`) reports: global
+  binary presence/version, `cli_version` match, leftover vendored CLI paths,
+  stale direnv `.envrc` entries. Migration doc covers: (1) install global
+  binary, (2) add `cli_version` to `.aps/config.yml`, (3) run `aps upgrade`
+  to back up/remove vendored `bin/`, `lib/`, `.aps/lib/` per INSTALL-013, (4)
+  optional `direnv allow` removal. `scaffold/update --global` remains for bash
+  fallback users. anvil-001-style CI can switch from git-SHA checkout to
+  `cli_version` pin + release install.
+- **Validation:** Fixture “bloated v1 project” migrates with dry-run + apply;
+  doctor flags incomplete `~/.aps/lib/` (e.g. missing `audit.sh`); migration
+  doc reviewed against nxrust/anvil-001 pain points from dogfooding
+- **Confidence:** high
+- **Dependencies:** INSTALL-013, INSTALL-014, INSTALL-015
+- **Files:** cli/src/setup.rs or new `cli/src/doctor.rs`, docs/installation.md,
+  docs/usage.md, scaffold/upgrade, test/fixtures/
+- **Status:** Draft
+
+### INSTALL-018: Binary-first project init (no default local CLI vendoring)
+
+- **Intent:** Align `curl | bash` and bash `aps init` with the Rust path: project
+  repos get plans + config, not a second CLI tree.
+- **Expected Outcome:** Default init/install-into-project does not copy
+  `bin/aps` + `lib/` unless `--local-cli` / `--bash` is set. TTY installer
+  picker offers “Install CLI globally” before “Initialize this repo”. Non-TTY
+  documents two-step: global install then `aps init`. `aps setup cli` copies
+  the running release binary to `~/.aps/bin` (already exists in Rust). Project
+  layout diagram updated: `.aps/config.yml` required; `.aps/bin/` optional.
+- **Validation:** Fresh `aps init` produces no root `bin/` or `lib/`; plans
+  and `.aps/config.yml` present; `aps lint` works when global binary on PATH;
+  `--local-cli` still vendors bash runtime for air-gap
+- **Confidence:** high
+- **Dependencies:** INSTALL-011, INSTALL-014, INSTALL-015
+- **Files:** scaffold/install, lib/scaffold.sh, cli/src/scaffold.rs,
+  docs/installation.md, test/run.sh
+- **Status:** Draft
+
 ## Execution Strategy
 
 ### Wave 1: Foundations (no dependencies)
@@ -499,6 +636,19 @@ Notes on schema:
 - INSTALL-012: `aps setup` picker and shortcuts
 - INSTALL-013: Safe upgrade cleanup
 
+### Wave 6: Global binary + project contract (depends on Wave 5, TUI-006)
+
+Parallel after INSTALL-014 lands:
+
+- INSTALL-014: `.aps/config.yml` project contract (`cli_version`, paths)
+- INSTALL-015: Global binary-first install channels (release, crates.io, Scoop)
+- INSTALL-016: Runtime config discovery (alternate `plans_dir`, `--strict`)
+
+Sequential cleanup:
+
+- INSTALL-018: Binary-first init (depends on 014, 015)
+- INSTALL-017: Migration path + `aps doctor` (depends on 013, 014, 015, 018)
+
 ## Notes
 
 - The current `aps-planning/` contains: SKILL.md, reference.md, examples.md,
@@ -522,14 +672,19 @@ Notes on schema:
 - Follow-up direction: the full layout below is an explicit opt-in result, not
   the default fresh-project footprint. The default should stay close to APS as a
   markdown specification: planning files first, optional tooling second.
+- **D-034 default footprint:** global `aps` on PATH + committed
+  `.aps/config.yml` + `plans/` (path from `plans_dir`). No root `bin/`,
+  no direnv requirement. See INSTALL-014..018.
+- **Alternate `plans_dir`:** monorepos may set `plans_dir: packages/foo/plans/`
+  in `.aps/config.yml`; federated nested indexes remain MONO module scope.
 
 ### Resulting Project Layout (full install, all options)
 
 ```
 .aps/
-├── config.yml                          # Install choices
-├── bin/aps                             # CLI linter
-├── lib/                                # CLI internals
+├── config.yml                          # Project contract (cli_version, paths)
+├── bin/aps                             # Optional vendored/pinned CLI only
+├── lib/                                # Optional bash CLI internals
 ├── scripts/                            # Hook scripts
 │   ├── init-session.sh
 │   ├── check-complete.sh

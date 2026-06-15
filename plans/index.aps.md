@@ -5,7 +5,7 @@
 | Status  | Active     |
 | Owner   | @aneki     |
 | Created | 2025-12-31 |
-| Updated | 2026-06-08 |
+| Updated | 2026-06-15 |
 
 ## Problem
 
@@ -43,7 +43,7 @@ APS needs continued development to:
 
 | Module                              | Purpose                                         | Status                  |
 | ----------------------------------- | ----------------------------------------------- | ----------------------- |
-| [install](./modules/install.aps.md) | Interactive install, `.aps/` layout, multi-tool | In Progress (follow-up) |
+| [install](./modules/install.aps.md) | Global binary install, project config contract, migration | In Progress (follow-up) |
 | [agents](./modules/agents.aps.md)   | APS Planner + Librarian agents, multi-harness   | Complete                |
 
 ### In Progress (v0.4 — Orchestration & UX)
@@ -117,7 +117,10 @@ These are explicitly out of scope:
 - **D-009:** npm init module — _decided: merged into scaffold module, no separate npm package_
 - **D-010:** Claude Code Tasks integration — _decided: yes, APS as planning layer + Tasks as execution layer_
 - **D-011:** `.aps/` as tooling root — _decided: yes, CLI + scripts + config + ephemeral under `.aps/`_
-- **D-012:** CLI location — _decided: `.aps/bin/aps` with PATH hint (direnv or shell)_
+- **D-012:** CLI location — _decided: `.aps/bin/aps` with PATH hint (direnv or shell). Amended 2026-06-15: global release binary on PATH is primary; `.aps/bin/` optional (see install D-034)_
+- **D-034:** Global binary-first install — _decided: default distribution is the release `aps` binary (Mac/Linux/Windows) via GitHub releases, install script, crates.io, and Scoop; `aps init` scaffolds project content only. See [install.aps.md](./modules/install.aps.md) INSTALL-014..018_
+- **D-035:** `.aps/config.yml` project contract — _decided: `cli_version` pins the toolchain; `plans_dir` / `docs_dir` / `tooling_root` are runtime defaults discovered by global `aps`. Explicit flags override_
+- **D-036:** Install-channel semver alignment — _decided: all distribution channels publish the same release version; per-project pin is `cli_version` in `.aps/config.yml`_
 - **D-013:** Skill format per tool — _decided: `.claude/skills/` as cross-tool path (Claude Code + Copilot + OpenCode auto-discover), `.agents/skills/` for Codex + Gemini (both require explicit install/link cmd); instruction files per tool (AGENTS.md, GEMINI.md)_
 - **D-014:** Agent model defaults — _decided: Planner on Opus, Librarian on Sonnet_
 - **D-015:** Commands deprecated — _decided: yes, fold `/plan` and `/plan-status` into skill_
