@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 #
 # APS Install Script
-# Creates APS structure in a new project with templates, skill, and commands.
+# Multi-mode entrypoint: install the CLI, initialize a repo (minimal planning
+# content by default), bootstrap a repo for an agent, upgrade, or add a tool.
 #
 # Usage:
 #   curl -fsSL https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install | bash
@@ -25,6 +26,9 @@ TARGET="."
 #   setup   add a tool integration (--setup <tool>)
 MODE=""
 SETUP_TARGET=""
+# init footprint flags (INSTALL-011): minimal by default, opt in to extras.
+USE_LOCAL_CLI=false
+INSTALL_HOOKS=false
 
 # Parse flags
 while [[ $# -gt 0 ]]; do
@@ -43,6 +47,8 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
     --binary|-b)       USE_BINARY=true ;;
+    --local-cli|--bash) USE_LOCAL_CLI=true ;;
+    --hooks)           INSTALL_HOOKS=true ;;
     -*) echo "error: unknown option: $1" >&2; exit 1 ;;
     *) TARGET="$1" ;;
   esac
@@ -385,7 +391,37 @@ install_setup() {
   (cd "$TARGET" && "$aps_bin" setup "$tool")
 }
 
-# Default project scaffold (the `init` mode): CLI + plans + skill + commands.
+# Write the minimal `.aps/config.yml` project contract for a fresh init.
+# The full schema lives in lib/scaffold.sh's write_config; the curl bootstrap
+# has no bash lib to source, so it writes the bare required shape here.
+write_min_config() {
+  local today
+  today="$(date +%Y-%m-%d)"
+  mkdir -p "$TARGET/.aps"
+  touch "$TARGET/.aps/.gitignore"
+  grep -qxF 'context/' "$TARGET/.aps/.gitignore" || printf 'context/\n' >> "$TARGET/.aps/.gitignore"
+  cat > "$TARGET/.aps/config.yml" <<EOF
+# .aps/config.yml — written by installer, read by updater
+aps:
+  version: "$VERSION"
+  config_schema: 1
+  installed: "$today"
+  updated: "$today"
+
+project:
+  type: simple
+  monorepo_tool: ~
+  profile: solo
+
+tools:
+  - name: generic
+    # No tool integration — run 'aps setup' to add one
+EOF
+}
+
+# Default project scaffold (the `init` mode). Minimal by default (INSTALL-011):
+# planning content + .aps/config.yml only. The CLI runtime and hooks are opt-in
+# (--local-cli / --hooks); tool skills/agents are added later with `aps setup`.
 install_init() {
 # Header
 echo ""
@@ -406,126 +442,84 @@ if [[ -d "$PLANS_DIR" ]]; then
   exit 1
 fi
 
-# Install CLI
-step "Installing APS CLI"
-if [[ "$USE_BINARY" == true ]] && install_binary "$TARGET/bin"; then
-  : # native binary installed; bash CLI not needed
-else
-  for f in bin/aps lib/output.sh lib/lint.sh lib/orchestrate.sh lib/audit.sh lib/scaffold.sh lib/rules/common.sh lib/rules/module.sh lib/rules/index.sh lib/rules/workitem.sh lib/rules/issues.sh lib/rules/design.sh; do
-    download_root "$f" "$TARGET/$f"
-  done
-  chmod +x "$TARGET/bin/aps"
-  info "bin/aps + lib/ (CLI)"
-fi
-
 # Create directory structure
 step "Creating directory structure"
 mkdir -p "$PLANS_DIR/modules"
 mkdir -p "$PLANS_DIR/execution"
 mkdir -p "$PLANS_DIR/decisions"
+mkdir -p "$PLANS_DIR/designs"
 
-# Download plan files
+# Download plan files (v2 templates: rules + project context + trackers)
 step "Downloading templates"
-download "plans/aps-rules.md" "$PLANS_DIR/aps-rules.md"
-info "aps-rules.md"
-
 download "plans/index.aps.md" "$PLANS_DIR/index.aps.md"
-info "index.aps.md"
-
+download "plans/aps-rules-v2.md" "$PLANS_DIR/aps-rules.md"
+download "plans/project-context.md" "$PLANS_DIR/project-context.md"
+download "plans/issues.md" "$PLANS_DIR/issues.md"
 download "plans/modules/.module.template.md" "$PLANS_DIR/modules/.module.template.md"
-info "modules/.module.template.md"
-
 download "plans/modules/.simple.template.md" "$PLANS_DIR/modules/.simple.template.md"
-info "modules/.simple.template.md"
-
 download "plans/modules/.index-monorepo.template.md" "$PLANS_DIR/modules/.index-monorepo.template.md"
-info "modules/.index-monorepo.template.md"
-
 download "plans/execution/.actions.template.md" "$PLANS_DIR/execution/.actions.template.md"
-info "execution/.actions.template.md"
-
 touch "$PLANS_DIR/decisions/.gitkeep"
+touch "$PLANS_DIR/designs/.gitkeep"
+info "plans/ (rules, project-context, index, issues, templates)"
 
-# Install skill
-step "Installing APS planning skill"
+# Project contract
+step "Writing project config"
+write_min_config
+info ".aps/config.yml + .aps/.gitignore"
 
-SKILL_DIR="$TARGET/aps-planning"
-COMMANDS_DIR="$TARGET/.claude/commands"
+# Optional: vendored bash CLI runtime (air-gap / pinned toolchains)
+if [[ "$USE_LOCAL_CLI" == true ]]; then
+  step "Vendoring bash CLI into .aps/"
+  if [[ "$USE_BINARY" == true ]] && install_binary "$TARGET/.aps/bin"; then
+    : # native binary installed
+  else
+    for f in bin/aps lib/output.sh lib/lint.sh lib/orchestrate.sh lib/audit.sh lib/scaffold.sh lib/rules/common.sh lib/rules/module.sh lib/rules/index.sh lib/rules/workitem.sh lib/rules/issues.sh lib/rules/design.sh; do
+      download_root "$f" "$TARGET/.aps/$f"
+    done
+    chmod +x "$TARGET/.aps/bin/aps"
+    info ".aps/bin/aps + .aps/lib/ (vendored CLI)"
+  fi
+fi
 
-mkdir -p "$SKILL_DIR/scripts"
-download "aps-planning/SKILL.md" "$SKILL_DIR/SKILL.md"
-download "aps-planning/reference.md" "$SKILL_DIR/reference.md"
-download "aps-planning/examples.md" "$SKILL_DIR/examples.md"
-download "aps-planning/hooks.md" "$SKILL_DIR/hooks.md"
-download "aps-planning/scripts/install-hooks.sh" "$SKILL_DIR/scripts/install-hooks.sh"
-download "aps-planning/scripts/init-session.sh" "$SKILL_DIR/scripts/init-session.sh"
-download "aps-planning/scripts/check-complete.sh" "$SKILL_DIR/scripts/check-complete.sh"
-download "aps-planning/scripts/pre-tool-check.sh" "$SKILL_DIR/scripts/pre-tool-check.sh"
-download "aps-planning/scripts/post-tool-nudge.sh" "$SKILL_DIR/scripts/post-tool-nudge.sh"
-download "aps-planning/scripts/enforce-plan-update.sh" "$SKILL_DIR/scripts/enforce-plan-update.sh"
-chmod +x "$SKILL_DIR/scripts/"*.sh
-
-info "aps-planning/ (skill, reference, examples, hooks, scripts)"
-
-mkdir -p "$COMMANDS_DIR"
-download "commands/plan.md" "$COMMANDS_DIR/plan.md"
-download "commands/plan-status.md" "$COMMANDS_DIR/plan-status.md"
-
-info ".claude/commands/ (plan, plan-status)"
+# Optional: hook scripts
+if [[ "$INSTALL_HOOKS" == true ]]; then
+  step "Installing hook scripts"
+  for s in install-hooks.sh init-session.sh check-complete.sh pre-tool-check.sh post-tool-nudge.sh enforce-plan-update.sh; do
+    download "aps-planning/scripts/$s" "$TARGET/.aps/scripts/$s"
+  done
+  chmod +x "$TARGET/.aps/scripts/"*.sh
+  info ".aps/scripts/ (hook scripts)"
+fi
 
 # Success
 echo ""
 step "Installation complete"
 echo ""
-echo "  bin/"
-echo "  └── aps                              <- CLI (lint, init, update)"
-echo ""
 echo "  plans/"
-echo "  ├── aps-rules.md              # Agent guidance"
-echo "  ├── index.aps.md              # Your main plan"
-echo "  ├── modules/"
-echo "  │   ├── .module.template.md           # Module template"
-echo "  │   ├── .simple.template.md           # Simple feature template"
-echo "  │   └── .index-monorepo.template.md   # Index for monorepos"
-echo "  ├── execution/"
-echo "  │   └── .actions.template.md  # Action plan template"
-echo "  └── decisions/"
+echo "  ├── aps-rules.md              # Agent guidance (APS-managed)"
+echo "  ├── project-context.md        # Your project context (edit this)"
+echo "  ├── index.aps.md              # Your main plan (edit this)"
+echo "  ├── issues.md                 # Issue & question tracker"
+echo "  ├── modules/                  # Module templates"
+echo "  ├── execution/                # Action plan template"
+echo "  ├── decisions/                # ADRs"
+echo "  └── designs/                  # Technical designs"
 echo ""
-echo "  aps-planning/"
-echo "  ├── SKILL.md                  # Planning skill (core rules)"
-echo "  ├── reference.md              # APS format reference"
-echo "  ├── examples.md               # Real-world examples"
-echo "  ├── hooks.md                  # Hook configuration guide"
-echo "  └── scripts/                  # Hook install + session scripts"
+echo "  .aps/config.yml               # Project contract (cli_version, paths)"
 echo ""
-echo "  .claude/commands/"
-echo "  ├── plan.md                   # legacy Claude command"
-echo "  └── plan-status.md            # legacy Claude command"
-echo ""
-
-# Interactive hook prompt
-if ask_yn "Install APS hooks into .claude/settings.local.json?" "y"; then
-  (cd "$TARGET" && bash aps-planning/scripts/install-hooks.sh)
-else
-  if ask_yn "Copy hook scripts for you to install/review later?" "y"; then
-    info "Hook scripts are at: aps-planning/scripts/"
-    echo "  Run ./aps-planning/scripts/install-hooks.sh when ready"
-    echo "  See aps-planning/hooks.md for what each hook does"
-  else
-    info "Skipping hooks. You can install them later:"
-    echo "  ./aps-planning/scripts/install-hooks.sh"
-  fi
-fi
-
-# PATH setup
-setup_path
 
 echo ""
 step "Next steps"
 echo ""
-printf '  1. Edit %bplans/index.aps.md%b to define your plan\n' "$BOLD" "$NC"
-echo "  2. Copy templates to create modules (remove the leading dot)"
-printf '  3. Point your AI agent at %bplans/aps-rules.md%b, or run %baps next%b\n' "$BOLD" "$NC" "$BOLD" "$NC"
+if [[ "$USE_LOCAL_CLI" != true ]]; then
+  printf '  1. Install the APS CLI: %bcurl -fsSL %s/scaffold/install | bash -s -- --cli%b\n' "$BOLD" "$BASE_URL" "$NC"
+  printf '  2. Edit %bplans/index.aps.md%b to define your plan\n' "$BOLD" "$NC"
+  printf '  3. Add hooks/agents/tool skills with %baps setup%b\n' "$BOLD" "$NC"
+else
+  printf '  1. Edit %bplans/index.aps.md%b to define your plan\n' "$BOLD" "$NC"
+  printf '  2. Point your AI agent at %bplans/aps-rules.md%b, or run %baps next%b\n' "$BOLD" "$NC" "$BOLD" "$NC"
+fi
 echo ""
 echo "Docs: https://github.com/EddaCraft/anvil-plan-spec"
 echo ""
@@ -548,6 +542,11 @@ Modes:
 Options:
   --binary           Prefer a prebuilt binary over the bash CLI
   -g, --global       Alias for --cli
+  --local-cli, --bash  (init) Also vendor the bash CLI into .aps/bin + .aps/lib
+  --hooks            (init) Also install hook scripts into .aps/scripts
+
+By default --init writes only planning content + .aps/config.yml; the global
+'aps' binary drives the repo. Add hooks/agents/tool skills with 'aps setup'.
 
 With no mode in an interactive terminal, a picker is shown.
 EOF

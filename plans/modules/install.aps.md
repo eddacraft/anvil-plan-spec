@@ -462,7 +462,19 @@ Notes on schema:
 - **Dependencies:** INSTALL-010
 - **Files:** lib/scaffold.sh, scaffold/install, scaffold/install.ps1,
   test/run.sh
-- **Status:** Ready
+- **Status:** Complete: 2026-06-15
+- **Results:** `aps init` (bash `cmd_init`) now scaffolds planning content +
+  `.aps/config.yml` only. The vendored bash CLI (`.aps/bin` + `.aps/lib`) and
+  hook scripts (`.aps/scripts`) are gated behind new `--local-cli`/`--bash`
+  and `--hooks` flags; PATH/direnv setup and the layout printout follow suit.
+  `.aps/.gitignore` (context ignore) moved into `write_config` so it is always
+  written. The curl `scaffold/install` and `scaffold/install.ps1` `--init`
+  modes were rewritten to match: minimal v2 templates + `write_min_config`,
+  no root `bin/`/`lib/`, no `aps-planning/`, no `.claude/commands/`; same
+  opt-in flags. Test 17 rewritten to assert the minimal footprint, Test 17b
+  covers `--local-cli`/`--hooks`, Test 33 statically guards the curl
+  installers. docs/installation.md updated. Full suite green; markdownlint
+  clean.
 
 ### INSTALL-012: Add `aps setup` picker and shortcuts
 
