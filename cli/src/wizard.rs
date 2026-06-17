@@ -81,6 +81,7 @@ pub enum Component {
     ProjectContext,
     DesignsDir,
     DecisionsDir,
+    ReleasesDir,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -135,6 +136,7 @@ pub struct WizardState {
     tooling_root: TextInputState,
     component_index: usize,
     selected_components: Vec<Component>,
+    components_initialized: bool,
     root: PathBuf,
     scaffold_run: Option<ScaffoldRun>,
     scaffold_error: Option<String>,
@@ -165,6 +167,7 @@ impl Default for WizardState {
             tooling_root: text_input_with(Self::DEFAULT_TOOLING_ROOT),
             component_index: 0,
             selected_components: Self::COMPONENTS.to_vec(),
+            components_initialized: false,
             root: PathBuf::from("."),
             scaffold_run: None,
             scaffold_error: None,
@@ -203,12 +206,13 @@ impl WizardState {
         Template::Index,
         Template::MonorepoIndex,
     ];
-    const COMPONENTS: [Component; 5] = [
+    const COMPONENTS: [Component; 6] = [
         Component::LintRules,
         Component::ApsRules,
         Component::ProjectContext,
         Component::DesignsDir,
         Component::DecisionsDir,
+        Component::ReleasesDir,
     ];
     const PATH_FIELDS: [PathField; 3] = [
         PathField::PlansDir,
@@ -456,6 +460,11 @@ impl WizardState {
             self.templates_initialized = true;
         }
 
+        if self.step == WizardStep::Components && !self.components_initialized {
+            self.selected_components = Self::default_components(self.profile);
+            self.components_initialized = true;
+        }
+
         WizardEvent::Continue
     }
 
@@ -565,6 +574,18 @@ impl WizardState {
         });
         templates.sort_by_key(|template| Self::template_order(*template));
         templates
+    }
+
+    /// Components selected by default for a profile. Solo keeps the wizard
+    /// minimal — release planning is opt-in — while Team and AI-agent
+    /// operators get `releases/` on by default (REL-002). Every component
+    /// stays toggleable; this only sets the initial check state.
+    fn default_components(profile: Profile) -> Vec<Component> {
+        Self::COMPONENTS
+            .iter()
+            .copied()
+            .filter(|component| *component != Component::ReleasesDir || profile != Profile::Solo)
+            .collect()
     }
 
     fn template_order(template: Template) -> usize {
@@ -709,7 +730,8 @@ impl WizardState {
              │   ├── index.aps.md\n\
              │   ├── aps-rules.md\n\
              │   ├── designs/\n\
-             │   └── decisions/\n\
+             │   ├── decisions/\n\
+             │   └── releases/\n\
              ├── {docs}\n\
              └── {tooling}"
         )
@@ -1464,6 +1486,7 @@ impl Component {
             Self::ProjectContext => "project-context.md",
             Self::DesignsDir => "designs/ directory",
             Self::DecisionsDir => "decisions/ directory",
+            Self::ReleasesDir => "releases/ directory",
         }
     }
 
@@ -1474,6 +1497,7 @@ impl Component {
             Self::ProjectContext => "durable project background for agents",
             Self::DesignsDir => "design documents alongside plans",
             Self::DecisionsDir => "decision log directory",
+            Self::ReleasesDir => "release plans with README + template",
         }
     }
 }
@@ -1933,10 +1957,39 @@ mod tests {
         let mut state = WizardState::default();
         advance_to(&mut state, WizardStep::Components);
 
-        assert_eq!(state.selected_components(), &WizardState::COMPONENTS);
+        // Solo keeps release planning opt-in; everything else is on.
+        assert_eq!(
+            state.selected_components(),
+            &WizardState::default_components(Profile::Solo)
+        );
+        assert!(
+            !state
+                .selected_components()
+                .contains(&Component::ReleasesDir)
+        );
 
         state.handle(Action::Toggle); // cursor on lint rules
         assert!(!state.selected_components().contains(&Component::LintRules));
+    }
+
+    #[test]
+    fn releases_dir_default_is_profile_gated() {
+        // Solo: releases/ off by default, but still toggleable on.
+        let mut solo = WizardState::default();
+        advance_to(&mut solo, WizardStep::Components);
+        assert!(!solo.selected_components().contains(&Component::ReleasesDir));
+
+        // Team: releases/ on by default.
+        let mut team = WizardState::default();
+        team.handle(Action::Down); // profile: team
+        advance_to(&mut team, WizardStep::Components);
+        assert!(team.selected_components().contains(&Component::ReleasesDir));
+
+        // AI agent operator: on by default too.
+        assert!(
+            WizardState::default_components(Profile::AgentOperator)
+                .contains(&Component::ReleasesDir)
+        );
     }
 
     #[test]

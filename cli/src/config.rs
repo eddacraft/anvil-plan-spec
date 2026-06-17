@@ -55,6 +55,7 @@ pub fn component_from_key(key: &str) -> Result<Component, String> {
         "project-context" => Ok(Component::ProjectContext),
         "designs-dir" => Ok(Component::DesignsDir),
         "decisions-dir" => Ok(Component::DecisionsDir),
+        "releases-dir" => Ok(Component::ReleasesDir),
         other => Err(format!("unknown component '{other}'")),
     }
 }
@@ -252,12 +253,13 @@ pub fn default_templates(profile: Profile, shape: ProjectShape) -> Vec<Template>
     templates
 }
 
-const ALL_COMPONENTS: [Component; 5] = [
+const ALL_COMPONENTS: [Component; 6] = [
     Component::LintRules,
     Component::ApsRules,
     Component::ProjectContext,
     Component::DesignsDir,
     Component::DecisionsDir,
+    Component::ReleasesDir,
 ];
 
 /// Build [`Selections`] for a non-interactive run: start from the config
@@ -508,7 +510,11 @@ mod tests {
             plans_dir: "plans".to_string(),
             docs_dir: "docs".to_string(),
             tooling_root: ".aps".to_string(),
-            components: vec![Component::LintRules, Component::ApsRules],
+            components: vec![
+                Component::LintRules,
+                Component::ApsRules,
+                Component::ReleasesDir,
+            ],
             cli_version: Some("9.9.9".to_string()),
         }
     }

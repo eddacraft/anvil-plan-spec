@@ -69,7 +69,7 @@ enum Command {
         #[arg(long)]
         tooling_root: Option<String>,
         /// Components (comma-separated): lint-rules, aps-rules, project-context,
-        /// designs-dir, decisions-dir
+        /// designs-dir, decisions-dir, releases-dir
         #[arg(long, value_delimiter = ',')]
         components: Vec<String>,
         /// Hook verbosity applied to all selected tools: full, minimal, none

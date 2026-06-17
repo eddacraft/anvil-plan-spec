@@ -29,6 +29,8 @@ const INDEX_MONOREPO_TEMPLATE: &str =
 const ACTIONS_TEMPLATE: &str = include_str!("../../scaffold/plans/execution/.actions.template.md");
 const DESIGN_TEMPLATE: &str = include_str!("../../scaffold/designs/.design.template.md");
 const QUICKSTART_TEMPLATE: &str = include_str!("../../templates/quickstart.template.md");
+const RELEASES_README: &str = include_str!("../../scaffold/plans/releases/README.md");
+const RELEASE_TEMPLATE: &str = include_str!("../../templates/release.template.md");
 
 const SKILL_MD: &str = include_str!("../../scaffold/aps-planning/SKILL.md");
 const SKILL_REFERENCE: &str = include_str!("../../scaffold/aps-planning/reference.md");
@@ -303,6 +305,9 @@ pub fn plan_steps(selections: &Selections) -> Vec<ScaffoldStep> {
     if selections.has_component(Component::DesignsDir) {
         dirs.push(FileOp::Mkdir(plans.join("designs")));
     }
+    if selections.has_component(Component::ReleasesDir) {
+        dirs.push(FileOp::Mkdir(plans.join("releases")));
+    }
     steps.push(ScaffoldStep {
         label: "Create directories".to_string(),
         ops: dirs,
@@ -353,6 +358,16 @@ pub fn plan_steps(selections: &Selections) -> Vec<ScaffoldStep> {
         templates.push(FileOp::Write {
             path: plans.join("designs/.design.template.md"),
             content: DESIGN_TEMPLATE,
+        });
+    }
+    if selections.has_component(Component::ReleasesDir) {
+        templates.push(FileOp::Write {
+            path: plans.join("releases/README.md"),
+            content: RELEASES_README,
+        });
+        templates.push(FileOp::Write {
+            path: plans.join("releases/.release.template.md"),
+            content: RELEASE_TEMPLATE,
         });
     }
     if let Some(custom) = &selections.custom_template {
@@ -570,6 +585,7 @@ pub fn component_key(component: Component) -> &'static str {
         Component::ProjectContext => "project-context",
         Component::DesignsDir => "designs-dir",
         Component::DecisionsDir => "decisions-dir",
+        Component::ReleasesDir => "releases-dir",
     }
 }
 
@@ -829,6 +845,7 @@ mod tests {
                 Component::ProjectContext,
                 Component::DesignsDir,
                 Component::DecisionsDir,
+                Component::ReleasesDir,
             ],
             cli_version: None,
         }
@@ -855,12 +872,42 @@ mod tests {
         let dirs = &steps[0].ops;
         assert!(dirs.contains(&FileOp::Mkdir(PathBuf::from("plans/decisions"))));
         assert!(dirs.contains(&FileOp::Mkdir(PathBuf::from("plans/designs"))));
+        assert!(dirs.contains(&FileOp::Mkdir(PathBuf::from("plans/releases"))));
 
         selections.components = vec![Component::ApsRules];
         let steps = plan_steps(&selections);
         let dirs = &steps[0].ops;
         assert!(!dirs.contains(&FileOp::Mkdir(PathBuf::from("plans/decisions"))));
         assert!(!dirs.contains(&FileOp::Mkdir(PathBuf::from("plans/designs"))));
+        assert!(!dirs.contains(&FileOp::Mkdir(PathBuf::from("plans/releases"))));
+    }
+
+    #[test]
+    fn releases_component_writes_readme_and_template() {
+        let root = temp_root("releases");
+        let mut selections = base_selections();
+        selections.components = vec![Component::ReleasesDir];
+        selections.tools = Vec::new();
+
+        let run = run_all(&root, &selections);
+
+        assert!(run.failures().is_empty(), "failures: {:?}", run.failures());
+        assert!(root.join("plans/releases").is_dir());
+        // The README points users at the local template, which must exist.
+        let readme = fs::read_to_string(root.join("plans/releases/README.md")).unwrap();
+        assert!(readme.contains(".release.template.md"));
+        assert!(root.join("plans/releases/.release.template.md").exists());
+
+        // Without the component nothing release-related is written.
+        let bare = temp_root("releases-off");
+        let mut off = base_selections();
+        off.components = Vec::new();
+        off.tools = Vec::new();
+        run_all(&bare, &off);
+        assert!(!bare.join("plans/releases").exists());
+
+        fs::remove_dir_all(&root).unwrap();
+        fs::remove_dir_all(&bare).unwrap();
     }
 
     #[test]
@@ -924,6 +971,8 @@ mod tests {
             "plans/execution/.actions.template.md",
             "plans/modules/.quickstart.template.md",
             "plans/designs/.design.template.md",
+            "plans/releases/README.md",
+            "plans/releases/.release.template.md",
             "aps-planning/SKILL.md",
             ".claude/commands/plan.md",
             ".claude/agents/aps-conductor.md",
@@ -950,6 +999,7 @@ mod tests {
         assert!(!root.join("plans/aps-rules.md").exists());
         assert!(!root.join("plans/project-context.md").exists());
         assert!(!root.join("plans/designs").exists());
+        assert!(!root.join("plans/releases").exists());
         assert!(!root.join("aps-planning").exists());
         assert!(root.join("plans/index.aps.md").exists());
 

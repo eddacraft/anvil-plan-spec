@@ -74,7 +74,9 @@ The pattern is generic enough to extract.
 **Exposes:**
 
 - `templates/release.template.md` — release plan template
-- `scaffold/plans/releases/.gitkeep` — directory scaffolded on init
+- `scaffold/plans/releases/README.md` + `.release.template.md` — release
+  directory scaffolded on init (was planned as a bare `.gitkeep`; REL-002
+  ships a README that points at the embedded template instead)
 - `aps release new <version>` — create new release file from template
 - `aps release status [version]` — show release readiness (work items
   Complete vs In Progress vs Draft scoped to release)
@@ -133,6 +135,13 @@ The pattern is generic enough to extract.
   `plans/releases/` with README; install wizard prompt gates the creation
 - **Confidence:** high
 - **Dependencies:** REL-001
+- **Status:** In Progress: 2026-06-15 — added `Component::ReleasesDir` to the
+  native wizard/scaffold. Wizard default is profile-gated (solo: opt-in/off,
+  team + agent-operator: on) and always toggleable; the non-interactive
+  default (`ALL_COMPONENTS`) keeps it on so `aps init` with default flags
+  produces the dir. Scaffold writes `plans/releases/README.md` plus the
+  embedded `.release.template.md`, so the README points at a real local
+  template.
 
 ### REL-003: Lint rules for release plan files
 
