@@ -225,7 +225,9 @@ pub fn run(start: &Path) -> i32 {
     }
 
     if report.has_problems() {
-        println!("\nSome checks failed. See docs/installation.md → \"Migrating to the global binary\".");
+        println!(
+            "\nSome checks failed. See docs/installation.md → \"Migrating to the global binary\"."
+        );
         1
     } else {
         println!("\nNo blocking problems. See docs/installation.md for the migration steps.");
