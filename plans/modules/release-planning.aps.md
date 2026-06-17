@@ -2,7 +2,7 @@
 
 | ID  | Owner  | Priority | Status |
 | --- | ------ | -------- | ------ |
-| REL | @aneki | medium   | Draft  |
+| REL | @aneki | medium   | Complete |
 
 ## Purpose
 
@@ -135,7 +135,7 @@ The pattern is generic enough to extract.
   `plans/releases/` with README; install wizard prompt gates the creation
 - **Confidence:** high
 - **Dependencies:** REL-001
-- **Status:** In Progress: 2026-06-15 — added `Component::ReleasesDir` to the
+- **Status:** Complete: 2026-06-17 — merged in #70 (`ce2fa34`). Added `Component::ReleasesDir` to the
   native wizard/scaffold. Wizard default is profile-gated (solo: opt-in/off,
   team + agent-operator: on) and always toggleable; the non-interactive
   default (`ALL_COMPONENTS`) keeps it on so `aps init` with default flags
@@ -155,8 +155,8 @@ The pattern is generic enough to extract.
   passes the anvil-001 v0.3.0-beta.md
 - **Confidence:** high
 - **Dependencies:** REL-001
-- **Status:** In Progress: 2026-06-15 — implemented in the canonical Rust
-  linter (`cli/src/lint.rs`), not bash `lib/rules/release.sh`, because
+- **Status:** Complete: 2026-06-17 — merged in #72 (`14076d2`). Implemented in
+  the canonical Rust linter (`cli/src/lint.rs`), not bash `lib/rules/release.sh`, because
   `aps lint` is now the Rust CLI. Added `FileType::Release` (parser
   discovers `plans/releases/v*.md`, excluding `README.md` and the dotfile
   template) and `lint_release` with R001 (naming), R002 (header table
@@ -177,7 +177,8 @@ The pattern is generic enough to extract.
   Narrative" section (landed with COMPOUND-003) explains when/how to write a
   release narrative. Remaining scope: dedicated doc with status flow and
   tooling hand-off.
-- **Status:** In Progress: 2026-06-15 — added `docs/release-planning.md`: the
+- **Status:** Complete: 2026-06-17 — merged in #74 (`b71c4ff`). Added
+  `docs/release-planning.md`: the
   dedicated guide covering when to start a plan (cut-date target),
   enumerating work items, handling scope changes, the Planning → Cutting →
   Shipped → Archived status flow, and the hand-off to release tooling. Uses

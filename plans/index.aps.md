@@ -5,7 +5,7 @@
 | Status  | Active     |
 | Owner   | @aneki     |
 | Created | 2025-12-31 |
-| Updated | 2026-06-15 |
+| Updated | 2026-06-17 |
 
 ## Problem
 
@@ -59,7 +59,7 @@ APS needs continued development to:
 | Module                                                | Purpose                                                        | Status           |
 | ----------------------------------------------------- | -------------------------------------------------------------- | ---------------- |
 | [conductor](./modules/conductor.aps.md)               | New module type for cross-module concerns (trial)              | Draft (Trialing) |
-| [release-planning](./modules/release-planning.aps.md) | Release plan template + scaffold + linter (trial in anvil-001) | Draft            |
+| [release-planning](./modules/release-planning.aps.md) | Release plan template, scaffold, `aps lint` rules, and docs    | Complete         |
 
 ### Compound-Engineering (Complete)
 
