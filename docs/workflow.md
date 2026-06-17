@@ -513,6 +513,11 @@ you _why_ this release exists — its theme, success criteria, risks, and how
 the shipped modules tie together. Keep CHANGELOG entries terse and have them
 link to the narrative for context.
 
+This section is the overview. For the full lifecycle — when to start a
+plan, enumerating the work, handling scope changes, the status flow, and
+the hand-off to release tooling — see the dedicated
+[Release Planning guide](release-planning.md).
+
 ### Where it lives
 
 ```text

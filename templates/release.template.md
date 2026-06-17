@@ -22,7 +22,7 @@ Keep CHANGELOG entries terse and have them link here for context.
 | Target           | v[version]                                  |
 | Cut from         | `main` (or your integration branch)         |
 | Previous release | v[previous-version]                         |
-| Status           | Planning / Cutting / Shipped                |
+| Status           | Planning / Cutting / Shipped / Archived     |
 | Date             | YYYY-MM-DD (planning), YYYY-MM-DD (shipped) |
 
 ## Release Theme

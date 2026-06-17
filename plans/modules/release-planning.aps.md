@@ -47,7 +47,7 @@ The pattern is generic enough to extract.
 - `aps lint` rules for release files (front-matter table, required sections)
 - Scaffold integration: `plans/releases/` created on `aps init` (optional via
   prompt)
-- Release status flow (Planning → Cut → Shipped → Archived)
+- Release status flow (Planning → Cutting → Shipped → Archived)
 - Optional `aps release` subcommand: `new`, `status`, `notes` (generates
   draft release notes by enumerating completed work items since last release)
 - Documentation and example based on the anvil-001 v0.3.0-beta plan
@@ -168,6 +168,13 @@ The pattern is generic enough to extract.
   Narrative" section (landed with COMPOUND-003) explains when/how to write a
   release narrative. Remaining scope: dedicated doc with status flow and
   tooling hand-off.
+- **Status:** In Progress: 2026-06-15 — added `docs/release-planning.md`: the
+  dedicated guide covering when to start a plan (cut-date target),
+  enumerating work items, handling scope changes, the Planning → Cutting →
+  Shipped → Archived status flow, and the hand-off to release tooling. Uses
+  the in-repo `plans/releases/v0.3.0.md` as the worked example (local
+  equivalent of the anvil-001 trial). Cross-linked from `docs/workflow.md`
+  and the README docs list.
 
 ### REL-005: `aps release` CLI subcommand (optional, deferred)
 
