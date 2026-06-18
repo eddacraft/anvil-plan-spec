@@ -91,7 +91,7 @@ VERSION=0.4.0 curl -fsSL .../scaffold/install | bash -s -- --cli
 cargo binstall aps-cli
 
 # 3. cargo install — build from source (requires the Rust toolchain):
-cargo install aps-cli            # once published to crates.io (see below)
+cargo install aps-cli
 ```
 
 On Windows, install via the script (`--cli` pulls `aps.exe`) or **Scoop**:
@@ -100,11 +100,9 @@ On Windows, install via the script (`--cli` pulls `aps.exe`) or **Scoop**:
 scoop install https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/packaging/scoop/aps.json
 ```
 
-> **crates.io status:** `cargo install aps-cli` / `cargo binstall aps-cli`
-> resolution from crates.io is **pending**. The crate depends on
-> `eddacraft-tui` via git, and crates.io requires every dependency to be
-> published there first. Until that lands, use the install script or Scoop;
-> `cargo binstall` also works directly from a tag once a release exists.
+> **crates.io status:** `aps-cli` publishes to crates.io — `cargo install
+> aps-cli` builds from source and `cargo binstall aps-cli` fetches the prebuilt
+> release binary. The install script and Scoop remain available as alternatives.
 
 Maintainers: the release bump checklist (tag → GitHub assets → crates.io →
 Scoop) lives in the header of `.github/workflows/release.yml`.

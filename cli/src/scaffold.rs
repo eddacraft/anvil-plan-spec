@@ -19,59 +19,59 @@ use crate::wizard::{
 
 // --- Embedded assets -------------------------------------------------------
 
-const INDEX_APS: &str = include_str!("../../scaffold/plans/index.aps.md");
-const APS_RULES: &str = include_str!("../../scaffold/plans/aps-rules.md");
-const PROJECT_CONTEXT: &str = include_str!("../../scaffold/plans/project-context.md");
-const MODULE_TEMPLATE: &str = include_str!("../../scaffold/plans/modules/.module.template.md");
-const SIMPLE_TEMPLATE: &str = include_str!("../../scaffold/plans/modules/.simple.template.md");
+const INDEX_APS: &str = include_str!("../scaffold/plans/index.aps.md");
+const APS_RULES: &str = include_str!("../scaffold/plans/aps-rules.md");
+const PROJECT_CONTEXT: &str = include_str!("../scaffold/plans/project-context.md");
+const MODULE_TEMPLATE: &str = include_str!("../scaffold/plans/modules/.module.template.md");
+const SIMPLE_TEMPLATE: &str = include_str!("../scaffold/plans/modules/.simple.template.md");
 const INDEX_MONOREPO_TEMPLATE: &str =
-    include_str!("../../scaffold/plans/modules/.index-monorepo.template.md");
-const ACTIONS_TEMPLATE: &str = include_str!("../../scaffold/plans/execution/.actions.template.md");
-const DESIGN_TEMPLATE: &str = include_str!("../../scaffold/designs/.design.template.md");
-const QUICKSTART_TEMPLATE: &str = include_str!("../../templates/quickstart.template.md");
-const RELEASES_README: &str = include_str!("../../scaffold/plans/releases/README.md");
-const RELEASE_TEMPLATE: &str = include_str!("../../templates/release.template.md");
+    include_str!("../scaffold/plans/modules/.index-monorepo.template.md");
+const ACTIONS_TEMPLATE: &str = include_str!("../scaffold/plans/execution/.actions.template.md");
+const DESIGN_TEMPLATE: &str = include_str!("../scaffold/designs/.design.template.md");
+const QUICKSTART_TEMPLATE: &str = include_str!("../templates/quickstart.template.md");
+const RELEASES_README: &str = include_str!("../scaffold/plans/releases/README.md");
+const RELEASE_TEMPLATE: &str = include_str!("../templates/release.template.md");
 
-const SKILL_MD: &str = include_str!("../../scaffold/aps-planning/SKILL.md");
-const SKILL_REFERENCE: &str = include_str!("../../scaffold/aps-planning/reference.md");
-const SKILL_EXAMPLES: &str = include_str!("../../scaffold/aps-planning/examples.md");
-const SKILL_HOOKS: &str = include_str!("../../scaffold/aps-planning/hooks.md");
+const SKILL_MD: &str = include_str!("../scaffold/aps-planning/SKILL.md");
+const SKILL_REFERENCE: &str = include_str!("../scaffold/aps-planning/reference.md");
+const SKILL_EXAMPLES: &str = include_str!("../scaffold/aps-planning/examples.md");
+const SKILL_HOOKS: &str = include_str!("../scaffold/aps-planning/hooks.md");
 
 const HOOK_SCRIPTS: [(&str, &str); 6] = [
     (
         "aps-planning/scripts/install-hooks.sh",
-        include_str!("../../scaffold/aps-planning/scripts/install-hooks.sh"),
+        include_str!("../scaffold/aps-planning/scripts/install-hooks.sh"),
     ),
     (
         "aps-planning/scripts/init-session.sh",
-        include_str!("../../scaffold/aps-planning/scripts/init-session.sh"),
+        include_str!("../scaffold/aps-planning/scripts/init-session.sh"),
     ),
     (
         "aps-planning/scripts/check-complete.sh",
-        include_str!("../../scaffold/aps-planning/scripts/check-complete.sh"),
+        include_str!("../scaffold/aps-planning/scripts/check-complete.sh"),
     ),
     (
         "aps-planning/scripts/pre-tool-check.sh",
-        include_str!("../../scaffold/aps-planning/scripts/pre-tool-check.sh"),
+        include_str!("../scaffold/aps-planning/scripts/pre-tool-check.sh"),
     ),
     (
         "aps-planning/scripts/post-tool-nudge.sh",
-        include_str!("../../scaffold/aps-planning/scripts/post-tool-nudge.sh"),
+        include_str!("../scaffold/aps-planning/scripts/post-tool-nudge.sh"),
     ),
     (
         "aps-planning/scripts/enforce-plan-update.sh",
-        include_str!("../../scaffold/aps-planning/scripts/enforce-plan-update.sh"),
+        include_str!("../scaffold/aps-planning/scripts/enforce-plan-update.sh"),
     ),
 ];
 
 const CLAUDE_COMMANDS: [(&str, &str); 2] = [
     (
         ".claude/commands/plan.md",
-        include_str!("../../scaffold/commands/plan.md"),
+        include_str!("../scaffold/commands/plan.md"),
     ),
     (
         ".claude/commands/plan-status.md",
-        include_str!("../../scaffold/commands/plan-status.md"),
+        include_str!("../scaffold/commands/plan-status.md"),
     ),
 ];
 
@@ -81,75 +81,75 @@ fn agent_files(tool: AiTool) -> &'static [(&'static str, &'static str)] {
         AiTool::ClaudeCode => &[
             (
                 ".claude/agents/aps-conductor.md",
-                include_str!("../../scaffold/agents/claude-code/aps-conductor.md"),
+                include_str!("../scaffold/agents/claude-code/aps-conductor.md"),
             ),
             (
                 ".claude/agents/aps-librarian.md",
-                include_str!("../../scaffold/agents/claude-code/aps-librarian.md"),
+                include_str!("../scaffold/agents/claude-code/aps-librarian.md"),
             ),
             (
                 ".claude/agents/aps-planner.md",
-                include_str!("../../scaffold/agents/claude-code/aps-planner.md"),
+                include_str!("../scaffold/agents/claude-code/aps-planner.md"),
             ),
         ],
         AiTool::Copilot => &[
             (
                 ".github/agents/aps-conductor.md",
-                include_str!("../../scaffold/agents/copilot/aps-conductor.md"),
+                include_str!("../scaffold/agents/copilot/aps-conductor.md"),
             ),
             (
                 ".github/agents/aps-librarian.md",
-                include_str!("../../scaffold/agents/copilot/aps-librarian.md"),
+                include_str!("../scaffold/agents/copilot/aps-librarian.md"),
             ),
             (
                 ".github/agents/aps-planner.md",
-                include_str!("../../scaffold/agents/copilot/aps-planner.md"),
+                include_str!("../scaffold/agents/copilot/aps-planner.md"),
             ),
         ],
         AiTool::Codex => &[
             (
                 ".codex/agents/aps-conductor.toml",
-                include_str!("../../scaffold/agents/codex/aps-conductor.toml"),
+                include_str!("../scaffold/agents/codex/aps-conductor.toml"),
             ),
             (
                 ".codex/agents/aps-librarian.toml",
-                include_str!("../../scaffold/agents/codex/aps-librarian.toml"),
+                include_str!("../scaffold/agents/codex/aps-librarian.toml"),
             ),
             (
                 ".codex/agents/aps-planner.toml",
-                include_str!("../../scaffold/agents/codex/aps-planner.toml"),
+                include_str!("../scaffold/agents/codex/aps-planner.toml"),
             ),
             (
                 ".codex/codex-config-snippet.toml",
-                include_str!("../../scaffold/agents/codex/codex-config-snippet.toml"),
+                include_str!("../scaffold/agents/codex/codex-config-snippet.toml"),
             ),
         ],
         AiTool::OpenCode => &[
             (
                 ".opencode/agent/aps-conductor.md",
-                include_str!("../../scaffold/agents/opencode/aps-conductor.md"),
+                include_str!("../scaffold/agents/opencode/aps-conductor.md"),
             ),
             (
                 ".opencode/agent/aps-librarian.md",
-                include_str!("../../scaffold/agents/opencode/aps-librarian.md"),
+                include_str!("../scaffold/agents/opencode/aps-librarian.md"),
             ),
             (
                 ".opencode/agent/aps-planner.md",
-                include_str!("../../scaffold/agents/opencode/aps-planner.md"),
+                include_str!("../scaffold/agents/opencode/aps-planner.md"),
             ),
         ],
         AiTool::Gemini => &[
             (
                 ".gemini/skills/aps-conductor/SKILL.md",
-                include_str!("../../scaffold/agents/gemini/aps-conductor/SKILL.md"),
+                include_str!("../scaffold/agents/gemini/aps-conductor/SKILL.md"),
             ),
             (
                 ".gemini/skills/aps-librarian/SKILL.md",
-                include_str!("../../scaffold/agents/gemini/aps-librarian/SKILL.md"),
+                include_str!("../scaffold/agents/gemini/aps-librarian/SKILL.md"),
             ),
             (
                 ".gemini/skills/aps-planner/SKILL.md",
-                include_str!("../../scaffold/agents/gemini/aps-planner/SKILL.md"),
+                include_str!("../scaffold/agents/gemini/aps-planner/SKILL.md"),
             ),
         ],
         AiTool::Generic => &[],

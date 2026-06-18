@@ -594,7 +594,7 @@ Notes on schema:
 - **Files:** scaffold/install, scaffold/install.ps1, cli/Cargo.toml,
   `.github/workflows/release.yml`, docs/installation.md, packaging/scoop/aps.json,
   test/run.sh
-- **Status:** In Progress (crates.io channel blocked) — 2026-06-15
+- **Status:** In Progress (crates.io unblocked; awaits tagged-release smoke) — 2026-06-18
 - **Results:** Binary-first global install shipped on both entrypoints:
   `scaffold/install` `--cli` installs the native release binary by default and
   falls back to the bash CLI only on unsupported platforms / `--bash`;
@@ -605,13 +605,21 @@ Notes on schema:
   assets → crates.io → Scoop) in `release.yml`. Bash `lib/` fallback manifest
   already includes `audit.sh`. Test 39 covers all of the above; full suite +
   markdownlint green.
-- **Blocker:** `cargo publish --dry-run` cannot pass — `eddacraft-tui` is a git
-  dependency with no crates.io version, and crates.io forbids git deps. The
-  crates.io channel (and `cargo install aps-cli` from crates.io) is gated on
-  `eddacraft-tui` being published there first; `publish = false` carries a TODO.
-  Binary distribution (install script, GitHub releases, `cargo binstall`, Scoop)
-  is unaffected. Cross-target `aps --version` smoke also needs a real tagged
-  release to verify on all five TUI-006 targets.
+- **crates.io channel unblocked (2026-06-18):** The recorded blocker was stale —
+  `eddacraft-tui` has been on crates.io since 2026-04-10 (now 0.4.0). Switched
+  `cli/Cargo.toml` off the git pin to `eddacraft-tui = "0.4"` (API-compatible, no
+  code changes) and set `publish = true`. The dry-run then exposed a _second_,
+  real blocker: 47 `include_str!("../../scaffold/...")` / `("../../templates/...")`
+  assets live at repo root (shared with the bash CLI) and fell outside the crate
+  tarball. Resolved by symlinking `cli/scaffold` → `../scaffold` and
+  `cli/templates` → `../templates` (git-tracked symlinks; `cargo package`
+  dereferences them into real tarball files) and repointing the paths to
+  `../scaffold` / `../templates`. `cargo publish --dry-run` now packages and
+  verifies clean; build + 98 tests + clippy + fmt green. docs/installation.md
+  crates.io status note updated.
+- **Remaining:** Cross-target `aps --version` / `aps lint --help` smoke still
+  needs a real tagged release to verify on all five TUI-006 targets, and the
+  first actual `cargo publish` happens via the release workflow.
 
 ### INSTALL-016: Runtime project config discovery (alternate `plans_dir`)
 

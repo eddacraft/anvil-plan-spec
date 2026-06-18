@@ -10,13 +10,17 @@ documentation = "https://github.com/EddaCraft/anvil-plan-spec/blob/main/docs/usa
 readme = "../README.md"
 keywords = ["planning", "spec", "cli", "agents", "tui"]
 categories = ["command-line-utilities", "development-tools"]
-# BLOCKED (INSTALL-015): crates.io publish requires every dependency to carry a
-# crates.io version. `eddacraft-tui` is a git dependency that is not yet
-# published, so `cargo publish` / `cargo publish --dry-run` cannot succeed.
-# Flip to `true` once eddacraft-tui ships to crates.io (see docs/installation.md
-# "Release channels"). Until then, distribution is GitHub release binaries +
-# `cargo binstall` (configured below), which need no crates.io source publish.
-publish = false
+# Published to crates.io. All dependencies carry crates.io versions
+# (eddacraft-tui shipped 0.4.0). Distribution channels: crates.io source publish
+# (`cargo install aps-cli`), GitHub release binaries, and `cargo binstall`
+# (configured below). One semver across channels.
+#
+# The scaffold assets embedded via include_str! live at the repo root
+# (../scaffold, ../templates) so the bash CLI can share them. `scaffold` and
+# `templates` here are symlinks into those dirs; `cargo package` dereferences
+# them and bakes real files into the tarball, so source builds resolve the
+# `../scaffold/...` paths without duplicating the assets in git.
+publish = true
 
 [[bin]]
 name = "aps"
@@ -37,7 +41,7 @@ pkg-fmt = "zip"
 [dependencies]
 clap = { version = "4", features = ["derive"] }
 crossterm = { version = "0.29", features = ["bracketed-paste"] }
-eddacraft-tui = { git = "https://github.com/EddaCraft/eddacraft-tui", rev = "2de997dc2d3bde54adc174834c2089efb0a2002a" }
+eddacraft-tui = "0.4"
 ratatui = "0.30"
 
 [lints.rust]
