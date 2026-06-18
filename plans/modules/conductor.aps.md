@@ -95,8 +95,10 @@ The trigger for this module came from two converging patterns:
   optionally. A release conductor may have its own work items (REL-001
   through REL-005) plus references to work items in other modules. Allowing
   both keeps the type useful._
-- **D-003:** Type marker location — _proposed: add `Type` column to the
-  metadata table. `Type: Conductor` opt-in; vertical modules omit (default)._
+- **D-003:** Type marker location — _decided 2026-06-18 (COND-002): add a
+  `Type` column to the metadata table after `ID`. `Type: Conductor` is opt-in;
+  vertical modules omit it (default). ID stays the first column so the parser
+  still reads it; Status is found by column name, so position is free._
 - **D-004:** Linter handling — _proposed: when `Type: Conductor` is set,
   W003 (cross-module dependency) downgrades to info or suppresses entirely.
   Conductor modules legitimately reference IDs from other files._
@@ -113,7 +115,7 @@ The trigger for this module came from two converging patterns:
 - [ ] Trial yields enough evidence to confirm D-001 through D-006
 - [ ] D-001 (naming) confirmed
 - [ ] D-002 (work item ownership) resolved
-- [ ] D-003 (type marker) resolved
+- [x] D-003 (type marker) resolved — COND-002
 - [ ] D-004 (linter behaviour) resolved
 - [ ] D-005 (index treatment) resolved
 - [ ] D-006 (recurring state) resolved
@@ -150,6 +152,14 @@ Conductor` metadata; references work items from other modules without
   spec when filled in for the release-planning trial
 - **Confidence:** medium
 - **Dependencies:** COND-001
+- **Status:** Complete: 2026-06-18 — shipped `templates/conductor.template.md`
+  with a `Type: Conductor` metadata table (ID kept first so the parser still
+  reads it; Status discoverable by column name) plus Coordinated Modules,
+  Cross-Module Work Items, optional owned Work Items, Status Roll-up,
+  Decisions, and Notes sections. Validated by instantiating it as the
+  release-planning trial and running `aps lint` — produces a valid module
+  with no warnings. Confirms D-003 (Type column in the metadata table).
+  Linter W003 suppression is COND-003's scope; index treatment is COND-004's.
 
 ### COND-003: Linter support for conductor modules
 
