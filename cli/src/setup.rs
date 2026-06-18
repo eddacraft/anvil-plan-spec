@@ -25,15 +25,15 @@ use crate::scaffold::{
 use crate::wizard::{AiTool, ToolConfig};
 
 // Embedded planning files for the minimal flows.
-const INDEX_APS: &str = include_str!("../../scaffold/plans/index.aps.md");
-const APS_RULES: &str = include_str!("../../scaffold/plans/aps-rules.md");
-const PROJECT_CONTEXT: &str = include_str!("../../scaffold/plans/project-context.md");
-const MODULE_TEMPLATE: &str = include_str!("../../scaffold/plans/modules/.module.template.md");
-const SIMPLE_TEMPLATE: &str = include_str!("../../scaffold/plans/modules/.simple.template.md");
+const INDEX_APS: &str = include_str!("../scaffold/plans/index.aps.md");
+const APS_RULES: &str = include_str!("../scaffold/plans/aps-rules.md");
+const PROJECT_CONTEXT: &str = include_str!("../scaffold/plans/project-context.md");
+const MODULE_TEMPLATE: &str = include_str!("../scaffold/plans/modules/.module.template.md");
+const SIMPLE_TEMPLATE: &str = include_str!("../scaffold/plans/modules/.simple.template.md");
 const INDEX_MONOREPO_TEMPLATE: &str =
-    include_str!("../../scaffold/plans/modules/.index-monorepo.template.md");
-const ACTIONS_TEMPLATE: &str = include_str!("../../scaffold/plans/execution/.actions.template.md");
-const DESIGN_TEMPLATE: &str = include_str!("../../scaffold/designs/.design.template.md");
+    include_str!("../scaffold/plans/modules/.index-monorepo.template.md");
+const ACTIONS_TEMPLATE: &str = include_str!("../scaffold/plans/execution/.actions.template.md");
+const DESIGN_TEMPLATE: &str = include_str!("../scaffold/designs/.design.template.md");
 
 /// Agent-readable bootstrap instructions (TUI-008). Written to the repo so
 /// a remote agent can pick up the workflow without further prompting.
