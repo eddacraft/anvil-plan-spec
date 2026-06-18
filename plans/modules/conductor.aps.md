@@ -99,9 +99,14 @@ The trigger for this module came from two converging patterns:
   `Type` column to the metadata table after `ID`. `Type: Conductor` is opt-in;
   vertical modules omit it (default). ID stays the first column so the parser
   still reads it; Status is found by column name, so position is free._
-- **D-004:** Linter handling — _proposed: when `Type: Conductor` is set,
-  W003 (cross-module dependency) downgrades to info or suppresses entirely.
-  Conductor modules legitimately reference IDs from other files._
+- **D-004:** Linter handling — _decided 2026-06-18 (COND-003): W003 needed no
+  change — it already resolves cross-module dependency IDs against the
+  plan-tree index, so legitimate cross-file references never warned. Instead,
+  conductor awareness adds **W002**: for `Type: Conductor` modules, the
+  `## Coordinated Modules` and `## Cross-Module Work Items` sections are
+  validated against the tree and unresolved IDs (typos) are flagged. Cleaner
+  than downgrading W003, and it covers the conductor-specific surface that was
+  previously unchecked._
 - **D-005:** Index treatment — _proposed: separate "Conductor / Crosscutting"
   table in `index.aps.md` so the type is visible at a glance._
 - **D-006:** Lifecycle — _proposed: same Draft/Ready/Active/Complete states,
@@ -116,7 +121,7 @@ The trigger for this module came from two converging patterns:
 - [ ] D-001 (naming) confirmed
 - [ ] D-002 (work item ownership) resolved
 - [x] D-003 (type marker) resolved — COND-002
-- [ ] D-004 (linter behaviour) resolved
+- [x] D-004 (linter behaviour) resolved — COND-003
 - [ ] D-005 (index treatment) resolved
 - [ ] D-006 (recurring state) resolved
 - [ ] Work items defined with validation
@@ -173,6 +178,22 @@ Conductor` metadata; references work items from other modules without
   `release-planning.aps.md`; correctly flags a typo'd cross-module ID
 - **Confidence:** high
 - **Dependencies:** COND-002
+- **Status:** Complete: 2026-06-18 — implemented in the canonical Rust linter
+  (`cli/src/lint.rs` + `cli/src/parser.rs`), not bash `lib/rules/module.sh`,
+  since `aps lint` is the Rust CLI (same call REL-003 made). `PlanFile`
+  gained `module_type()` / `is_conductor()` reading the `Type` column by name
+  (ID stays first; Status still found by name). W003 already resolved
+  cross-module deps via the plan-tree index, so legitimate cross-file
+  references never warned — the real gap was the conductor's coordination
+  sections, which went unvalidated. New **W002** scans `## Coordinated
+  Modules` and `## Cross-Module Work Items` for work-item IDs and flags any
+  that resolve nowhere in the tree (the spec's "W004" is already taken;
+  W002 was free and sits beside W003). `release-planning.aps.md` now carries
+  `Type: Conductor` and lints clean (0 warnings); a typo'd cross-ref
+  (`INSTALL-099`) flags W002 while the real `INSTALL-014` does not. Covered
+  by three unit tests (`detects_conductor_type_column`,
+  `w002_flags_conductor_typo_refs_but_not_valid_ones`,
+  `w002_skipped_for_vertical_modules`) and documented in `docs/usage.md`.
 
 ### COND-004: Index treatment for conductor modules
 

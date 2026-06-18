@@ -28,7 +28,9 @@ File naming: name.aps.md (e.g. release-planning.aps.md).
 
 <!--
 Keep ID as the first column. `Type: Conductor` marks this as a conductor module
-so tooling can treat cross-module references as legitimate (no W003 warnings).
+so tooling treats cross-module references as legitimate. `aps lint` validates
+the IDs in the Coordinated Modules / Cross-Module Work Items sections against
+the plan tree and flags typos (W002); it does not warn on valid cross-file refs.
 Status values: Draft / Ready / In Progress / Complete / Blocked, plus
 **Recurring** for conductors that never naturally complete (ongoing budgets,
 security posture).

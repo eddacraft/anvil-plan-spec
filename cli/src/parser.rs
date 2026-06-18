@@ -257,6 +257,39 @@ impl PlanFile {
         None
     }
 
+    /// Value of the `Type` column in the metadata table, if present
+    /// (`get_module_type`). Vertical modules omit the column and return None.
+    pub fn module_type(&self) -> Option<String> {
+        let mut type_col = None;
+        for line in &self.lines {
+            match type_col {
+                None => {
+                    if is_id_header_row(line) {
+                        type_col = Some(line.split('|').position(|cell| cell.trim() == "Type")?);
+                    }
+                }
+                Some(col) => {
+                    if !line.starts_with('|') || is_id_header_row(line) {
+                        continue;
+                    }
+                    if line.chars().all(|c| matches!(c, '|' | ':' | '-' | ' ')) {
+                        continue;
+                    }
+                    let value = line.split('|').nth(col).unwrap_or("").trim().to_string();
+                    return Some(value).filter(|v| !v.is_empty());
+                }
+            }
+        }
+        None
+    }
+
+    /// True when the metadata table marks this as a conductor (crosscutting)
+    /// module (`Type: Conductor`, case-insensitive).
+    pub fn is_conductor(&self) -> bool {
+        self.module_type()
+            .is_some_and(|t| t.eq_ignore_ascii_case("Conductor"))
+    }
+
     /// All `### PREFIX-NNN:` work item headers (`get_work_items`).
     pub fn work_items(&self) -> Vec<WorkItemHeader> {
         self.lines
@@ -576,6 +609,22 @@ mod tests {
         assert!(plan.has_metadata_table());
         assert_eq!(plan.module_id().as_deref(), Some("TUI"));
         assert_eq!(plan.status().as_deref(), Some("In Progress"));
+        assert_eq!(plan.module_type(), None);
+        assert!(!plan.is_conductor());
+    }
+
+    #[test]
+    fn detects_conductor_type_column() {
+        // Type column sits after ID; ID and Status are still read correctly.
+        let plan = PlanFile::from_text(
+            "x.aps.md",
+            "# Title\n\n| ID  | Type      | Owner | Status   |\n| --- | --------- | ----- | -------- |\n| REL | Conductor | @me   | Complete |\n",
+        );
+
+        assert_eq!(plan.module_id().as_deref(), Some("REL"));
+        assert_eq!(plan.status().as_deref(), Some("Complete"));
+        assert_eq!(plan.module_type().as_deref(), Some("Conductor"));
+        assert!(plan.is_conductor());
     }
 
     #[test]

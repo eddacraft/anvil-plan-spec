@@ -1,8 +1,8 @@
 # Release Planning Module
 
-| ID  | Owner  | Priority | Status   | Type      |
-| --- | ------ | -------- | -------- | --------- |
-| REL | @aneki | medium   | Complete | Conductor |
+| ID  | Type      | Owner  | Priority | Status   |
+| --- | --------- | ------ | -------- | -------- |
+| REL | Conductor | @aneki | medium   | Complete |
 
 ## Purpose
 

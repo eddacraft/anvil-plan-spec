@@ -347,8 +347,51 @@ fn lint_module(report: &mut LintReport, plan: &PlanFile, tree_ids: &HashSet<Stri
 
     check_w017_last_reviewed(report, plan);
 
+    if plan.is_conductor() {
+        check_w002_conductor_refs(report, plan, tree_ids);
+    }
+
     if plan.has_section("## Work Items") {
         lint_work_items(report, plan, tree_ids);
+    }
+}
+
+/// W002: a conductor module's coordination sections reference a work-item ID
+/// that resolves nowhere in the plan tree — most likely a typo. Conductor
+/// modules legitimately reference IDs owned by other modules (that is the
+/// point), so cross-file references are expected here; only unresolved ones
+/// are flagged. Vertical-module dependency typos remain W003's job.
+fn check_w002_conductor_refs(report: &mut LintReport, plan: &PlanFile, tree_ids: &HashSet<String>) {
+    const SECTIONS: [&str; 2] = ["## Coordinated Modules", "## Cross-Module Work Items"];
+    for section in SECTIONS {
+        let Some(header_line) = plan.section_line(section) else {
+            continue;
+        };
+        let mut in_comment = false;
+        for (offset, line) in plan.section_content(section).iter().enumerate() {
+            let trimmed = line.trim_start();
+            if in_comment {
+                if trimmed.contains("-->") {
+                    in_comment = false;
+                }
+                continue;
+            }
+            if trimmed.starts_with("<!--") {
+                in_comment = !trimmed.contains("-->");
+                continue;
+            }
+            for id in extract_dep_ids(line) {
+                if !tree_ids.contains(&id) {
+                    report.add(
+                        &plan.path,
+                        Severity::Warning,
+                        "W002",
+                        format!("Cross-module reference '{id}' not found in plan tree"),
+                        Some(header_line + 1 + offset),
+                    );
+                }
+            }
+        }
     }
 }
 
@@ -1173,6 +1216,54 @@ mod tests {
         assert!(codes(&report).contains(&"W003"));
         let w003 = report.findings.iter().find(|f| f.code == "W003").unwrap();
         assert!(w003.message.contains("X-999"));
+    }
+
+    #[test]
+    fn w002_flags_conductor_typo_refs_but_not_valid_ones() {
+        let text = "\
+| ID | Type | Status |\n| --- | --------- | -------- |\n| REL | Conductor | Complete |\n\n\
+## Purpose\n\ntext\n\n\
+## Coordinated Modules\n\n\
+| Module | Role | Status |\n| --- | --- | --- |\n| [install](./install.aps.md) | wires scaffold | Done |\n\n\
+## Cross-Module Work Items\n\n\
+- [INSTALL-014](./install.aps.md) — real, resolves in tree\n\
+- [INSTALL-999](./install.aps.md) — typo, resolves nowhere\n\n\
+## Work Items\n\n### REL-001: Thing\n\n- **Intent:** i\n- **Expected Outcome:** o\n- **Validation:** v\n";
+        let plan = PlanFile::from_text("plans/modules/release-planning.aps.md", text);
+        assert!(plan.is_conductor());
+        let mut tree = HashSet::new();
+        tree.insert("INSTALL-014".to_string());
+        let mut report = LintReport::default();
+        check_w002_conductor_refs(&mut report, &plan, &tree);
+        let w002: Vec<&Finding> = report
+            .findings
+            .iter()
+            .filter(|f| f.code == "W002")
+            .collect();
+        assert_eq!(
+            w002.len(),
+            1,
+            "only INSTALL-999 is unresolved: {:?}",
+            codes(&report)
+        );
+        assert!(w002[0].message.contains("INSTALL-999"));
+    }
+
+    #[test]
+    fn w002_skipped_for_vertical_modules() {
+        // A vertical module never carries these sections, and lint_module only
+        // runs the conductor check when `is_conductor()`. An unmarked module
+        // with a typo'd cross-ref in prose must not raise W002.
+        let text = "\
+| ID | Status |\n| --- | --- |\n| AUTH | Ready |\n\n\
+## Purpose\n\nMentions FAKE-999 in passing.\n\n\
+## Work Items\n\n### AUTH-001: Thing\n\n- **Intent:** i\n- **Expected Outcome:** o\n- **Validation:** v\n";
+        let report = lint_text("plans/modules/auth.aps.md", text);
+        assert!(
+            !codes(&report).contains(&"W002"),
+            "got {:?}",
+            codes(&report)
+        );
     }
 
     #[test]
