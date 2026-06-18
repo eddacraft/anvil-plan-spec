@@ -1,8 +1,8 @@
 # Release Planning Module
 
-| ID  | Owner  | Priority | Status |
-| --- | ------ | -------- | ------ |
-| REL | @aneki | medium   | Complete |
+| ID  | Owner  | Priority | Status   | Type      |
+| --- | ------ | -------- | -------- | --------- |
+| REL | @aneki | medium   | Complete | Conductor |
 
 ## Purpose
 
@@ -220,6 +220,7 @@ The pattern is generic enough to extract.
   changes to the template should be validated against this file.
 - The MVP is template + scaffold + lint. CLI support is gravy and should
   wait for the trial pattern to settle.
-- This module is a candidate for the **Crosscutting / Conductor** module
-  type being trialed (see `conductor.aps.md`). Releases naturally cut
-  across multiple domain modules.
+- This module is the first **Crosscutting / Conductor** trial instance
+  (`Type: Conductor`, see `conductor.aps.md` COND-001). Releases naturally
+  cut across multiple domain modules; the marker is lint-safe and the
+  cross-module references (`ORCH-001`, `COMPOUND-003`) resolve cleanly.
