@@ -16,6 +16,38 @@
 | Work Item | Execution authority | Outcome, validation command        | How to implement       |
 | Action    | Checkpoint          | Observable state                   | Implementation steps   |
 
+## Module Types: Vertical and Conductor
+
+Most modules are **vertical** — they own a single domain (auth, billing, ui)
+and all its work items end-to-end. This is the default; omit any type marker.
+
+A **conductor** (crosscutting) module coordinates work _across_ vertical
+modules — release cuts, security audits, perf budgets, migration waves. It
+references work items other modules own, and "done" means the concern is
+addressed for this slice, not that a feature is built. Mark it with a `Type`
+column in the metadata table:
+
+```markdown
+| ID  | Type      | Owner     | Priority | Status   |
+| --- | --------- | --------- | -------- | -------- |
+| REL | Conductor | @username | medium   | Complete |
+```
+
+- Keep `ID` as the first column; `Type` goes after it. Vertical modules leave
+  the column out.
+- A module is **not** a conductor just because it is _about_ a crosscutting
+  topic — only if coordinating other modules' work _is_ the work. When in
+  doubt, prefer vertical.
+- Conductors may use `Recurring` as a status when the concern never naturally
+  completes (perf budget, ongoing security posture).
+- `aps lint` validates cross-module references in a conductor's `## Coordinated
+  Modules` / `## Cross-Module Work Items` sections (W002) and checks that
+  modules listed under a `### Conductor / Crosscutting` index subsection carry
+  `Type: Conductor` (W006).
+
+Full guidance and a worked example: `docs/conductor-modules.md`. Template:
+`templates/conductor.template.md`.
+
 ## Actions: The Lean Rule
 
 Actions translate work item intent into **observable checkpoints**. They are NOT implementation guides.

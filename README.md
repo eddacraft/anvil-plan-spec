@@ -268,6 +268,7 @@ for the full lifecycle.
 - [Workflow guide](docs/workflow.md) — Plan / Execute / Validate / Learn
 - [CLI reference](docs/usage.md) — every command, every flag, JSON output
 - [Release planning](docs/release-planning.md) — release narratives, status flow, tooling hand-off
+- [Conductor modules](docs/conductor-modules.md) — crosscutting modules that coordinate work across domains
 - [Monorepo support](docs/monorepo.md) — multi-package layouts
 - [Terminology](docs/TERMINOLOGY.md) — words APS uses and what they mean
 - [Roadmap](ROADMAP.md) — where this is going

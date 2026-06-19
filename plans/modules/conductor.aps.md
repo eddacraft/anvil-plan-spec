@@ -1,8 +1,8 @@
 # Crosscutting / Conductor Modules
 
-| ID   | Owner  | Priority | Status           |
-| ---- | ------ | -------- | ---------------- |
-| COND | @aneki | medium   | Draft (Trialing) |
+| ID   | Owner  | Priority | Status   |
+| ---- | ------ | -------- | -------- |
+| COND | @aneki | medium   | Complete |
 
 ## Purpose
 
@@ -87,14 +87,15 @@ The trigger for this module came from two converging patterns:
 
 ## Decisions
 
-- **D-001:** Naming — _proposed: "Conductor" as the type name. Alternatives
-  considered: Crosscutting, Aspect, Coordinator. Conductor connects naturally
-  with the existing Conductor agent concept (ORCH-005) and is more
-  concrete than "Crosscutting"._
-- **D-002:** Should conductor modules own work items? — _proposed: yes,
-  optionally. A release conductor may have its own work items (REL-001
-  through REL-005) plus references to work items in other modules. Allowing
-  both keeps the type useful._
+- **D-001:** Naming — _decided 2026-06-19: "Conductor". Shipped as the `Type`
+  value, template name, docs, and index section throughout COND-002…005; the
+  name held up in use and echoes the ORCH-005 Conductor agent. Alternatives
+  (Crosscutting, Aspect, Coordinator) rejected — "Crosscutting" survives only
+  as the descriptive subtitle._
+- **D-002:** Should conductor modules own work items? — _decided 2026-06-19:
+  yes, optionally. The release-planning trial owns REL-001…005 _and_ references
+  work items in other modules; the template and linter (W002) support the
+  hybrid. Allowing both keeps the type useful._
 - **D-003:** Type marker location — _decided 2026-06-18 (COND-002): add a
   `Type` column to the metadata table after `ID`. `Type: Conductor` is opt-in;
   vertical modules omit it (default). ID stays the first column so the parser
@@ -110,26 +111,28 @@ The trigger for this module came from two converging patterns:
 - **D-005:** Index treatment — _decided 2026-06-19 (COND-004): a separate
   `### Conductor / Crosscutting` subsection under `## Modules` lists
   `Type: Conductor` modules so the type is visible at a glance. The subsection
-  is for conductor *instances*; the `conductor` feature module that introduces
+  is for conductor _instances_; the `conductor` feature module that introduces
   the type lives with the other feature modules. `aps lint` enforces this with
   W006 (a listed module must carry `Type: Conductor`). Added to
   `templates/index.template.md` as an optional subsection._
-- **D-006:** Lifecycle — _proposed: same Draft/Ready/Active/Complete states,
-  with an extra "Recurring" state for conductor modules that don't naturally
-  complete (perf budgets, ongoing security posture)._
+- **D-006:** Lifecycle — _decided 2026-06-19 (COND-005): same
+  Draft/Ready/In Progress/Complete states, plus a `Recurring` status for
+  conductor modules that don't naturally complete (perf budgets, ongoing
+  security posture). Documented in `templates/conductor.template.md`,
+  `docs/conductor-modules.md`, and `aps-rules.md`._
 
 ## Ready Checklist
 
 - [x] Purpose and scope are clear
 - [x] Dependencies identified
-- [ ] Trial yields enough evidence to confirm D-001 through D-006
-- [ ] D-001 (naming) confirmed
-- [ ] D-002 (work item ownership) resolved
+- [x] Trial yields enough evidence to confirm D-001 through D-006
+- [x] D-001 (naming) confirmed
+- [x] D-002 (work item ownership) resolved
 - [x] D-003 (type marker) resolved — COND-002
 - [x] D-004 (linter behaviour) resolved — COND-003
 - [x] D-005 (index treatment) resolved — COND-004
-- [ ] D-006 (recurring state) resolved
-- [ ] Work items defined with validation
+- [x] D-006 (recurring state) resolved — COND-005
+- [x] Work items defined with validation
 
 ## Work Items
 
@@ -235,6 +238,15 @@ Conductor` metadata; references work items from other modules without
   module
 - **Confidence:** high
 - **Dependencies:** COND-001, COND-002
+- **Status:** Complete: 2026-06-19 — added `docs/conductor-modules.md`
+  (conductor vs vertical decision guidance with a "remove the cross-module
+  references — is there anything left?" test, anatomy of the `Type` marker and
+  coordination sections, the release-planning worked example, the recurring vs
+  one-shot lifecycle distinction, and how W002/W006 help). Added a "Module
+  Types: Vertical and Conductor" section to `scaffold/plans/aps-rules.md`
+  covering the `Type` field. Cross-linked from the README docs list. Worked
+  example matches the real module: release-planning owns REL-001…005 _and_
+  references cross-module work (`ORCH-001`, `COMPOUND-003`).
 
 ### COND-006: Identify additional candidates from existing modules
 
@@ -247,6 +259,12 @@ Conductor` metadata; references work items from other modules without
   written justification for why none qualify
 - **Confidence:** low
 - **Dependencies:** COND-005
+- **Status:** Complete: 2026-06-19 — audited compound, integrations, prompts
+  (plus monorepo, examples, tasks, spec, dogfood). None re-categorised; all
+  are vertical. Written justification recorded in Notes below. Outcome: the
+  conductor type currently generalises to exactly one instance
+  (release-planning), which is acceptable — the type earns its keep on the
+  concern it models, not on headcount.
 
 ## Execution Strategy
 
@@ -267,13 +285,37 @@ Conductor` metadata; references work items from other modules without
 
 ## Notes
 
-- The whole module is a deliberate trial. If after running release-planning
-  through this lens the pattern feels forced, the right outcome is to
-  delete this module and treat releases as a regular module that happens
-  to reference others. Status `Draft (Trialing)` reflects that.
+- This module began as a deliberate trial. The trial concluded in favour of
+  adopting the type (D-029): release-planning runs cleanly as a conductor, the
+  `Type` marker is lint-safe, and the pattern did not feel forced. All work
+  items COND-001…006 are Complete, so the module is now `Complete`.
 - The name **Conductor** was chosen over **Crosscutting** because it
   echoes the existing ORCH-005 Conductor agent and reads more concretely.
   Could be revisited in D-001.
 - Open question for the trial: does a conductor module benefit from a
   rendered status roll-up (Complete: 12/15 work items across modules) or
   is that just noise? Answer should fall out of REL trial usage.
+
+### COND-006 audit: candidate modules assessed (2026-06-19)
+
+Audited the draft/feature modules for crosscutting traits. Verdicts use the
+test "if you removed every cross-module reference, would the module still
+have a reason to exist?" — yes ⇒ vertical.
+
+| Module       | Status   | Verdict    | Why                                                                                                   |
+| ------------ | -------- | ---------- | ----------------------------------------------------------------------------------------------------- |
+| compound     | Complete | Vertical   | Owns the learn-phase templates/archival end-to-end. Ships `release.template.md` but doesn't coordinate release work. |
+| integrations | Draft    | Vertical   | Owns JSON export / GitHub sync end-to-end; exposes a data interface, doesn't sequence other modules.   |
+| prompts      | Draft    | Vertical   | Owns prompt variants within its own scope; no cross-module references.                                 |
+| monorepo     | Draft    | Borderline | Spans structural concerns and references VAL/ORCH/SCAFFOLD, but those are implementation _dependencies_; it owns the federated-trees feature end-to-end. |
+| examples     | Draft    | Vertical   | Owns the worked-examples corpus.                                                                       |
+| tasks        | Complete | Vertical   | Owns Claude Code task integration end-to-end; depends on AGENT/ORCH but coordinates nothing.           |
+| spec         | Complete | Vertical   | Defines shared vocabulary others depend on, but doesn't coordinate their work.                         |
+| dogfood      | Complete | Vertical   | Validates this repo's own planning surface; hygiene, not coordination.                                 |
+
+**Conclusion:** no module re-categorised. `monorepo` is the closest call —
+its scope is structural — but it _owns_ that concern rather than waving
+traffic across autonomous domains, so it stays vertical. The conductor type
+generalises to exactly one instance today (release-planning); that is a fine
+outcome. Re-audit when a security-audit, perf-budget, or migration-wave
+module is proposed — those are the natural next conductors.
