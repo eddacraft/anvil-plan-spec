@@ -201,9 +201,89 @@ fn lint_index(report: &mut LintReport, plan: &PlanFile) {
         );
     }
     check_w019_module_links(report, plan);
+    check_w006_conductor_index(report, plan);
     for section in ["## Overview", "## Problem & Success Criteria", "## Modules"] {
         check_empty_section(report, plan, section);
     }
+}
+
+/// W006: a module listed under a `### Conductor / Crosscutting` index
+/// subsection whose file exists but is not marked `Type: Conductor`. Keeps the
+/// index's conductor grouping honest — the inverse of COND-003's module check.
+/// Missing/non-module link targets are W019's job, so they are skipped here.
+fn check_w006_conductor_index(report: &mut LintReport, plan: &PlanFile) {
+    let dir = Path::new(&plan.path)
+        .parent()
+        .map(Path::to_path_buf)
+        .unwrap_or_else(|| Path::new(".").to_path_buf());
+
+    let mut in_conductor = false;
+    for (index, line) in plan.lines.iter().enumerate() {
+        if let Some(heading) = line.strip_prefix("### ") {
+            let h = heading.to_lowercase();
+            in_conductor = h.contains("conductor") || h.contains("crosscutting");
+            continue;
+        }
+        // Any other heading ends the subsection.
+        if line.starts_with("## ") {
+            in_conductor = false;
+        }
+        if !in_conductor {
+            continue;
+        }
+
+        for target in link_targets(line) {
+            if !target.ends_with(".aps.md") {
+                continue;
+            }
+            let path = dir.join(&target);
+            let Ok(module) = PlanFile::load(&path.to_string_lossy()) else {
+                continue; // missing file → W019 already covers it
+            };
+            if !module.is_conductor() {
+                report.add(
+                    &plan.path,
+                    Severity::Warning,
+                    "W006",
+                    format!(
+                        "Module '{target}' is listed under Conductor / Crosscutting but its file is not marked `Type: Conductor`"
+                    ),
+                    Some(index + 1),
+                );
+            }
+        }
+    }
+}
+
+/// Resolve every `](target)` link target on a line, stripping titles, anchors,
+/// and URI-scheme links. Shared by the index reference checks.
+fn link_targets(line: &str) -> Vec<String> {
+    let mut targets = Vec::new();
+    let mut rest = line;
+    while let Some(open) = rest.find("](") {
+        let after = &rest[open + 2..];
+        let Some(close) = after.find(')') else {
+            break;
+        };
+        let mut target = after[..close].to_string();
+        rest = &after[close + 1..];
+
+        // Strip markdown link titles: ` "title"` / ` 'title'`.
+        if let Some(at) = target.find([' ', '\t']) {
+            let tail = target[at..].trim_start();
+            if tail.starts_with('"') || tail.starts_with('\'') {
+                target.truncate(at);
+            }
+        }
+        if target.starts_with('#') || has_uri_scheme(&target) {
+            continue;
+        }
+        let target = target.split('#').next().unwrap_or("");
+        if !target.is_empty() {
+            targets.push(target.to_string());
+        }
+    }
+    targets
 }
 
 /// W019: link in ## Modules points to a non-existent file. Warning, not
@@ -1264,6 +1344,49 @@ mod tests {
             "got {:?}",
             codes(&report)
         );
+    }
+
+    #[test]
+    fn w006_flags_non_conductor_in_conductor_index_section() {
+        use std::fs;
+        let root = std::env::temp_dir().join("aps_w006_test");
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(root.join("modules")).unwrap();
+        // One conductor module, one vertical module mislisted as conductor.
+        fs::write(
+            root.join("modules/release-planning.aps.md"),
+            "# Rel\n\n| ID | Type | Status |\n| --- | --- | --- |\n| REL | Conductor | Complete |\n\n## Purpose\n\nx\n\n## Work Items\n\n### REL-001: a\n",
+        )
+        .unwrap();
+        fs::write(
+            root.join("modules/auth.aps.md"),
+            "# Auth\n\n| ID | Status |\n| --- | --- |\n| AUTH | Ready |\n\n## Purpose\n\nx\n\n## Work Items\n\n### AUTH-001: a\n",
+        )
+        .unwrap();
+        let index = root.join("index.aps.md");
+        fs::write(
+            &index,
+            "# Plan\n\n## Modules\n\n### Conductor / Crosscutting (Adopted)\n\n| Module | Status |\n| --- | --- |\n| [release-planning](./modules/release-planning.aps.md) | Complete |\n| [auth](./modules/auth.aps.md) | Ready |\n",
+        )
+        .unwrap();
+
+        let plan = PlanFile::load(&index.to_string_lossy()).unwrap();
+        let mut report = LintReport::default();
+        check_w006_conductor_index(&mut report, &plan);
+
+        let w006: Vec<&Finding> = report
+            .findings
+            .iter()
+            .filter(|f| f.code == "W006")
+            .collect();
+        assert_eq!(
+            w006.len(),
+            1,
+            "only auth is mislisted: {:?}",
+            codes(&report)
+        );
+        assert!(w006[0].message.contains("auth.aps.md"));
+        let _ = fs::remove_dir_all(&root);
     }
 
     #[test]

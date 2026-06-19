@@ -107,8 +107,13 @@ The trigger for this module came from two converging patterns:
   validated against the tree and unresolved IDs (typos) are flagged. Cleaner
   than downgrading W003, and it covers the conductor-specific surface that was
   previously unchecked._
-- **D-005:** Index treatment — _proposed: separate "Conductor / Crosscutting"
-  table in `index.aps.md` so the type is visible at a glance._
+- **D-005:** Index treatment — _decided 2026-06-19 (COND-004): a separate
+  `### Conductor / Crosscutting` subsection under `## Modules` lists
+  `Type: Conductor` modules so the type is visible at a glance. The subsection
+  is for conductor *instances*; the `conductor` feature module that introduces
+  the type lives with the other feature modules. `aps lint` enforces this with
+  W006 (a listed module must carry `Type: Conductor`). Added to
+  `templates/index.template.md` as an optional subsection._
 - **D-006:** Lifecycle — _proposed: same Draft/Ready/Active/Complete states,
   with an extra "Recurring" state for conductor modules that don't naturally
   complete (perf budgets, ongoing security posture)._
@@ -122,7 +127,7 @@ The trigger for this module came from two converging patterns:
 - [ ] D-002 (work item ownership) resolved
 - [x] D-003 (type marker) resolved — COND-002
 - [x] D-004 (linter behaviour) resolved — COND-003
-- [ ] D-005 (index treatment) resolved
+- [x] D-005 (index treatment) resolved — COND-004
 - [ ] D-006 (recurring state) resolved
 - [ ] Work items defined with validation
 
@@ -206,6 +211,18 @@ Conductor` metadata; references work items from other modules without
   warnings on the upgraded `plans/index.aps.md`
 - **Confidence:** medium
 - **Dependencies:** COND-002
+- **Status:** Complete: 2026-06-19 — `templates/index.template.md` gains an
+  optional `### Conductor / Crosscutting` subsection with guidance. The index
+  linter is conductor-aware via new **W006**: a module listed under a
+  `### Conductor / Crosscutting` subsection whose file is not `Type: Conductor`
+  is flagged (inverse of COND-003's module check; reuses a shared
+  `link_targets` helper with W019). Dogfood fix: the real index listed the
+  **`conductor` feature module** under Conductor / Crosscutting, but that
+  module introduces the type rather than being an instance — W006 caught it.
+  Moved `conductor` to the v0.4 In Progress group; the section now lists only
+  `release-planning` (a real `Type: Conductor` module) and lints clean. Unit
+  test `w006_flags_non_conductor_in_conductor_index_section`; documented in
+  `docs/usage.md`. Resolves D-005.
 
 ### COND-005: Documentation + worked example
 

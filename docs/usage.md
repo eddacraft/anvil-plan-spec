@@ -89,6 +89,7 @@ narratives). `README.md` and the `.release.template.md` are not linted.
 | W003 | Work Item      | Dependency references an ID not found anywhere in the plan tree (work items and decisions both resolve cross-file)      |
 | W004 | Module / Index | Section exists but is empty (`## Purpose`, `## In Scope`, `## Overview`, `## Problem & Success Criteria`, `## Modules`) |
 | W005 | Module         | Status is `Ready` but no work items are defined                                                                         |
+| W006 | Index          | Module listed under a `### Conductor / Crosscutting` index subsection but its file is not marked `Type: Conductor`       |
 | W010 | Issues         | Issue entry missing `Status`, `Discovered`, or `Severity` field                                                         |
 | W011 | Issues         | Question entry missing `Status`, `Discovered`, or `Priority` field                                                      |
 | W012 | Issues         | Issue ID does not match `ISS-NNN` format or uses wrong casing                                                           |
