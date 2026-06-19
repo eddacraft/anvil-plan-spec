@@ -139,6 +139,7 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 
 .serena
+.clawpatch/
 
 # Local APS install artifacts (source lives under scaffold/)
 aps-planning/
