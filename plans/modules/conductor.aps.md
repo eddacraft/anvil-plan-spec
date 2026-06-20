@@ -132,6 +132,13 @@ Conductor` metadata; references work items from other modules without
   awkwardness emerges from the type marker
 - **Confidence:** high
 - **Dependencies:** REL-001
+- **Status:** Complete: 2026-06-18 — release-planning shipped (REL-001–004)
+  and now carries `Type: Conductor`. All three validation criteria hold:
+  module ships; cross-module references (`ORCH-001`, `COMPOUND-003`) resolve
+  clean in-tree; the `Type` column is lint-safe (whole-tree lint passes with
+  the marker applied). The linter is agnostic to the marker — semantic
+  awareness (allowed values, rule relaxation) is COND-003's scope. Trial
+  outcome: adopt (resolves D-029).
 
 ### COND-002: Define `Type: Conductor` schema and template
 
