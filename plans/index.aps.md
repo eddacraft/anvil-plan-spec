@@ -53,13 +53,18 @@ APS needs continued development to:
 | [orchestrate](./modules/orchestrate.aps.md) | CLI orchestration, dependency resolution, state machine | Complete |
 | [tui](./modules/tui.aps.md)                 | Ratatui TUI customization wizard for project setup      | Complete |
 | [dogfood](./modules/dogfood.aps.md)         | Keep this repo's own APS plans accurate and validated   | Complete |
+| [conductor](./modules/conductor.aps.md)     | New module type for cross-module concerns               | Complete |
 
 ### Conductor / Crosscutting (Adopted)
 
-| Module                                                | Purpose                                                        | Status      |
-| ----------------------------------------------------- | -------------------------------------------------------------- | ----------- |
-| [conductor](./modules/conductor.aps.md)               | New module type for cross-module concerns                      | In Progress |
-| [release-planning](./modules/release-planning.aps.md) | Release plan template, scaffold, `aps lint` rules, and docs    | Complete    |
+<!-- Modules listed here carry `Type: Conductor` (they coordinate work across
+     vertical modules). The `conductor` module that *introduces* the type is a
+     normal feature module and lives under v0.4 above. `aps lint` enforces the
+     Type marker on entries in this section (W006). -->
+
+| Module                                                | Purpose                                                     | Status   |
+| ----------------------------------------------------- | ----------------------------------------------------------- | -------- |
+| [release-planning](./modules/release-planning.aps.md) | Release plan template, scaffold, `aps lint` rules, and docs | Complete |
 
 ### Compound-Engineering (Complete)
 

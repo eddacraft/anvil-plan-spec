@@ -50,6 +50,20 @@ graph LR
 | [module-id](./modules/module-name.aps.md) | MOD | @username | Draft  | medium   | core | —            |
 | [another-id](./modules/another.aps.md)    | API | @username | Draft  | high     | api  | module-id    |
 
+<!--
+Optional: group crosscutting / conductor modules (release cuts, security
+audits, perf budgets, migration waves) under their own subsection so the type
+is visible at a glance. Every module listed here must carry `Type: Conductor`
+in its file (see templates/conductor.template.md); `aps lint` flags any that
+do not (W006). Omit this subsection if the plan has no conductor modules.
+-->
+
+### Conductor / Crosscutting _(optional)_
+
+| Module                                            | ID  | Owner     | Status | Priority | Concern |
+| ------------------------------------------------- | --- | --------- | ------ | -------- | ------- |
+| [release-planning](./modules/release-planning.aps.md) | REL | @username | Draft  | medium   | release |
+
 ## Risks & Mitigations
 
 | Risk               | Impact | Likelihood | Mitigation          |
