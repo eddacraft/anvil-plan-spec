@@ -8,7 +8,7 @@
     "lint": "markdownlint \"**/*.md\"",
     "lint:fix": "markdownlint --fix \"**/*.md\"",
     "validate": "./bin/aps lint",
-    "prepare": "husky"
+    "prepare": "husky || true"
   },
   "devDependencies": {
     "husky": "^9.1.7",
