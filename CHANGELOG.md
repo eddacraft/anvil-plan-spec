@@ -6,8 +6,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-06-21
+
+**Release narrative:** [plans/releases/v0.4.0.md](./plans/releases/v0.4.0.md)
+for theme, success criteria, and risks.
+
 ### Added
 
+- **Conductor / crosscutting module type** (COND module — Complete) — a new
+  `Type: Conductor` module type for concerns that coordinate work across
+  vertical modules (releases, audits, budgets, migrations).
+  `templates/conductor.template.md`, parser `is_conductor()`, lint **W002**
+  (unresolved cross-module references in a conductor) and **W006** (index
+  Conductor-section entries must be `Type: Conductor`), an optional index
+  subsection, and `docs/conductor-modules.md`. `release-planning` is the
+  canonical instance.
+- **Binary-first distribution** (INSTALL-011…018) — `aps` installs as a global
+  binary via crates.io (`cargo install aps-cli`), GitHub release binaries,
+  Scoop, and `cargo binstall`. `aps init` scaffolds project content only;
+  `.aps/config.yml` pins `cli_version` and carries runtime path defaults; a
+  migration path moves projects from the vendored CLI to the global binary.
+- **Release planning addon** (release-planning module — Complete) —
+  `plans/releases/` layout, `release.template.md`, R001–R004 lint rules,
+  scaffolding on `aps init`, and `docs/release-planning.md`.
 - **`aps audit` command** (DOGFOOD-002) — formalizes the anvil-001 completion
   audit: executes Complete items' Validation commands (PASS/FAIL/PARTIAL),
   flags understated Drafts whose Files already exist (A002), stale Ready
@@ -35,9 +56,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   section rewritten to reference the completed roll-up and `plans/completed/`
   long-form notes; new "Release Narrative" section explains when and how to
   write a release doc.
+- **Conductor agent** (ORCH-005) — a coordinator agent role for cross-module
+  work, complementing the MCP server.
+- **Claude Code Tasks integration** (TASKS-001) — documented APS-to-Tasks
+  mapping so work items drive Claude Code Tasks.
+- **Status vocabulary reconciliation** (SPEC-001) — canonical
+  `Draft / Ready / In Progress / Complete / Blocked` with `Proposed → Draft`
+  and `Done → Complete` aliases normalised by the tooling.
+- **TUI wizard refinements** (TUI-010, TUI-011) — onboarding wizard polish.
 
 ### Changed
 
+- **Version bumped to 0.4.0** — one semver across all distribution channels
+  (D-036); `.aps/config.yml` pins `cli_version: 0.4.0`.
 - **W003 resolves across the plan tree** (DOGFOOD-002) — dependency
   references to work items and decisions in _other_ module files (and the
   index) no longer warn; only IDs missing from the entire plan are flagged.
