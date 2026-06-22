@@ -468,8 +468,8 @@ grep -q 'Get-ApsReleaseTarget' "$INSTALL_PS1" || fail "install.ps1 missing targe
 CARGO="$PROJECT_ROOT/cli/Cargo.toml"
 grep -q 'package.metadata.binstall' "$CARGO" || fail "Cargo.toml missing binstall metadata"
 grep -q '^keywords' "$CARGO" || fail "Cargo.toml missing crates.io keywords"
-grep -qi 'eddacraft-tui' "$CARGO" && grep -qi 'BLOCKED' "$CARGO" \
-  || fail "Cargo.toml missing crates.io publish blocker note"
+grep -q '^publish = true' "$CARGO" || fail "Cargo.toml publish flag not enabled"
+grep -qi 'crates.io' "$CARGO" || fail "Cargo.toml missing crates.io publish note"
 # Scoop manifest is valid JSON with the Windows asset + autoupdate
 SCOOP="$PROJECT_ROOT/packaging/scoop/aps.json"
 [[ -f "$SCOOP" ]] || fail "scoop manifest missing"
