@@ -24,8 +24,14 @@ for theme, success criteria, and risks.
 - **Binary-first distribution** (INSTALL-011…018) — `aps` installs as a global
   binary via crates.io (`cargo install aps-cli`), GitHub release binaries,
   Scoop, and `cargo binstall`. `aps init` scaffolds project content only;
-  `.aps/config.yml` pins `cli_version` and carries runtime path defaults; a
-  migration path moves projects from the vendored CLI to the global binary.
+  `.aps/config.yml` pins `cli_version` and carries runtime path defaults;
+  runtime discovery respects project `plans_dir` / `docs_dir` without `--plans`
+  or direnv. `aps doctor` diagnoses toolchain drift; `aps setup` is an
+  interactive picker for optional integrations; the public `curl | bash`
+  installer gains a TTY mode picker with explicit non-interactive flags
+  (`--cli`, `--init`, `--agent`, `--upgrade`); `aps upgrade` cleans up
+  legacy v1 and bulky v2 footprints. A migration path moves projects from the
+  vendored CLI to the global binary.
 - **Release planning addon** (release-planning module — Complete) —
   `plans/releases/` layout, `release.template.md`, R001–R004 lint rules,
   scaffolding on `aps init`, and `docs/release-planning.md`.
@@ -48,22 +54,35 @@ for theme, success criteria, and risks.
   `docs/usage.md`.
 
 - **Compound-engineering archive patterns** (COMPOUND module — Complete) —
-  `templates/completed-index.template.md` and `templates/release.template.md`
-  ship the doc-only halves of the Learn phase. `plans/completed.aps.md`
-  seeded from this repo's shipped work, and `plans/releases/v0.3.0.md`
-  authored as the proof-of-concept release narrative.
+  `templates/solution.template.md`, `templates/completed-index.template.md`,
+  and `templates/release.template.md` ship the doc-only halves of the Learn
+  phase. `plans/completed.aps.md` seeded from this repo's shipped work, and
+  `plans/releases/v0.3.0.md` authored as the proof-of-concept release
+  narrative.
 - **Workflow guide additions** — `docs/workflow.md` "Completion and Archival"
   section rewritten to reference the completed roll-up and `plans/completed/`
   long-form notes; new "Release Narrative" section explains when and how to
   write a release doc.
+- **Rust CLI and TUI wizard** (TUI module — Complete) — Ratatui-based `aps
+  init` wizard covering profile, project shape, AI tooling, template/path
+  customization, scaffold execution, and non-interactive config replay.
+  Native Rust `aps lint` and `aps next` reach byte-for-byte parity with bash
+  (TUI-009); bash implementations are feature-frozen per orchestrate D-006.
+  `aps setup` mode picker (TUI-007) and agent bootstrap flow (TUI-008).
+  Wizard hardening: bracketed paste support (TUI-010) and key-release filter
+  plus Index/MonorepoIndex exclusivity (TUI-011).
 - **Conductor agent** (ORCH-005) — a coordinator agent role for cross-module
-  work, complementing the MCP server.
+  work across Claude Code, Codex, Copilot, OpenCode, and Gemini harnesses,
+  complementing the MCP server.
 - **Claude Code Tasks integration** (TASKS-001) — documented APS-to-Tasks
-  mapping so work items drive Claude Code Tasks.
+  mapping with prompts for wave planning, agent assignment, task dispatch,
+  and status sync under `docs/ai/prompting/claudecode/`.
 - **Status vocabulary reconciliation** (SPEC-001) — canonical
   `Draft / Ready / In Progress / Complete / Blocked` with `Proposed → Draft`
   and `Done → Complete` aliases normalised by the tooling.
-- **TUI wizard refinements** (TUI-010, TUI-011) — onboarding wizard polish.
+- **APS plan-update contribution guidance** (DOGFOOD-003) — AGENTS.md
+  documents when and how to update plans alongside template, prompt, and
+  validation changes.
 
 ### Changed
 
@@ -82,6 +101,18 @@ for theme, success criteria, and risks.
   (`Proposed` / `Ready` / `In Progress` / `Blocked` / `Draft` / `Deferred`) are
   still checked. Applies to both the bash (`lib/rules/workitem.sh`) and
   PowerShell (`lib/rules/WorkItem.psm1`) rule engines.
+
+### Fixed
+
+- **Installer** — hardened per council review; mode picker respects TTY vs
+  non-interactive flags and avoids surprise bulky installs.
+- **TUI wizard** — multi-line paste no longer replays newlines as Enter and
+  drives scaffold execution without review; Windows terminals that report
+  key releases no longer double every keystroke; selecting `Index` or
+  `MonorepoIndex` deselects the other so scaffold output is not overwritten.
+- **Scaffold** — init output includes all referenced paths.
+- **Prepare script** — `husky || true` so installs that omit dev dependencies
+  do not fail when the husky binary is unavailable.
 
 ## [0.3.0] - 2026-05-20
 
