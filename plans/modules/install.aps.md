@@ -2,9 +2,9 @@
 
 | ID      | Owner  | Priority | Status                  |
 | ------- | ------ | -------- | ----------------------- |
-| INSTALL | @aneki | high     | In Progress (follow-up) |
+| INSTALL | @aneki | high     | Complete |
 
-**Last reviewed:** 2026-06-15
+**Last reviewed:** 2026-06-22
 
 ## Purpose
 
@@ -594,7 +594,7 @@ Notes on schema:
 - **Files:** scaffold/install, scaffold/install.ps1, cli/Cargo.toml,
   `.github/workflows/release.yml`, docs/installation.md, packaging/scoop/aps.json,
   test/run.sh
-- **Status:** In Progress (crates.io unblocked; awaits tagged-release smoke) — 2026-06-18
+- **Status:** Complete: 2026-06-22
 - **Results:** Binary-first global install shipped on both entrypoints:
   `scaffold/install` `--cli` installs the native release binary by default and
   falls back to the bash CLI only on unsupported platforms / `--bash`;
@@ -617,9 +617,11 @@ Notes on schema:
   `../scaffold` / `../templates`. `cargo publish --dry-run` now packages and
   verifies clean; build + 98 tests + clippy + fmt green. docs/installation.md
   crates.io status note updated.
-- **Remaining:** Cross-target `aps --version` / `aps lint --help` smoke still
-  needs a real tagged release to verify on all five TUI-006 targets, and the
-  first actual `cargo publish` happens via the release workflow.
+- **v0.4.0 smoke (2026-06-22):** Tag `v0.4.0` published; GitHub release workflow
+  built all five TUI-006 targets; `cargo publish` shipped `aps-cli 0.4.0` to
+  crates.io; `cargo install aps-cli --version 0.4.0` and the
+  `aps-x86_64-unknown-linux-gnu` release asset both report `aps 0.4.0`;
+  Scoop manifest pinned to `0.4.0` with release SHA256.
 
 ### INSTALL-016: Runtime project config discovery (alternate `plans_dir`)
 

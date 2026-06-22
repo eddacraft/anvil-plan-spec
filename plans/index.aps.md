@@ -43,7 +43,7 @@ APS needs continued development to:
 
 | Module                              | Purpose                                                   | Status                  |
 | ----------------------------------- | --------------------------------------------------------- | ----------------------- |
-| [install](./modules/install.aps.md) | Global binary install, project config contract, migration | In Progress (follow-up) |
+| [install](./modules/install.aps.md) | Global binary install, project config contract, migration | Complete |
 | [agents](./modules/agents.aps.md)   | APS Planner + Librarian agents, multi-harness             | Complete                |
 
 ### In Progress (v0.4 — Orchestration & UX)
