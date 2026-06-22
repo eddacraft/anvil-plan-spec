@@ -7,10 +7,8 @@ name: Release CLI
 #        -> this workflow builds the five TUI-006 targets and publishes the
 #           GitHub release assets (aps-<target>.{tar.gz,zip} + SHA256SUMS).
 #   3. crates.io:  cd cli && cargo publish
-#        -> BLOCKED until eddacraft-tui is published to crates.io (it is a git
-#           dependency today, so `cargo publish` is rejected). cargo-binstall
-#           works without this step via the GitHub assets above
-#           (see cli/Cargo.toml [package.metadata.binstall]).
+#        -> all deps carry crates.io versions (eddacraft-tui 0.4+). cargo-binstall
+#           also works via GitHub assets (see cli/Cargo.toml [package.metadata.binstall]).
 #   4. Scoop:  update packaging/scoop/aps.json for the new tag
 #        -> `scoop update aps` (or autoupdate) fills version from checkver and
 #           hash from the release SHA256SUMS. Push the manifest to the bucket.

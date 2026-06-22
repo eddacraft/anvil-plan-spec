@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
-## [0.4.0] - 2026-06-21
+## [0.4.0] - 2026-06-22
 
 **Release narrative:** [plans/releases/v0.4.0.md](./plans/releases/v0.4.0.md)
 for theme, success criteria, and risks.

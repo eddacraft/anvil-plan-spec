@@ -181,7 +181,7 @@ vendored CLI to refresh):
 binary reads by walking up from the current directory. Its contract fields:
 
 ```yaml
-cli_version: 0.4.0-dev   # toolchain semver, stamped from the running binary
+cli_version: 0.4.0       # toolchain semver, stamped from the running binary
 plans_dir: plans/        # where plan documents live
 docs_dir: docs/          # where generated docs live
 tooling_root: .aps/      # APS-owned tooling root
