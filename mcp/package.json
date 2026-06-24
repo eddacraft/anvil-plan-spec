@@ -7,7 +7,7 @@
   "type": "module",
   "scripts": {
     "start": "node src/index.ts",
-    "test": "node --test test/"
+    "test": "node --test \"test/**/*.test.ts\""
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.0",
