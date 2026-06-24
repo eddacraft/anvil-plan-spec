@@ -1,0 +1,6 @@
+# Force the patched hono release into the @modelcontextprotocol/sdk dependency
+# tree (transitive via @hono/node-server). Resolves GHSA advisories for CORS
+# wildcard credential reflection, serve-static path traversal, body-limit
+# bypass, and Set-Cookie/header handling. See alerts #25-#29.
+overrides:
+  hono: ^4.12.27
