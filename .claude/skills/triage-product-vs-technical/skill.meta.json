@@ -15,7 +15,7 @@
   },
   "localChanges": [
     "removed Claude-only allowed-tools frontmatter (ADR-0003)",
-    "replaced GSD .planning/config.json injection with eddacraft 'When to apply' anchored on fable5-aps-loop",
+    "replaced GSD .planning/config.json injection with eddacraft 'When to apply' anchored on aps-loop",
     "decisions log rewired to plans/execution/decisions.md; ADR promotion path added",
     "milestone-summary batch surfacing replaced with the run's final report",
     "AskUserQuestion/CLAUDE.md references neutralised; classifier_version field dropped",
