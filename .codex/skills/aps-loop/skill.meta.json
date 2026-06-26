@@ -16,7 +16,7 @@
   "agentSupport": {
     "scope": "general",
     "agents": [],
-    "notes": "Canonical harness-agnostic APS development loop: planning fills a Ready backlog, autonomous execution drains it, Ready is the human-owned membrane. Autonomous-first with three checkpoints (design/ready/merge). Runtime variants bind to this (e.g. fable5-aps-loop). Design: plans/designs/2026-06-18-canonical-aps-loop.design.md; lifecycle: ADR-0013."
+    "notes": "Canonical harness-agnostic APS development loop: planning fills a Ready backlog, autonomous execution drains it, Ready is the human-owned membrane. Autonomous-first with three checkpoints (design/ready/merge). Runtime variants may bind to this. Design: plans/designs/2026-06-18-canonical-aps-loop.design.md; lifecycle: ADR-0013."
   },
   "localChanges": []
 }
