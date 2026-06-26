@@ -17,8 +17,8 @@ the _how_ on the other side. Because everything past the membrane lives in a
 throwaway branch or worktree, the loop drives autonomously and stops only at the
 named checkpoints.
 
-This skill is the canonical spec; runtimes (Claude, Codex) run it directly. The
-full design rationale is
+This skill is the canonical spec. Runtime-specific variants bind to it (e.g.
+`fable5-aps-loop`). The full design rationale is
 `plans/designs/2026-06-18-canonical-aps-loop.design.md`.
 
 If `plans/index.aps.md` does not exist, this skill does not apply. Route to
@@ -233,8 +233,8 @@ changes made, and any checkpoint decision needed from the user.
 
 ## Bindings and leaves
 
-- **Bindings:** none — Claude and Codex run this spec directly. Any future
-  runtime binding references this skill rather than redefining the loop.
+- **Bindings:** `fable5-aps-loop` (Claude Fable 5 binding of this spec). New
+  runtime bindings reference this skill rather than redefining the loop.
 - **Leaves:** `aps-probe` (capability manifest), `aps-gate-policy` (gate policy +
   presets + designGate toggle), `aps-task-router` (fast/full routing),
   `aps-safety-rails` (immutable rails), `aps-landing` (fenced landing +
