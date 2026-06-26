@@ -479,7 +479,7 @@ if (-not (Test-Path -LiteralPath $gitignore) -or -not ((Get-Content -LiteralPath
 $today = (Get-Date -Format "yyyy-MM-dd")
 # $Version is a git ref ("main") by default; only pin it as cli_version when
 # it is an explicit semver, else fall back to the release version.
-if ($Version -match '^v?[0-9]') { $cliVersion = $Version -replace '^v', '' } else { $cliVersion = "0.3.0" }
+if ($Version -match '^v?[0-9]') { $cliVersion = $Version -replace '^v', '' } else { $cliVersion = "0.4.0" }
 $configBody = @"
 # .aps/config.yml — written by installer, read by updater
 
@@ -491,7 +491,7 @@ docs_dir: docs/
 tooling_root: .aps/
 
 aps:
-  version: "0.3.0"
+  version: "0.4.0"
   config_schema: 1
   installed: "$today"
   updated: "$today"

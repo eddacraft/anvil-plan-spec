@@ -1,6 +1,6 @@
 {
   "name": "anvil-plan-spec",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "description": "A lightweight specification format for planning and work item authorisation in AI-assisted development.",
   "license": "Apache-2.0",
