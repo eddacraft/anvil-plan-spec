@@ -4,7 +4,7 @@ description: >-
   Before an autonomous workflow pauses for the user, classifies the pending
   question as PRODUCT (must surface, in plain English) or TECHNICAL
   (auto-resolve, log the decision, continue). Use inside any unattended or
-  low-touch run — the aps-loop checkpoint step, autonomous planning,
+  low-touch run — the fable5-aps-loop checkpoint step, autonomous planning,
   or execution agents — whenever a question, blocker, or grey area is about
   to interrupt the user. Keeps autonomous runs moving by stopping only for
   decisions a non-developer must actually make.
@@ -21,7 +21,7 @@ grey area, or pause to the user. Classify the pending question and either:
 
 ## When to apply
 
-- An autonomous loop (such as `aps-loop`) hits something that looks
+- An autonomous loop (such as `fable5-aps-loop`) hits something that looks
   checkpoint-worthy and must decide whether to stop or proceed.
 - A planning or execution agent is about to ask the user a question
   mid-run.
@@ -29,7 +29,7 @@ grey area, or pause to the user. Classify the pending question and either:
   stakeholder, unattended run, low-touch autopilot).
 
 Structural checkpoint rules (for example the plan-evolution authority table
-in `aps-loop`) take precedence: a change that table marks as a
+in `fable5-aps-loop`) take precedence: a change that table marks as a
 checkpoint is always surfaced. This skill classifies everything else — the
 ad-hoc questions and grey areas that arise during work.
 
@@ -185,7 +185,7 @@ explicitly requested more involvement.
 
 ## Cross-references
 
-- `aps-loop` — the checkpoint step this skill refines
+- `fable5-aps-loop` — the checkpoint step this skill refines
 - `product-only-interview` — companion for non-developer requirement
   gathering
 - `plans/aps-rules.md` — decisions and design-doc conventions
