@@ -1,0 +1,22 @@
+{
+  "name": "aps-resume",
+  "origin": {
+    "type": "local",
+    "repo": "eddacraft-skills",
+    "path": "skills/eddacraft/aps-resume",
+    "ref": "main",
+    "lastImportedCommit": null
+  },
+  "status": "canonical",
+  "targets": {
+    "claude": true,
+    "opencode": true,
+    "openclaw": false
+  },
+  "agentSupport": {
+    "scope": "general",
+    "agents": [],
+    "notes": "Trust-window resume leaf for the canonical APS loop (module 12, design change #6 / gap G8). Cheap cold resume when state is provably fresh (recency + baseline SHA + unchanged scope), durable committed run-journal, declared non-idempotent actions never auto-replayed, mid-action heartbeat, and verbatim cold-rehydration protocol. Serves aps-loop; design: plans/designs/2026-06-18-canonical-aps-loop.design.md."
+  },
+  "localChanges": []
+}

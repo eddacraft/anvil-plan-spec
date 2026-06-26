@@ -1,0 +1,24 @@
+{
+  "name": "triage-product-vs-technical",
+  "origin": {
+    "type": "git",
+    "repo": "https://github.com/grahac/makeitso",
+    "path": "skills/triage-product-vs-technical",
+    "ref": "unknown (harvested from local install 2026-06-11; pin on neutralisation)",
+    "lastImportedCommit": null
+  },
+  "status": "canonical",
+  "targets": {
+    "claude": true,
+    "opencode": true,
+    "openclaw": false
+  },
+  "localChanges": [
+    "removed Claude-only allowed-tools frontmatter (ADR-0003)",
+    "replaced GSD .planning/config.json injection with eddacraft 'When to apply' anchored on aps-loop",
+    "decisions log rewired to plans/execution/decisions.md; ADR promotion path added",
+    "milestone-summary batch surfacing replaced with the run's final report",
+    "AskUserQuestion/CLAUDE.md references neutralised; classifier_version field dropped",
+    "UK/AU English pass; cross-references added"
+  ]
+}

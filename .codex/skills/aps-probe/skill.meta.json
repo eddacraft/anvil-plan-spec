@@ -1,0 +1,22 @@
+{
+  "name": "aps-probe",
+  "origin": {
+    "type": "local",
+    "repo": "eddacraft-skills",
+    "path": "skills/eddacraft/aps-probe",
+    "ref": "main",
+    "lastImportedCommit": null
+  },
+  "status": "canonical",
+  "targets": {
+    "claude": true,
+    "opencode": true,
+    "openclaw": false
+  },
+  "agentSupport": {
+    "scope": "general",
+    "agents": [],
+    "notes": "PROBE+ self-validating capability manifest for the APS loop: detect (never assume) test/lint/typecheck/build commands, CI, isolation, branch protections, secret tooling, and package manager once per repo; cache with per-command hash + test count + output sample; re-probe on config-hash mismatch; smoke test, zero-test escalation, and VERIFY_INCOMPLETE guards prevent false greens. Portability keystone, highest-risk component. Design change #1 / gap G1."
+  },
+  "localChanges": []
+}
