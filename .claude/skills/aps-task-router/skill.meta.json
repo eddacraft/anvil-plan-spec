@@ -1,0 +1,22 @@
+{
+  "name": "aps-task-router",
+  "origin": {
+    "type": "local",
+    "repo": "eddacraft-skills",
+    "path": "skills/eddacraft/aps-task-router",
+    "ref": "main",
+    "lastImportedCommit": null
+  },
+  "status": "canonical",
+  "targets": {
+    "claude": true,
+    "opencode": true,
+    "openclaw": false
+  },
+  "agentSupport": {
+    "scope": "general",
+    "agents": [],
+    "notes": "Fast/full classifier leaf for the APS loop (module 12, design changes #3/#5, gap G4): a task is fast only if all hold (<=3 files, no interface/schema/API change, no new deps, no security-sensitive paths, established approach, no cross-module deps), gated by a dependency fan-out scan; fast cuts content (design/review/worktree) but never authority (Ready membrane, merge) or the safety rails; any doubt -> full; hygiene-class items are scope-exempt. Design: plans/designs/2026-06-18-canonical-aps-loop.design.md."
+  },
+  "localChanges": []
+}
