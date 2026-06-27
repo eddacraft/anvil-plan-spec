@@ -82,7 +82,7 @@ release narratives live in [`plans/releases/`](./releases/).
 | [spec](./modules/spec.aps.md)                 | Canonical vocabulary + schema (status reconciliation)     | Complete |
 | [tasks](./modules/tasks.aps.md)               | Claude Code Tasks integration                             | Complete |
 | [examples](./modules/examples.aps.md)         | Additional worked examples                                | Draft    |
-| [prompts](./modules/prompts.aps.md)           | Tool-specific prompt variants                             | Draft    |
+| [prompts](./modules/prompts.aps.md)           | Tool-specific prompt variants                             | Ready    |
 | [integrations](./modules/integrations.aps.md) | JSON export, GitHub sync                                  | Draft    |
 | [monorepo](./modules/monorepo.aps.md)         | Nested index.aps.md plans, federated lint + orchestration | Draft    |
 
@@ -143,3 +143,4 @@ These are explicitly out of scope:
 - **D-028:** Add release planning as an APS addon — _decided: yes, extract pattern from anvil-001 trial (`plans/releases/v0.3.0-beta.md`); see `release-planning.aps.md`_
 - **D-029:** Introduce conductor / crosscutting module type — _decided 2026-06-18: adopt. Trial concluded via COND-001 — release-planning carries `Type: Conductor`, cross-module references resolve clean, the marker is lint-safe. Remaining work: COND-002 (schema/template) + COND-003 (linter awareness)_
 - **D-030:** Deeper monorepo support via nested indexes — _decided: yes, as a new Draft module. Tagged modules (docs/monorepo.md) stay the default tier; nested `index.aps.md` plans are the federated tier for packages with independent owners/lifecycles. See [monorepo.aps.md](./modules/monorepo.aps.md) — its D-001..D-004 (child location, ID namespacing, child autonomy, coexistence) must resolve before Ready_
+- **D-038:** Promote `prompts` from Draft to Ready — _decided 2026-06-27: yes. Work broken out into PROMPTS-001 (normalize existing variants), PROMPTS-002 (variant-vs-stub policy), PROMPTS-003 (stubs for Copilot/Codex/Gemini, closing the D-006 coverage gap). See [prompts.aps.md](./modules/prompts.aps.md)_
