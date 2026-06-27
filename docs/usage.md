@@ -361,9 +361,20 @@ the sibling `bin/aps`, then `$PATH`); `APS_PLANS` sets the plan root passed
 to every command. The server is optional — everything it does is also
 available via the CLI or by editing markdown directly.
 
-## Windows (PowerShell)
+## Windows
 
-The PowerShell port currently mirrors the lint/init/update surface:
+On Windows, use the native `aps.exe` from the PowerShell installer or Scoop for
+the cross-platform command surface:
+
+```powershell
+aps init
+aps lint plans\
+aps next
+aps doctor
+```
+
+The legacy PowerShell script remains available for lint/init/update fallback
+use cases:
 
 ```powershell
 .\bin\aps.ps1 lint plans\
@@ -371,8 +382,9 @@ The PowerShell port currently mirrors the lint/init/update surface:
 .\bin\aps.ps1 lint plans\ --json
 ```
 
-For orchestration on Windows, use WSL or Git Bash with the bash CLI. A native
-PowerShell port of `next`/`start`/`complete`/`graph` is on the roadmap.
+Commands that still depend on the bash runtime should be run from WSL or Git
+Bash. See [installation.md](installation.md#windows-details) for the recommended
+PowerShell and Scoop install paths.
 
 ## CI Integration
 
