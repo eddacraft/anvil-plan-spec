@@ -4,8 +4,8 @@
 # content by default), bootstrap a repo for an agent, upgrade, or add a tool.
 #
 # Usage:
-#   Invoke-Expression (Invoke-WebRequest -Uri "https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install.ps1" -UseBasicParsing).Content
-#   $env:APS_VERSION = "v0.2.0"; Invoke-Expression (Invoke-WebRequest -Uri "..." -UseBasicParsing).Content
+#   & ([scriptblock]::Create((irm "https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install.ps1"))) --cli
+#   $env:APS_VERSION = "v0.4.0"; & ([scriptblock]::Create((irm "..."))) --cli
 #
 # For updating existing projects, use the update script instead.
 #
@@ -573,7 +573,7 @@ Write-Step "Next steps"
 Write-Host ""
 if (-not $UseLocalCli) {
     Write-Host "  1. Install the APS CLI: " -NoNewline
-    Write-Host "Invoke-Expression (Invoke-WebRequest -Uri `"$BaseUrl/scaffold/install.ps1`" -UseBasicParsing).Content; <pass --cli>" -ForegroundColor White
+    Write-Host "& ([scriptblock]::Create((irm `"$BaseUrl/scaffold/install.ps1`"))) --cli" -ForegroundColor White
     Write-Host "  2. Edit " -NoNewline; Write-Host "plans\index.aps.md" -ForegroundColor White -NoNewline; Write-Host " to define your plan"
     Write-Host "  3. Add hooks/agents/tool skills with " -NoNewline; Write-Host "aps setup" -ForegroundColor White
 } else {
