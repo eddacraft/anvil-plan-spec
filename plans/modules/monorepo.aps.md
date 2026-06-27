@@ -2,7 +2,9 @@
 
 | ID   | Owner  | Priority | Status |
 | ---- | ------ | -------- | ------ |
-| MONO | @aneki | medium   | Draft  |
+| MONO | @aneki | medium   | In Progress |
+
+**Last reviewed:** 2026-06-27
 
 ## Purpose
 
@@ -64,13 +66,13 @@ monorepos — this module covers the federated tier above it.
 
 ## Ready Checklist
 
-- [ ] Purpose and scope are clear
-- [ ] D-001 through D-004 resolved
-- [ ] Work items confirmed against resolved decisions
+- [x] Purpose and scope are clear
+- [x] D-001 through D-004 resolved
+- [x] Work items confirmed against resolved decisions
 
 ## Work Items
 
-### MONO-001: Define the nested plan convention
+### MONO-001: Define the nested plan convention — Complete 2026-06-27
 
 - **Intent:** Establish how child `index.aps.md` files are declared,
   discovered, and linked from a parent plan
@@ -79,8 +81,19 @@ monorepos — this module covers the federated tier above it.
 - **Validation:** `./bin/aps lint test/fixtures/monorepo/plans` passes on a
   two-level fixture tree
 - **Confidence:** medium
-- **Dependencies:** D-001, D-002, D-003
-- **Status:** Draft
+- **Dependencies:** D-001, D-002, D-003 (all resolved)
+- **Status:** Complete
+- **Results:** Convention + machine-readable grammar in
+  [../designs/2026-06-27-nested-plans.design.md](../designs/2026-06-27-nested-plans.design.md)
+  (declaration via `## Child Plans`, path-derived child names, directory-layout
+  discovery, `<name>:<ID>` cross-tree refs). Templates
+  `templates/index-nested.template.md` (federated root) and
+  `templates/index-child.template.md` (standalone child) lint valid when
+  instantiated. Fixture `test/fixtures/monorepo/` (root + `core` + `api` with a
+  `core:AUTH-001` cross-tree dep): parent, `core`, and whole-tree lint clean;
+  `api` linted alone shows the one expected cross-tree W003. Two findings handed
+  to MONO-002 (recursive find already resolves whole-tree deps; W003 must become
+  `<name>:`-prefix-aware) — see the design doc's Findings section.
 
 ### MONO-002: Lint traversal of nested plans
 
@@ -91,8 +104,12 @@ monorepos — this module covers the federated tier above it.
 - **Validation:** Fixture with cross-tree deps and a deliberate ID collision
   produces the expected results
 - **Confidence:** medium
-- **Dependencies:** MONO-001
-- **Status:** Draft
+- **Dependencies:** MONO-001 (complete)
+- **Status:** Ready
+- **Notes:** Start from the MONO-001 findings — `build_id_index` already
+  resolves cross-tree deps on a whole-tree lint; the work is `## Child Plans`
+  scoping, `<name>:`-prefix-aware W003, and inter-tree ID-collision detection.
+  Reuse `test/fixtures/monorepo/` and add a deliberate-collision fixture.
 
 ### MONO-003: Orchestration across nested plans
 
@@ -115,8 +132,11 @@ monorepos — this module covers the federated tier above it.
 - **Validation:** Roll-up section in the fixture root lints clean and matches
   the child plan states
 - **Confidence:** low
-- **Dependencies:** MONO-001
-- **Status:** Draft
+- **Dependencies:** MONO-001 (complete)
+- **Status:** Ready
+- **Notes:** The `index-nested` template and fixture root already carry a
+  `## Roll-up` stub table — this item populates it and documents the refresh
+  ritual.
 
 ### MONO-005: Scaffold support for nested layouts
 
@@ -125,8 +145,11 @@ monorepos — this module covers the federated tier above it.
   root plan plus at least one child plan wired to it
 - **Validation:** Test-suite init run produces a tree that `aps lint` accepts
 - **Confidence:** medium
-- **Dependencies:** MONO-001
-- **Status:** Draft
+- **Dependencies:** MONO-001 (complete)
+- **Status:** Ready
+- **Notes:** Scaffold from `templates/index-nested.template.md` +
+  `templates/index-child.template.md`; the `test/fixtures/monorepo/` layout is
+  the target shape.
 
 ### MONO-006: Documentation and worked example
 
@@ -142,22 +165,34 @@ monorepos — this module covers the federated tier above it.
 
 ## Decisions
 
-- **D-001:** Child plan location — _open._ Candidates: co-located with the
-  package (`packages/<pkg>/plans/index.aps.md`, most portable) vs centralised
-  (`plans/<pkg>/index.aps.md`, simplest discovery). Co-location is the
-  stronger candidate because extraction-portability is the motivating case.
-- **D-002:** ID namespacing across trees — _open._ Module IDs are only unique
-  per tree today; this repo already has a D-026 collision between its index
-  and tui module. Options: required per-tree prefix, path-qualified IDs
-  (`core:AUTH-001`) for cross-tree references, or collision detection only.
-- **D-003:** Child autonomy — _open._ Children as fully standalone plans
-  (own Problem/Success Criteria, work without the parent) vs subordinate
-  views of one root plan. Standalone is the stronger candidate — it keeps
-  every plan portable and lets `--plans` point anywhere.
-- **D-004:** Relationship to tagged modules — _open (leaning coexist)._
-  Package tags remain the default for small monorepos; nested indexes are
-  the opt-in tier when packages need independent plans. Docs must carry the
-  decision guidance.
+- **D-001:** Child plan location — _decided 2026-06-26: co-located._ Child
+  plans live with their package at `packages/<pkg>/plans/index.aps.md` (a
+  child carries its plan when extracted to its own repo, which is the
+  motivating case). Discovery without the parent is by directory layout:
+  `aps` treats any `**/plans/index.aps.md` below the root as a child plan.
+  Centralised `plans/<pkg>/` is not blessed — co-location is the single
+  convention so discovery stays unambiguous.
+- **D-002:** ID namespacing across trees — _decided 2026-06-26: bare IDs
+  per tree, path-qualified for cross-tree references, collision detection
+  always on._ Module/work-item IDs stay unprefixed within a tree (a child
+  extracted to its own repo carries no redundant prefix — consistent with
+  D-001/D-003). Cross-tree references qualify with the child's path-derived
+  name (`core:AUTH-001`). `aps lint` flags duplicate IDs **within** a tree
+  (existing behaviour) and reports cross-tree collisions as a warning rather
+  than an error, since each tree is independently valid. A required global
+  prefix was rejected — it taxes the common standalone case to serve the
+  rarer cross-tree reference.
+- **D-003:** Child autonomy — _decided 2026-06-26: standalone._ Each child
+  is a complete APS plan with its own Problem / Success Criteria / Modules
+  and lints, orchestrates, and ships in isolation. The parent links children
+  and rolls up their status; it does not own their modules. This keeps every
+  plan portable and lets `--plans` point at any node in the tree.
+- **D-004:** Relationship to tagged modules — _decided 2026-06-26: coexist,
+  tags remain the default._ Package tags (docs/monorepo.md) stay the
+  recommended approach for monorepos that share one backlog. Nested indexes
+  are the opt-in federated tier for packages with independent owners,
+  lifecycles, or extraction plans. Docs carry the tags-vs-nested decision
+  guidance and a migration path (MONO-006).
 
 ## Relationship to Other Modules
 
