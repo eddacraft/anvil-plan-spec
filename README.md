@@ -15,19 +15,34 @@ APS is the planning layer that lives in your repo, travels with your code, and
 works with every AI tool you use — Claude Code, Cursor, Copilot, Codex, OpenCode,
 Gemini, ChatGPT, and whatever comes next.
 
-## Install in 10 seconds
+## Install
+
+macOS / Linux:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install | bash
 ```
 
-This opens a mode picker — install the CLI, initialize a repo, bootstrap an
-agent, upgrade, or add a tool integration. Skip it with a flag:
-`--cli`, `--init`, `--agent`, `--upgrade`, or `--setup <tool>`. Then run
-`aps init` for the interactive setup wizard.
+Windows PowerShell:
 
-Want to inspect the installer first? Pipe to `less`. Need Windows, version
-pinning, or non-interactive flags? See [docs/installation.md](docs/installation.md).
+```powershell
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install.ps1))) --cli
+```
+
+Or install with Scoop:
+
+```powershell
+scoop install https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/packaging/scoop/aps.json
+```
+
+Then run `aps init` in your repository for the interactive setup wizard.
+
+The installer can also initialize a repo, bootstrap an agent, upgrade, or add a
+tool integration. Use `--cli`, `--init`, `--agent`, `--upgrade`, or
+`--setup <tool>` to skip the picker.
+
+Want to inspect the installer first, pin a version, or run non-interactively?
+See [docs/installation.md](docs/installation.md).
 
 ## Why APS?
 
@@ -216,16 +231,16 @@ your-project/
 
 ## Platform support
 
-| Platform    | Authoring (`lint`/`init`)          | Orchestration (`next`/`start`/`complete`/`graph`) |
-| ----------- | ---------------------------------- | ------------------------------------------------- |
-| **Linux**   | Bash 4.0+                          | Bash 4.0+                                         |
-| **macOS**   | Bash 4.0+ via `brew install bash`  | Bash 4.0+ via `brew install bash`                 |
-| **Windows** | PowerShell 5.1+ (native `aps.ps1`) | Bash 4.0+ via WSL or Git Bash                     |
+| Platform    | Recommended path                                  | Notes                                      |
+| ----------- | ------------------------------------------------- | ------------------------------------------ |
+| **Linux**   | Native `aps` binary via install script or cargo   | Bash CLI fallback needs Bash 4.0+          |
+| **macOS**   | Native `aps` binary via install script or cargo   | Bash fallback needs Homebrew Bash 4.0+     |
+| **Windows** | Native `aps.exe` via PowerShell script or Scoop   | Use WSL/Git Bash for bash-only commands    |
 
-Native `aps.ps1` covers `lint` and `init` on Windows today; orchestration is
-bash-only — use WSL or Git Bash for the full experience. A native PowerShell
-port of orchestration is on the roadmap. macOS ships Bash 3.2 (too old —
-APS needs associative arrays); Homebrew's bash is picked up automatically.
+The native binary supports the core cross-platform surface (`init`, `setup`,
+`lint`, `next`, `doctor`). Commands that still depend on the bash runtime use
+WSL or Git Bash on Windows. macOS ships Bash 3.2 (too old for the fallback
+runtime); Homebrew's bash is picked up automatically.
 
 ## AI agent guidance
 
