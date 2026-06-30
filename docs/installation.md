@@ -64,14 +64,20 @@ To use a custom location, set `APS_HOME`:
 curl -fsSL .../install | APS_HOME=/opt/aps bash -s -- --global
 ```
 
-To update a global installation:
+To update a global installation, reinstall the binary the same way you
+installed it:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/update | bash -s -- --global
+cargo binstall aps-cli                                  # prebuilt binary
+cargo install aps-cli                                   # build from source
+curl -fsSL .../scaffold/install | bash -s -- --cli      # install script
 
-# Or from the installed CLI:
-aps update --global
+# Bash/PowerShell runtime only (air-gapped installs) — refresh in place:
+curl -fsSL .../scaffold/update | bash -s -- --global
 ```
+
+> Note: `aps update` (the binary subcommand) reconciles a **project's**
+> generated files — it is not how you upgrade the global binary itself.
 
 To uninstall: remove `~/.aps/` and the PATH line from your shell config.
 
@@ -199,24 +205,25 @@ tooling_root: .aps/      # APS-owned tooling root
 
 Both the native binary and the bash CLI write these same contract keys.
 
-## Upgrade (Remove Generated Bloat)
+## Migrate (Remove Generated Bloat)
 
 Older or heavier installs scatter generated files across the repo (root
 `bin/` + `lib/`, a v1 `aps-planning/` skill dir, `.claude/commands/`, and a
-vendored `.aps/bin` + `.aps/lib`). `aps upgrade` removes that bloat safely so
-the repo can run on the global `aps` binary instead.
+vendored `.aps/bin` + `.aps/lib`). `aps migrate` diagnoses the project and
+removes that bloat safely so the repo can run on the global `aps` binary
+instead.
 
 ```bash
-aps upgrade            # dry run — shows what would be backed up and removed
-aps upgrade --apply    # back up to .aps/backup/<timestamp>/, then remove
-aps upgrade --apply --yes   # non-interactive
+aps migrate            # dry run — diagnoses, shows what would be removed
+aps migrate --apply    # back up to .aps/backup/<timestamp>/, then remove
+aps migrate --apply --yes   # non-interactive
 
 # Or via curl, without a local CLI (the dry run is agent-safe — it writes nothing):
 curl -fsSL https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/upgrade | bash
 curl -fsSL .../scaffold/upgrade | bash -s -- --apply --yes
 ```
 
-`upgrade` **dry-runs by default** and never deletes user content: `plans/**`,
+`migrate` **dry-runs by default** and never deletes user content: `plans/**`,
 `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, and settings files are protected. Every
 removed path is copied to `.aps/backup/<timestamp>/` first. Hook paths in
 `.claude/settings.local.json` are rewritten from `aps-planning/scripts/` to
@@ -251,16 +258,17 @@ CLI (root `bin/` + `lib/`, or `.aps/bin` + `.aps/lib`) and often a direnv
    [Project Config Contract](#project-config-contract-apsconfigyml)). `aps init`
    stamps it on new projects; for older configs, add it by hand.
 
-4. **Remove the vendored bloat** — run `aps upgrade` (dry-run first), which
-   backs up and removes root `bin/`, `lib/`, and `.aps/lib/` per the rules
-   above.
+4. **Remove the vendored bloat** — run `aps migrate` (dry-run first), which
+   backs up and removes root `bin/`, `lib/`, and `.aps/lib/`, rewrites stale
+   hook paths, pins `cli_version`, and drops the direnv `PATH_add bin` per the
+   rules above. `aps migrate --apply` performs it.
 
-5. **Drop direnv activation (optional)** — once `aps` resolves from PATH, delete
-   the `PATH_add bin` line from `.envrc` and re-run `direnv allow`.
+5. **Drop direnv activation (optional)** — `aps migrate --apply` removes the
+   `PATH_add bin` line for you; re-run `direnv allow` to refresh the cache.
 
 **Bash-only / air-gapped users** can stay on the vendored runtime: keep it
-fresh with `scaffold/update --global` (or `aps update --global`), and re-run
-`aps doctor` — an incomplete `~/.aps/lib/` is reported as a problem.
+fresh with `scaffold/update --global`, and re-run `aps doctor` — an incomplete
+`~/.aps/lib/` is reported as a problem.
 
 **CI** can switch from a git-SHA checkout of the bash CLI to a pinned release:
 install the binary for the `cli_version` in `.aps/config.yml`, then run `aps`
