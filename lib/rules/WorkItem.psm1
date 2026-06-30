@@ -49,19 +49,41 @@ function Test-W001IdFormat {
 
 # W003: Dependency references unknown task ID
 # Resolves in-file first, then against the plan-tree index (cross-module
-# dependencies and decision references are legitimate).
+# dependencies and decision references are legitimate). Understands the
+# cross-tree `<name>:<ID>` form: in federated scope, validates the prefix names
+# a discovered child and the ID exists there; in isolation (named tree absent),
+# treats it as an intentional external ref and stays silent so standalone
+# children lint clean. (MONO-002)
 function Test-W003Dependencies {
-    param([string]$File, [int]$ItemLine, [string[]]$AllIds, [string[]]$TreeIds = @())
+    param([string]$File, [int]$ItemLine, [string[]]$AllIds, [string[]]$TreeIds = @(), [hashtable]$ChildIds = @{})
     $content = Get-ApsWorkItemContent -FilePath $File -StartLine $ItemLine
 
     foreach ($line in $content) {
         if ($line -match '^- \*\*Dependencies:\*\*') {
-            $depIds = [regex]::Matches($line, '[A-Z]+-[0-9]{3}')
-            foreach ($dep in $depIds) {
-                if ($dep.Value -notin $AllIds -and $dep.Value -notin $TreeIds) {
-                    $depLine = Get-ApsLineNumber -FilePath $File -Pattern "Dependencies:.*$([regex]::Escape($dep.Value))"
-                    Add-ApsResult -Path $File -Type "warning" -Code "W003" `
-                        -Message "Dependency '$($dep.Value)' not found in plan" -Line "$depLine"
+            # Keep any cross-tree `<name>:` prefix alongside bare IDs.
+            $tokens = [regex]::Matches($line, '([a-z0-9][a-z0-9-]*:)?[A-Z]+-[0-9]{3}')
+            foreach ($t in $tokens) {
+                $tok = $t.Value
+                if ($tok -like '*:*') {
+                    # Cross-tree reference: resolve only when the named child is
+                    # in scope; otherwise it is an intentional external ref and a
+                    # standalone child must still lint clean (MONO-002 / D-003).
+                    $cname = $tok.Split(':', 2)[0]
+                    $cid = $tok.Split(':', 2)[1]
+                    if ($ChildIds.ContainsKey($cname) -and @($ChildIds[$cname]).Count -gt 0) {
+                        if ($cid -notin $ChildIds[$cname]) {
+                            $depLine = Get-ApsLineNumber -FilePath $File -Pattern "Dependencies:.*$([regex]::Escape($tok))"
+                            Add-ApsResult -Path $File -Type "warning" -Code "W003" `
+                                -Message "Cross-tree dependency '$tok' not found in child '$cname'" -Line "$depLine"
+                        }
+                    }
+                } else {
+                    # Bare ID: resolve in-file first, then against the tree index.
+                    if ($tok -notin $AllIds -and $tok -notin $TreeIds) {
+                        $depLine = Get-ApsLineNumber -FilePath $File -Pattern "Dependencies:.*$([regex]::Escape($tok))"
+                        Add-ApsResult -Path $File -Type "warning" -Code "W003" `
+                            -Message "Dependency '$tok' not found in plan" -Line "$depLine"
+                    }
                 }
             }
             break
@@ -107,7 +129,7 @@ function Test-W018TerminalValidation {
 
 # Lint all work items in a file
 function Invoke-ApsWorkItemLint {
-    param([string]$File, [string[]]$TreeIds = @())
+    param([string]$File, [string[]]$TreeIds = @(), [hashtable]$ChildIds = @{})
     $hasErrors = $false
 
     # Collect all work item IDs for dependency checking
@@ -130,7 +152,7 @@ function Invoke-ApsWorkItemLint {
         if (-not (Test-E005RequiredFields -File $File -ItemHeader $item.Header -ItemLine $item.LineNumber)) {
             $hasErrors = $true
         }
-        Test-W003Dependencies -File $File -ItemLine $item.LineNumber -AllIds $allIds -TreeIds $TreeIds
+        Test-W003Dependencies -File $File -ItemLine $item.LineNumber -AllIds $allIds -TreeIds $TreeIds -ChildIds $ChildIds
         Test-W018TerminalValidation -File $File -ItemHeader $item.Header -ItemLine $item.LineNumber -ModuleStatus $moduleStatus
     }
 

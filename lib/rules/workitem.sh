@@ -79,18 +79,33 @@ check_w003_dependencies() {
   ' "$file")
 
   if [[ -n "$deps_line" ]]; then
-    # Extract task IDs from the line (e.g., "AUTH-001, AUTH-002" or just "AUTH-001")
-    local dep_ids
-    dep_ids=$(echo "$deps_line" | grep -oE '[A-Z]+-[0-9]{3}' || true)
+    # Extract dependency tokens, keeping any cross-tree `<name>:` prefix
+    # (e.g. "core:AUTH-001") alongside bare IDs ("AUTH-001"). (MONO-002)
+    local dep_tokens
+    dep_tokens=$(echo "$deps_line" | grep -oE '([a-z0-9][a-z0-9-]*:)?[A-Z]+-[0-9]{3}' || true)
 
-    for dep_id in $dep_ids; do
-      # Resolve in-file first, then against the plan-tree index (cross-module
-      # dependencies and decision references are legitimate)
-      if ! echo "$all_ids" | grep -qw "$dep_id" \
-        && ! echo "${APS_TREE_IDS:-}" | grep -qw "$dep_id"; then
-        local line_num
-        line_num=$(grep -n "Dependencies:.*$dep_id" "$file" | head -1 | cut -d: -f1)
-        add_result "$file" "warning" "W003" "Dependency '$dep_id' not found in plan" "$line_num"
+    local tok line_num
+    for tok in $dep_tokens; do
+      if [[ "$tok" == *:* ]]; then
+        # Cross-tree reference: <name>:<ID>. Resolve only when the named child
+        # is in scope; otherwise it is an intentional external reference and a
+        # standalone child must still lint clean (MONO-002 / D-003).
+        local cname="${tok%%:*}" cid="${tok#*:}"
+        if [[ -n "${APS_CHILD_IDS[$cname]:-}" ]]; then
+          if ! echo "${APS_CHILD_IDS[$cname]}" | grep -qw "$cid"; then
+            line_num=$(grep -n "Dependencies:.*$tok" "$file" | head -1 | cut -d: -f1)
+            add_result "$file" "warning" "W003" \
+              "Cross-tree dependency '$tok' not found in child '$cname'" "$line_num"
+          fi
+        fi
+      else
+        # Bare ID: resolve in-file first, then against the plan-tree index
+        # (cross-module dependencies and decision references are legitimate)
+        if ! echo "$all_ids" | grep -qw "$tok" \
+          && ! echo "${APS_TREE_IDS:-}" | grep -qw "$tok"; then
+          line_num=$(grep -n "Dependencies:.*$tok" "$file" | head -1 | cut -d: -f1)
+          add_result "$file" "warning" "W003" "Dependency '$tok' not found in plan" "$line_num"
+        fi
       fi
     done
   fi

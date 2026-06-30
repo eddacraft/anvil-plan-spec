@@ -181,13 +181,41 @@ and whole-tree. Two facts for MONO-002 fell out:
    key on the *value side* of dependency/interface fields, honour the `name:`
    prefix, and skip code spans/fences.
 
-The one expected `api`-alone W003 is the only non-clean result in the fixture
-matrix; parent, `core`, and whole-tree all lint clean.
+At MONO-001 close, the one expected `api`-alone W003 was the only non-clean
+result; parent, `core`, and whole-tree all lint clean. MONO-002 (below) changes
+the `api`-alone result to clean by making W003 prefix-aware.
+
+## As-built: lint traversal (MONO-002, 2026-06-27)
+
+Implemented in the bash linter (`lib/lint.sh`, `lib/rules/workitem.sh`):
+
+- **Traversal.** `cmd_lint` follows `## Child Plans` links from a parent index
+  (`expand_child_plans`, transitive, deduped on lexically-normalised paths), so
+  `aps lint <parent>/plans` validates every child tree as one plan. This closes
+  the canonical case where children live at `packages/<pkg>/plans/`, outside the
+  parent dir (a whole-tree target already pulled children in via recursive find).
+- **Prefix-aware W003.** Dependencies are parsed keeping the `<name>:` prefix.
+  A `<name>:<ID>` ref resolves against the named child's IDs
+  (`build_child_registry` → `APS_CHILD_IDS`) when that child is in scope; when it
+  is not (a child linted alone), the ref is an intentional external link and
+  stays silent, so standalone children lint clean. A bare ID keeps its existing
+  behaviour (resolve in-file, then against the whole linted scope).
+- **Collision detection (W020).** `check_cross_tree_collisions` warns once per
+  work-item ID defined in more than one child tree (warning, not error — D-002
+  keeps each tree independently valid; collisions only make `<name>:<ID>` refs
+  ambiguous). Fires only when a federation parent is in scope.
+
+Known nuance: a *bare* ID still resolves across the entire linted scope, not
+strictly within its own tree (pre-existing `APS_TREE_IDS` leniency). The
+`name:` prefix is the explicit cross-tree mechanism; tightening bare resolution
+to in-tree-only would change long-standing single-repo behaviour and is out of
+scope here.
 
 ## Open items deferred downstream
 
-- Cross-tree reference *resolution* + prefix-aware W003 + ID-collision
-  reporting → MONO-002
+- **PowerShell parity** for the MONO-002 behaviour (`lib/Lint.psm1`,
+  `lib/rules/WorkItem.psm1`) — the repo keeps a PS port in step with the bash
+  linter; not done yet (no `pwsh` in the dev env to verify a port against)
 - Federated `aps next`/`graph`/`audit` and scoping → MONO-003
 - Roll-up section population in the parent → MONO-004
 - User-facing docs + migration guide → MONO-006

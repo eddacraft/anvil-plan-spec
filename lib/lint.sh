@@ -102,6 +102,173 @@ build_id_index() {
   return 0
 }
 
+# Lexically normalise a path: collapse '.' and '..' segments without touching
+# the filesystem, preserving whether the path is relative or absolute. Used so
+# child-plan links (joined onto a parent dir, e.g. "plans/../packages/...")
+# dedupe cleanly against recursively-found paths and keep tidy relative output.
+# Usage: normalize_path "a/b/../c"
+normalize_path() {
+  local path="$1"
+  local abs=false
+  [[ "$path" == /* ]] && abs=true
+  local out=() part
+  local IFS=/
+  for part in $path; do
+    case "$part" in
+      ''|.) ;;
+      ..)
+        if [[ ${#out[@]} -gt 0 && "${out[-1]}" != ".." ]]; then
+          unset 'out[-1]'
+        elif [[ "$abs" == false ]]; then
+          out+=("..")
+        fi
+        ;;
+      *) out+=("$part") ;;
+    esac
+  done
+  local result="${out[*]}"
+  if [[ "$abs" == true ]]; then
+    echo "/$result"
+  else
+    echo "${result:-.}"
+  fi
+}
+
+# Emit child-plan index paths declared in a parent index's "## Child Plans"
+# section (MONO-002). Each list item links a child index.aps.md relative to the
+# parent; paths are resolved against the parent dir and normalised.
+# Usage: resolve_child_plan_links "path/to/index.aps.md"
+resolve_child_plan_links() {
+  local index_file="$1"
+  local dir
+  dir=$(dirname "$index_file")
+  awk '
+    /^## / { in_section = ($0 ~ /^## Child Plans[[:space:]]*$/) ? 1 : 0; next }
+    in_section && match($0, /\]\([^)]+\)/) {
+      print substr($0, RSTART + 2, RLENGTH - 3)
+    }
+  ' "$index_file" 2>/dev/null | while IFS= read -r link; do
+    [[ -z "$link" ]] && continue
+    local resolved
+    resolved=$(normalize_path "$dir/$link")
+    [[ -f "$resolved" ]] && echo "$resolved"
+  done
+}
+
+# Expand a file list in place by following ## Child Plans links transitively.
+# Reads and rewrites the global `files` array; deduped on normalised paths.
+# Usage: expand_child_plans
+expand_child_plans() {
+  local -A seen=()
+  local f key
+  local result=()
+  for f in "${files[@]}"; do
+    key=$(normalize_path "$f")
+    if [[ -z "${seen[$key]:-}" ]]; then
+      seen["$key"]=1
+      result+=("$f")
+    fi
+  done
+
+  local queue=("${result[@]}")
+  while [[ ${#queue[@]} -gt 0 ]]; do
+    local current="${queue[0]}"
+    queue=("${queue[@]:1}")
+    [[ "$(basename "$current")" == "index.aps.md" ]] || continue
+    local child_index
+    while IFS= read -r child_index; do
+      [[ -z "$child_index" ]] && continue
+      local cf
+      while IFS= read -r cf; do
+        key=$(normalize_path "$cf")
+        if [[ -z "${seen[$key]:-}" ]]; then
+          seen["$key"]=1
+          result+=("$cf")
+          queue+=("$cf")
+        fi
+      done < <(find_aps_files "$(dirname "$child_index")")
+    done < <(resolve_child_plan_links "$current")
+  done
+
+  files=("${result[@]}")
+}
+
+# Per-child work-item ID registry for cross-tree (`<name>:<ID>`) resolution.
+# Keyed by path-derived child name (the segment above a child's plans/ dir).
+# W003 reads this to validate prefixed deps; empty when no child trees are in
+# scope (a child linted alone), which is how isolated cross-tree refs stay
+# silent. (MONO-002)
+declare -gA APS_CHILD_IDS=()
+
+# Build APS_CHILD_IDS from the final `files` list. For each plan root present
+# (an index.aps.md), derive its child name and collect the work-item IDs
+# defined under that root.
+# Usage: build_child_registry
+build_child_registry() {
+  APS_CHILD_IDS=()
+  local f root name ids rf
+  for f in "${files[@]}"; do
+    [[ "$(basename "$f")" == "index.aps.md" ]] || continue
+    root=$(dirname "$f")                       # .../<name>/plans
+    name=$(basename "$(dirname "$root")")      # <name>
+    [[ -n "$name" && "$name" != "." && "$name" != "/" ]] || continue
+    # Collect this root's own files (index + modules), tolerating an absent
+    # modules/ dir; keep the pipeline from tripping `set -eo pipefail`.
+    local root_files=()
+    while IFS= read -r rf; do
+      [[ -n "$rf" ]] && root_files+=("$rf")
+    done < <(find "$root" -maxdepth 2 -type f -name '*.aps.md' 2>/dev/null || true)
+    [[ ${#root_files[@]} -gt 0 ]] || continue
+    ids=$(awk '
+      FNR == 1 { fence = 0 }
+      /^(```|~~~)/ { fence = !fence; next }
+      fence { next }
+      match($0, /^### [A-Za-z]+-[0-9]+:/) { print substr($0, 5, RLENGTH - 5) }
+    ' "${root_files[@]}" 2>/dev/null | sort -u | tr '\n' ' ' || true)
+    APS_CHILD_IDS["$name"]="${APS_CHILD_IDS[$name]:-} $ids"
+  done
+}
+
+# W020: the same work-item ID is defined in more than one child tree. Per D-002
+# IDs are bare per tree and may legitimately collide across trees, so this is a
+# warning (each tree stays independently valid) — but it makes cross-tree
+# references ambiguous, so surface it. Only fires when a federation parent
+# (a `## Child Plans` index) is in scope. (MONO-002)
+check_cross_tree_collisions() {
+  [[ ${#APS_CHILD_IDS[@]} -gt 0 ]] || return 0
+
+  # Attach warnings to the federation parent (the index declaring children).
+  local parent_file="" f
+  for f in "${files[@]}"; do
+    [[ "$(basename "$f")" == "index.aps.md" ]] || continue
+    if grep -qE '^## Child Plans[[:space:]]*$' "$f" 2>/dev/null; then
+      parent_file="$f"
+      break
+    fi
+  done
+  [[ -n "$parent_file" ]] || return 0
+
+  # Map each ID to the distinct child names that define it.
+  local -A id_owners=()
+  local name id
+  for name in "${!APS_CHILD_IDS[@]}"; do
+    for id in ${APS_CHILD_IDS[$name]}; do
+      [[ -n "$id" ]] || continue
+      case " ${id_owners[$id]:-} " in
+        *" $name "*) ;;
+        *) id_owners["$id"]="${id_owners[$id]:-} $name" ;;
+      esac
+    done
+  done
+
+  for id in "${!id_owners[@]}"; do
+    if [[ $(echo "${id_owners[$id]}" | wc -w) -gt 1 ]]; then
+      add_result "$parent_file" "warning" "W020" \
+        "Work-item ID '$id' defined in multiple child trees:${id_owners[$id]}"
+    fi
+  done
+}
+
 # Lint a single file
 # Usage: lint_file "path/to/file.aps.md"
 lint_file() {
@@ -229,6 +396,10 @@ EOF
         done < <(find_aps_files "designs")
       fi
     fi
+
+    # MONO-002: follow ## Child Plans links so a federated parent root validates
+    # its child plan trees as one plan (children live outside the parent dir).
+    expand_child_plans
   fi
 
   if [[ ${#files[@]} -eq 0 ]]; then
@@ -252,6 +423,8 @@ EOF
     done < <(find_aps_files "$troot")
   fi
   build_id_index "${index_files[@]}"
+  build_child_registry
+  check_cross_tree_collisions
 
   # Lint each file
   for file in "${files[@]}"; do

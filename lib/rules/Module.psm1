@@ -105,7 +105,7 @@ function Test-W005ReadyNoItems {
 
 # Run all module/simple rules
 function Invoke-ApsModuleLint {
-    param([string]$File, [string[]]$TreeIds = @())
+    param([string]$File, [string[]]$TreeIds = @(), [hashtable]$ChildIds = @{})
     $hasErrors = $false
 
     if (-not (Test-E001Purpose -File $File)) { $hasErrors = $true }
@@ -117,7 +117,7 @@ function Invoke-ApsModuleLint {
     Test-W017LastReviewed -File $File
 
     if (Test-ApsSection -FilePath $File -SectionHeader "## Work Items") {
-        if (-not (Invoke-ApsWorkItemLint -File $File -TreeIds $TreeIds)) { $hasErrors = $true }
+        if (-not (Invoke-ApsWorkItemLint -File $File -TreeIds $TreeIds -ChildIds $ChildIds)) { $hasErrors = $true }
     }
 
     return (-not $hasErrors)

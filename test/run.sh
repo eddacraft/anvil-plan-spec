@@ -531,5 +531,57 @@ else
   echo "SKIP (cli/target/release/aps not built)"
 fi
 
+# Test 42: MONO-002 — federated parent root follows ## Child Plans links
+echo -n "Test: nested-plans traversal lints children from parent root... "
+output=$($APS lint "$SCRIPT_DIR/fixtures/monorepo/plans" 2>&1) || true
+echo "$output" | grep -q "5 files checked" || fail "parent root did not traverse into child plans"
+echo "$output" | grep -q "core/plans/index.aps.md" || fail "core child not linted from parent root"
+echo "$output" | grep -q "api/plans/modules/handlers.aps.md" || fail "api child module not linted from parent root"
+echo "$output" | grep -q "W003" && fail "cross-tree dep core:AUTH-001 should resolve in federated lint" || pass
+
+# Test 43: MONO-002 — bad cross-tree ref warns when the named child is in scope
+echo -n "Test: nested-plans bad cross-tree ref flagged in federated lint... "
+BADREF=$(mktemp -d)
+cp -r "$SCRIPT_DIR/fixtures/monorepo/." "$BADREF/"
+HFILE="$BADREF/packages/api/plans/modules/handlers.aps.md"
+awk '{ gsub(/core:AUTH-001/, "core:AUTH-999"); print }' "$HFILE" > "$HFILE.tmp" && mv "$HFILE.tmp" "$HFILE"
+output=$($APS lint "$BADREF/plans" 2>&1) || true
+echo "$output" | grep -q "W003" && echo "$output" | grep -q "core:AUTH-999" || { rm -rf "$BADREF"; fail "bad cross-tree ref not flagged"; }
+rm -rf "$BADREF"
+pass
+
+# Test 44: MONO-002 — isolated child with a cross-tree ref still lints clean
+echo -n "Test: nested-plans isolated child lints clean... "
+output=$($APS lint "$SCRIPT_DIR/fixtures/monorepo/packages/api/plans" 2>&1) || true
+echo "$output" | grep -q "W003" && fail "isolated child should not flag external cross-tree ref" || pass
+
+# Test 45: MONO-002 — W020 work-item ID collision across child trees
+echo -n "Test: nested-plans cross-tree ID collision detected (W020)... "
+COL=$(mktemp -d)
+cp -r "$SCRIPT_DIR/fixtures/monorepo/." "$COL/"
+CF="$COL/packages/api/plans/modules/handlers.aps.md"
+awk '{ gsub(/HND-001/, "AUTH-001"); print }' "$CF" > "$CF.tmp" && mv "$CF.tmp" "$CF"
+output=$($APS lint "$COL/plans" 2>&1) || true
+echo "$output" | grep -q "W020" && echo "$output" | grep -q "AUTH-001" || { rm -rf "$COL"; fail "W020 collision not detected"; }
+rm -rf "$COL"
+# the clean fixture must NOT trip W020
+output=$($APS lint "$SCRIPT_DIR/fixtures/monorepo/plans" 2>&1) || true
+echo "$output" | grep -q "W020" && fail "W020 false positive on clean fixture" || pass
+
+# Test 46: MONO-002 — PowerShell parity for nested-plans traversal/W003/W020
+# The bash linter is canonical; lib/*.psm1 mirrors it. CI carries no pwsh, so
+# guard parity by string-checking the ported surface (same approach as the
+# install.ps1 parity checks above).
+echo -n "Test: nested-plans PowerShell parity surface present... "
+PS_LINT="$PROJECT_ROOT/lib/Lint.psm1"
+PS_WI="$PROJECT_ROOT/lib/rules/WorkItem.psm1"
+grep -q 'function Expand-ApsChildPlans' "$PS_LINT" || fail "Lint.psm1 missing Expand-ApsChildPlans (child-plan traversal)"
+grep -q 'function Build-ApsChildRegistry' "$PS_LINT" || fail "Lint.psm1 missing Build-ApsChildRegistry"
+grep -q 'function Test-ApsCrossTreeCollisions' "$PS_LINT" || fail "Lint.psm1 missing Test-ApsCrossTreeCollisions (W020)"
+grep -q 'W020' "$PS_LINT" || fail "Lint.psm1 missing W020 code"
+grep -qF 'Cross-tree dependency' "$PS_WI" || fail "WorkItem.psm1 missing prefix-aware W003"
+grep -qF '[a-z0-9][a-z0-9-]*:' "$PS_WI" || fail "WorkItem.psm1 missing <name>:<ID> token grammar"
+pass
+
 echo ""
 echo -e "${GREEN}All tests passed!${NC}"
