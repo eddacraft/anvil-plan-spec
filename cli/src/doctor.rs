@@ -2,7 +2,7 @@
 //! CLI to the global release binary (INSTALL-017).
 //!
 //! It reports four things: whether the global binary's version matches the
-//! project's `cli_version` pin, leftover vendored CLI trees that `aps upgrade`
+//! project's `cli_version` pin, leftover vendored CLI trees that `aps migrate`
 //! can clean, the completeness of a global `~/.aps/lib/` bash runtime, and
 //! stale direnv `PATH_add bin` entries left over from the vendored layout.
 
@@ -118,7 +118,7 @@ pub fn diagnose(start: &Path, home: &Path, exe: Option<&Path>) -> Report {
         )),
     }
 
-    // 3. Leftover vendored CLI trees that `aps upgrade` can back up and remove.
+    // 3. Leftover vendored CLI trees that `aps migrate` can back up and remove.
     // Gate on an APS-specific marker so an unrelated project `bin/` or `lib/`
     // (common in real repos) is never mistaken for a vendored APS CLI.
     let leftovers: Vec<&str> = [
@@ -142,7 +142,7 @@ pub fn diagnose(start: &Path, home: &Path, exe: Option<&Path>) -> Report {
             Level::Warn,
             "vendored CLI",
             format!(
-                "leftover vendored CLI under {}: {} — run `aps upgrade` to back up and remove",
+                "leftover vendored CLI under {}: {} — run `aps migrate` to back up and remove",
                 root.display(),
                 leftovers.join(", ")
             ),
