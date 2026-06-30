@@ -9,7 +9,6 @@
 use std::collections::HashSet;
 use std::io::IsTerminal;
 use std::path::Path;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::parser::{self, FileType, PlanFile};
 
@@ -487,7 +486,7 @@ fn check_w017_last_reviewed(report: &mut LintReport, plan: &PlanFile) {
         let rest = line.strip_prefix("**Last reviewed:**")?;
         let date = rest.trim_start_matches(' ');
         let date = date.get(..10)?;
-        parse_civil_date(date).map(|epoch_days| (date.to_string(), epoch_days))
+        crate::date::parse_civil_date(date).map(|epoch_days| (date.to_string(), epoch_days))
     });
 
     let Some((date, reviewed_days)) = reviewed else {
@@ -507,7 +506,7 @@ fn check_w017_last_reviewed(report: &mut LintReport, plan: &PlanFile) {
         .and_then(|v| v.parse().ok())
         .unwrap_or(60);
 
-    let age_days = today_civil_days() - reviewed_days;
+    let age_days = crate::date::today_civil_days() - reviewed_days;
     if age_days > stale_days {
         let line = plan
             .lines
@@ -522,48 +521,6 @@ fn check_w017_last_reviewed(report: &mut LintReport, plan: &PlanFile) {
             line,
         );
     }
-}
-
-/// Today as civil days since the epoch, in the *local* timezone — bash's
-/// `date -d "$reviewed" +%s` anchors at local midnight, so its W017 age is
-/// the local civil-day difference. std has no timezone access, so ask
-/// `date` like bash does; fall back to UTC when unavailable.
-fn today_civil_days() -> i64 {
-    let local = std::process::Command::new("date")
-        .arg("+%Y-%m-%d")
-        .output()
-        .ok()
-        .filter(|out| out.status.success())
-        .and_then(|out| parse_civil_date(String::from_utf8_lossy(&out.stdout).trim()));
-
-    local.unwrap_or_else(|| {
-        SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .map(|d| (d.as_secs() / 86_400) as i64)
-            .unwrap_or(0)
-    })
-}
-
-/// Days since the Unix epoch for a `YYYY-MM-DD` date (Howard Hinnant's
-/// civil-date algorithm). Returns None for malformed dates.
-fn parse_civil_date(date: &str) -> Option<i64> {
-    let bytes = date.as_bytes();
-    if bytes.len() != 10 || bytes[4] != b'-' || bytes[7] != b'-' {
-        return None;
-    }
-    let y: i64 = date[..4].parse().ok()?;
-    let m: i64 = date[5..7].parse().ok()?;
-    let d: i64 = date[8..10].parse().ok()?;
-    if !(1..=12).contains(&m) || !(1..=31).contains(&d) {
-        return None;
-    }
-    let y = if m <= 2 { y - 1 } else { y };
-    let era = if y >= 0 { y } else { y - 399 } / 400;
-    let yoe = y - era * 400;
-    let mp = (m + 9) % 12;
-    let doy = (153 * mp + 2) / 5 + d - 1;
-    let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
-    Some(era * 146_097 + doe - 719_468)
 }
 
 fn lint_work_items(report: &mut LintReport, plan: &PlanFile, tree_ids: &HashSet<String>) {

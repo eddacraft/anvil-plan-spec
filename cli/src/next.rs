@@ -18,6 +18,8 @@ pub struct WorkItem {
     pub deps: String,
     pub module: String,
     pub file: String,
+    /// 1-based line of the `### ID:` header, for re-reading item content.
+    pub line: usize,
 }
 
 #[derive(Debug, Default)]
@@ -30,10 +32,22 @@ impl PlanGraph {
     /// Load index module table + all module work items
     /// (`orch_load_index_modules` + `orch_load_work_items` with load_all).
     pub fn load(plan_root: &Path) -> Result<Self, String> {
+        Self::load_inner(plan_root, true)
+    }
+
+    /// Load module work items without the index module table — mirrors
+    /// `cmd_audit`, which calls `orch_load_work_items` alone so module
+    /// statuses come purely from each module file.
+    pub fn load_items_only(plan_root: &Path) -> Result<Self, String> {
+        Self::load_inner(plan_root, false)
+    }
+
+    fn load_inner(plan_root: &Path, with_index: bool) -> Result<Self, String> {
         let mut graph = Self::default();
 
         let index_path = plan_root.join("index.aps.md");
-        if index_path.is_file()
+        if with_index
+            && index_path.is_file()
             && let Ok(index) = PlanFile::load(&index_path.to_string_lossy())
         {
             for (module, status) in parser::index_modules(&index) {
@@ -92,6 +106,7 @@ impl PlanGraph {
                     deps,
                     module: module_id.clone(),
                     file: file.clone(),
+                    line: item.line,
                 });
             }
         }
@@ -104,6 +119,20 @@ impl PlanGraph {
             .iter()
             .find(|item| item.id == id)
             .map(|item| item.status.as_str())
+    }
+
+    /// Locate a work item by ID (`orch_item_index`).
+    pub fn find(&self, id: &str) -> Option<&WorkItem> {
+        self.items.iter().find(|item| item.id == id)
+    }
+
+    /// Module status as resolved during load (`ORCH_MODULE_STATUSES[m]`),
+    /// defaulting to `Unknown`.
+    pub fn module_status(&self, module: &str) -> &str {
+        self.module_statuses
+            .get(module)
+            .map(String::as_str)
+            .unwrap_or("Unknown")
     }
 
     /// `orch_deps_complete`.
@@ -134,7 +163,7 @@ impl PlanGraph {
         })
     }
 
-    fn matches_module(&self, item: &WorkItem, filter: &str) -> bool {
+    pub fn matches_module(&self, item: &WorkItem, filter: &str) -> bool {
         if filter.is_empty() {
             return true;
         }
@@ -172,7 +201,9 @@ impl PlanGraph {
     }
 }
 
-fn deps_display(deps: &str) -> String {
+/// Render a Dependencies field for display (`orch_deps_display`): newlines
+/// become `, ` and an empty value reads `None`.
+pub fn deps_display(deps: &str) -> String {
     let display = deps.replace('\n', ", ");
     if display.is_empty() {
         "None".to_string()
