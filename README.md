@@ -1,7 +1,7 @@
 <!-- markdownlint-disable MD041 -->
 
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.3.0-green.svg)](https://github.com/EddaCraft/anvil-plan-spec/releases/tag/v0.3.0)
+[![Version](https://img.shields.io/badge/version-0.4.0-green.svg)](https://github.com/EddaCraft/anvil-plan-spec/releases/tag/v0.4.0)
 [![Made for AI agents](https://img.shields.io/badge/made%20for-AI%20agents-purple.svg)](docs/ai-agent-guide.md)
 
 <!-- markdownlint-enable MD041 -->
@@ -169,18 +169,24 @@ don't need them.
 
 No plugins. No integrations. No configuration. It's just files.
 
-## What's new in v0.3.0
+## What's new in v0.4.0
 
-Released **2026-05-20** — the orchestration release.
+Released **2026-06-22** — the binary-first release.
 
-- **Orchestration CLI** — `aps next`, `start`, `complete`, `graph` drive plans through
-  a `Draft → Ready → In Progress → Complete` state machine.
-- **Context packaging** — `aps start` writes a focused brief to `.aps/context/<ID>.md`.
-- **Learning capture** — `aps complete --learning "..."` lets each item teach the next.
+- **Native binary CLI** — `aps` ships as a single Rust binary (`cargo install
+  aps-cli`, `cargo binstall`, Scoop, or the install script). The full command
+  surface — `init`, `setup`, `update`, `migrate`, `lint`, `next`, `start`,
+  `complete`, `graph`, `audit`, `doctor` — runs from one binary.
 - **TUI init wizard** — Ratatui-based onboarding for `aps init`.
-- **Multi-agent ports** — Codex, GitHub Copilot, OpenCode, and Gemini join Claude Code.
-- **Wave-based execution** — action plans coordinate concurrent agents.
-- **`aps migrate`** — converts v1 layouts to the v2 consolidated `.aps/` root.
+- **`aps update`** — reconciles a project's generated footprint (adds missing
+  templates, refreshes existing ones) and reports exactly what changed.
+- **`aps migrate` + `aps doctor`** — diagnose toolchain drift and move a project
+  off the vendored bash CLI onto the global binary, backing up what it removes.
+- **`aps audit`** — verifies recorded plan state against reality (runs Complete
+  items' Validation, flags understated drafts, stale items, broken links).
+- **MCP server** — exposes the orchestration surface to MCP-capable agents.
+- **Conductor modules + release planning** — crosscutting module type and a
+  `plans/releases/` narrative layout.
 
 Full notes: [CHANGELOG.md](CHANGELOG.md).
 

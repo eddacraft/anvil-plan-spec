@@ -6,6 +6,38 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **Full orchestration in the native binary** — `aps start`, `complete`,
+  `graph`, and `audit` are now implemented in the Rust CLI, byte-for-byte
+  identical to the feature-frozen bash CLI. Binary-first installs (the default)
+  can drive the whole `Draft → Ready → In Progress → Complete` lifecycle, write
+  context packages, and run completion audits without the vendored bash CLI.
+- **`aps update`** — reconciles a project's generated footprint: adds missing
+  core templates, refreshes existing ones, reconciles the skill when installed,
+  and reports every file as added / updated / unchanged / skipped. Fixes the
+  prior `aps setup upgrade` behaviour that silently skipped files a project did
+  not already have.
+- **`aps migrate`** — moves a project off the vendored bash CLI onto the global
+  binary: runs the `aps doctor` diagnosis, then (with `--apply`) backs up and
+  removes vendored CLI bloat, rewrites stale hook paths, pins `cli_version`, and
+  drops a stale direnv `PATH_add bin`. Dry-runs by default.
+
+### Changed
+
+- `aps setup upgrade` now reports how many generated templates were refreshed
+  and how many were absent (pointing to `aps update`) instead of silently
+  refreshing only what already existed.
+- `aps doctor` now points at `aps migrate` (not the non-existent `aps upgrade`
+  binary subcommand) for vendored-CLI cleanup.
+
+### Fixed
+
+- Documentation and the README version badge corrected to 0.4.0; usage and
+  installation guides reconciled with the binary's actual command surface
+  (`update`, `migrate`, orchestration), removing references to commands the
+  binary did not implement.
+
 ## [0.4.0] - 2026-06-22
 
 **Release narrative:** [plans/releases/v0.4.0.md](./plans/releases/v0.4.0.md)

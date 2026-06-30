@@ -13,8 +13,8 @@ faster and harder to get wrong than manual status edits.
 
 ```bash
 aps init [dir]              # Create APS structure in a new project
-aps update [dir]            # Refresh templates, skill, and tool files
-aps migrate [dir]           # Convert v1 layout to v2 (.aps/)
+aps update [dir]            # Reconcile generated templates + skill (add missing, refresh)
+aps migrate [dir]           # Move a project onto the global binary (remove vendored bloat)
 aps lint [file|dir]         # Validate APS documents
 aps next [module]           # Show the next ready work item
 aps start <ID>              # Mark a Ready work item as In Progress
@@ -120,8 +120,20 @@ Pass `--json` for machine-readable results — handy for CI summaries:
 
 ### `aps init` / `update` / `migrate`
 
-These are the install-time commands. See [installation.md](installation.md) for
-the full lifecycle (scaffold, update, v1→v2 migration).
+These are the install-time commands:
+
+- **`aps init`** scaffolds a new project (TUI wizard or flags).
+- **`aps update [dir]`** reconciles the generated footprint — adds any missing
+  core templates, refreshes existing ones, and reconciles the skill when
+  installed. It reports each file as added / updated / unchanged / skipped, and
+  never touches your plan content. (`aps setup upgrade` refreshes only the files
+  already present; `update` is the one that also adds what's missing.)
+- **`aps migrate [dir]`** moves a project off the vendored bash CLI onto the
+  global binary: it runs the `aps doctor` diagnosis, then (with `--apply`) backs
+  up and removes vendored CLI bloat, rewrites stale hook paths, pins
+  `cli_version`, and drops a stale direnv `PATH_add bin`. Dry-runs by default.
+
+See [installation.md](installation.md) for the full lifecycle.
 
 ## Orchestration
 
@@ -302,7 +314,7 @@ aps doctor — migration diagnostics
 
   [ok  ] global binary: aps 0.4.0 at /home/you/.aps/bin/aps
   [warn] cli_version: project pins 0.3.0 but this binary is 0.4.0 — install the pinned release or update the pin
-  [warn] vendored CLI: leftover vendored CLI under /repo: bin/aps, lib — run `aps upgrade` to back up and remove
+  [warn] vendored CLI: leftover vendored CLI under /repo: bin/aps, lib — run `aps migrate` to back up and remove
   [ok  ] global runtime: /home/you/.aps/lib is complete
   [warn] direnv: /repo/.envrc still adds ./bin to PATH — drop it once you run on the global binary
 ```
