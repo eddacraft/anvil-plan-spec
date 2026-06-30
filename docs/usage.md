@@ -97,6 +97,15 @@ narratives). `README.md` and the `.release.template.md` are not linted.
 | W017 | Module         | Active module (`Ready` / `In Progress`) has no `**Last reviewed:**` field, or it is older than `APS_STALE_DAYS` (60)    |
 | W018 | Work Item      | Complete item has no `**Validation:**` field inside a still-active module — completion cannot be audited                |
 | W019 | Index          | Link in `## Modules` points to a non-existent file (warning so seed plans stay clean; `aps audit` gates it as A004)     |
+| W020 | Index          | Work-item ID defined in more than one child tree of a federated (nested-plans) monorepo — collisions make `<name>:<ID>` cross-tree references ambiguous (warning; each child tree stays independently valid) |
+
+> **Nested plans (monorepos).** When `aps lint` is pointed at a federated
+> **parent** `index.aps.md` (one with a `## Child Plans` section), it follows
+> those links and validates every child plan tree as one plan. Cross-tree
+> dependencies are written `<child-name>:<ID>` (e.g. `core:AUTH-001`) and
+> resolve against the named child when it is in scope; a child linted on its own
+> treats such a reference as an intentional external link and stays clean. See
+> the [nested-plans design](../plans/designs/2026-06-27-nested-plans.design.md).
 
 #### JSON output
 

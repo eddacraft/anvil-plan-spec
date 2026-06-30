@@ -95,7 +95,7 @@ monorepos — this module covers the federated tier above it.
   to MONO-002 (recursive find already resolves whole-tree deps; W003 must become
   `<name>:`-prefix-aware) — see the design doc's Findings section.
 
-### MONO-002: Lint traversal of nested plans
+### MONO-002: Lint traversal of nested plans — Complete 2026-06-30
 
 - **Intent:** Make `aps lint` validate a federated tree as one plan
 - **Expected Outcome:** Lint follows child index links from the root,
@@ -105,11 +105,26 @@ monorepos — this module covers the federated tier above it.
   produces the expected results
 - **Confidence:** medium
 - **Dependencies:** MONO-001 (complete)
-- **Status:** Ready
-- **Notes:** Start from the MONO-001 findings — `build_id_index` already
-  resolves cross-tree deps on a whole-tree lint; the work is `## Child Plans`
-  scoping, `<name>:`-prefix-aware W003, and inter-tree ID-collision detection.
-  Reuse `test/fixtures/monorepo/` and add a deliberate-collision fixture.
+- **Status:** Complete
+- **Action plan:** [../execution/MONO-002.actions.md](../execution/MONO-002.actions.md)
+- **Results:** `cmd_lint` follows a parent index's `## Child Plans` links and
+  pulls each child tree into the lint set transitively (`normalize_path`,
+  `resolve_child_plan_links`, `expand_child_plans` in `lib/lint.sh`), so a
+  federated root lints the whole tree as one plan. W003
+  (`lib/rules/workitem.sh`) is now `<name>:<ID>`-aware: cross-tree refs resolve
+  against an in-scope child registry (`build_child_registry`/`APS_CHILD_IDS`),
+  stay silent when the named child is absent (standalone children lint clean),
+  and warn on a genuine miss. New **W020** (`check_cross_tree_collisions`)
+  warns when one work-item ID is defined in more than one child tree (per
+  D-002, a warning — each tree stays independently valid). Fixture
+  `test/fixtures/monorepo/` (root + `core` + `api`, `core:AUTH-001` cross-tree
+  dep) lints clean as a federation; `api` linted alone is clean; bad-ref and
+  collision scenarios warn — `test/run.sh` tests 42–46. **PowerShell parity**
+  delivered: `lib/Lint.psm1` + `lib/rules/WorkItem.psm1` mirror traversal,
+  prefix-aware W003, and W020; verified behaviourally against all four
+  scenarios under PowerShell 7.4.6 (output identical to bash), and guarded in
+  CI by a string-parity check (test 46). W020 documented in `docs/usage.md`
+  and the [design doc](../designs/2026-06-27-nested-plans.design.md).
 
 ### MONO-003: Orchestration across nested plans
 
@@ -120,8 +135,8 @@ monorepos — this module covers the federated tier above it.
 - **Validation:** `aps next` from the fixture root returns the correct item
   across trees; scoped invocation returns only the child's items
 - **Confidence:** medium
-- **Dependencies:** MONO-001, MONO-002
-- **Status:** Draft
+- **Dependencies:** MONO-001 (complete), MONO-002 (complete)
+- **Status:** Ready
 
 ### MONO-004: Root roll-up view
 
