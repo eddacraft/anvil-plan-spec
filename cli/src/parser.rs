@@ -303,6 +303,24 @@ impl PlanFile {
             .collect()
     }
 
+    /// A `## <section>` heading and its body up to (excluding) the next
+    /// `## ` heading, header line included (`orch_emit_section`). Empty when
+    /// the section is absent.
+    pub fn emit_section(&self, section: &str) -> Vec<&str> {
+        let header = format!("## {section}");
+        let Some(start) = self.lines.iter().position(|line| *line == header) else {
+            return Vec::new();
+        };
+        let mut out = vec![self.lines[start].as_str()];
+        out.extend(
+            self.lines[start + 1..]
+                .iter()
+                .take_while(|line| !line.starts_with("## "))
+                .map(String::as_str),
+        );
+        out
+    }
+
     /// Lines after a work item header until the next `## `/`### ` heading
     /// (`orch_item_content` and the E005 extraction).
     pub fn item_content(&self, header_line: usize) -> Vec<&str> {

@@ -6,10 +6,13 @@ use clap::{Parser, Subcommand};
 #[allow(unused_imports)]
 use eddacraft_tui as _;
 
+mod audit;
 mod config;
+mod date;
 mod doctor;
 mod lint;
 mod next;
+mod orchestrate;
 mod parser;
 mod scaffold;
 mod setup;
@@ -103,6 +106,50 @@ enum Command {
     Next {
         /// Optional module filter (e.g. orch, tui)
         module: Option<String>,
+        /// Plan root directory (default: plans)
+        #[arg(long, value_name = "DIR")]
+        plans: Option<String>,
+    },
+    /// Mark a Ready work item as In Progress and write its context package
+    Start {
+        /// Work item ID, e.g. AUTH-003
+        id: String,
+        /// Plan root directory (default: plans)
+        #[arg(long, value_name = "DIR")]
+        plans: Option<String>,
+    },
+    /// Mark an In Progress work item as Complete
+    Complete {
+        /// Work item ID, e.g. AUTH-003
+        id: String,
+        /// Append a learning line after Validation (ORCH D-002)
+        #[arg(long, value_name = "TEXT")]
+        learning: Option<String>,
+        /// Plan root directory (default: plans)
+        #[arg(long, value_name = "DIR")]
+        plans: Option<String>,
+    },
+    /// Show work items and dependency arrows
+    Graph {
+        /// Optional module ID or file name (e.g. AUTH or auth)
+        module: Option<String>,
+        /// Plan root directory (default: plans)
+        #[arg(long, value_name = "DIR")]
+        plans: Option<String>,
+    },
+    /// Audit plan state against reality (runs Complete items' Validation)
+    Audit {
+        /// Optional module ID or file name to scope the audit
+        module: Option<String>,
+        /// Output results in JSON format
+        #[arg(long)]
+        json: bool,
+        /// Do not execute Validation commands (verification reports PARTIAL)
+        #[arg(long)]
+        no_run: bool,
+        /// Staleness threshold in days (default: 60)
+        #[arg(long, value_name = "DAYS")]
+        stale_days: Option<u32>,
         /// Plan root directory (default: plans)
         #[arg(long, value_name = "DIR")]
         plans: Option<String>,
@@ -203,9 +250,65 @@ fn main() {
             let code = next::cmd_next(&resolved, module.as_deref().unwrap_or(""));
             std::process::exit(code);
         }
+        Some(Command::Start { id, plans }) => {
+            let resolved = resolve_plans(plans, cli.strict, "aps start");
+            std::process::exit(orchestrate::cmd_start(&resolved, &id));
+        }
+        Some(Command::Complete {
+            id,
+            learning,
+            plans,
+        }) => {
+            let resolved = resolve_plans(plans, cli.strict, "aps complete");
+            std::process::exit(orchestrate::cmd_complete(
+                &resolved,
+                &id,
+                learning.as_deref(),
+            ));
+        }
+        Some(Command::Graph { module, plans }) => {
+            let resolved = resolve_plans(plans, cli.strict, "aps graph");
+            std::process::exit(orchestrate::cmd_graph(
+                &resolved,
+                module.as_deref().unwrap_or(""),
+            ));
+        }
+        Some(Command::Audit {
+            module,
+            json,
+            no_run,
+            stale_days,
+            plans,
+        }) => {
+            let resolved = resolve_plans(plans, cli.strict, "aps audit");
+            std::process::exit(audit::cmd_audit(
+                &resolved,
+                module.as_deref().unwrap_or(""),
+                json,
+                no_run,
+                stale_days,
+            ));
+        }
         Some(Command::Doctor) => {
             let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
             std::process::exit(doctor::run(&cwd));
+        }
+    }
+}
+
+/// Resolve a plan root for project-scoped orchestration commands: an explicit
+/// `--plans` wins; otherwise discover it from `.aps/config.yml`, enforcing the
+/// `cli_version` pin (exit 2 on a strict mismatch) exactly like `lint`/`next`.
+fn resolve_plans(plans: Option<String>, strict: bool, label: &str) -> String {
+    match plans {
+        Some(p) => p,
+        None => {
+            let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+            if let Err(err) = config::check_cli_version(&cwd, strict) {
+                eprintln!("{label}: {err}");
+                std::process::exit(2);
+            }
+            config::default_plans(&cwd)
         }
     }
 }
