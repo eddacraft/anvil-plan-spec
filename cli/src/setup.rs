@@ -94,7 +94,9 @@ impl SetupMode {
             Self::AgentBootstrap => "minimal plan files + agent next steps",
             Self::ToolIntegrations => "skills and agents for selected AI tools",
             Self::Hooks => "hook scripts under aps-planning/scripts/",
-            Self::Upgrade => "refresh generated templates in place",
+            Self::Upgrade => {
+                "refresh existing generated templates (use `aps update` to add missing)"
+            }
             Self::All => "templates, components, skill, and hooks",
         }
     }
@@ -212,6 +214,10 @@ pub fn upgrade_steps(root: &Path) -> Result<Vec<ScaffoldStep>, String> {
         return Err("no plans/ directory here — nothing to upgrade".to_string());
     }
 
+    // `upgrade` refreshes the generated files a project already has, in place.
+    // Files it doesn't have are reported (never silently dropped) and left for
+    // `aps update`, which reconciles the full footprint by adding the missing
+    // ones. This split is why the count can read "5 of 6": the 6th is absent.
     let ops: Vec<FileOp> = UPGRADABLE
         .iter()
         .filter(|(path, _)| root.join(path).exists())
@@ -222,13 +228,22 @@ pub fn upgrade_steps(root: &Path) -> Result<Vec<ScaffoldStep>, String> {
         .collect();
 
     if ops.is_empty() {
-        return Err("no generated APS files found to refresh".to_string());
+        return Err(
+            "no generated APS files found to refresh — run `aps update` to add them".to_string(),
+        );
     }
 
-    Ok(vec![ScaffoldStep {
-        label: format!("Refresh {} generated file(s)", ops.len()),
-        ops,
-    }])
+    let missing = UPGRADABLE.len() - ops.len();
+    let label = if missing > 0 {
+        format!(
+            "Refresh {} generated template(s) — {missing} not present (run `aps update` to add)",
+            ops.len()
+        )
+    } else {
+        format!("Refresh {} generated template(s)", ops.len())
+    };
+
+    Ok(vec![ScaffoldStep { label, ops }])
 }
 
 /// The full tool-agnostic footprint: minimal init, all templates, all

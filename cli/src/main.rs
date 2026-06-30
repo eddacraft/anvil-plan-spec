@@ -11,11 +11,13 @@ mod config;
 mod date;
 mod doctor;
 mod lint;
+mod migrate;
 mod next;
 mod orchestrate;
 mod parser;
 mod scaffold;
 mod setup;
+mod update;
 mod wizard;
 
 #[derive(Parser)]
@@ -91,6 +93,25 @@ enum Command {
         /// name (claude-code, copilot, codex, opencode, gemini, generic)
         target: Option<String>,
         /// Skip confirmation for bulky/destructive flows (all, upgrade)
+        #[arg(long, short = 'y')]
+        yes: bool,
+    },
+    /// Reconcile a project's generated APS footprint (templates, skill)
+    Update {
+        /// Project directory (default: current directory)
+        dir: Option<String>,
+    },
+    /// Move a project onto the global binary: diagnose, remove vendored bloat
+    Migrate {
+        /// Project directory (default: current directory)
+        dir: Option<String>,
+        /// Back up and apply the changes (default: dry run)
+        #[arg(long)]
+        apply: bool,
+        /// Preview only — never modify files (the default)
+        #[arg(long)]
+        dry_run: bool,
+        /// Skip the confirmation prompt under --apply
         #[arg(long, short = 'y')]
         yes: bool,
     },
@@ -249,6 +270,21 @@ fn main() {
             };
             let code = next::cmd_next(&resolved, module.as_deref().unwrap_or(""));
             std::process::exit(code);
+        }
+        Some(Command::Update { dir }) => {
+            let start = PathBuf::from(dir.unwrap_or_else(|| ".".to_string()));
+            std::process::exit(update::cmd_update(&start));
+        }
+        Some(Command::Migrate {
+            dir,
+            apply,
+            dry_run,
+            yes,
+        }) => {
+            let start = PathBuf::from(dir.unwrap_or_else(|| ".".to_string()));
+            // --dry-run is the default and always wins over --apply if both given.
+            let apply = apply && !dry_run;
+            std::process::exit(migrate::cmd_migrate(&start, apply, yes));
         }
         Some(Command::Start { id, plans }) => {
             let resolved = resolve_plans(plans, cli.strict, "aps start");
