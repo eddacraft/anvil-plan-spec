@@ -1,13 +1,28 @@
 # Installation
 
-## Quick Install (Linux/macOS)
+## Quick Install
+
+macOS / Linux:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install | bash
 ```
 
+Windows PowerShell:
+
+```powershell
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install.ps1))) --cli
+```
+
+Windows with Scoop:
+
+```powershell
+scoop install https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/packaging/scoop/aps.json
+```
+
 In an interactive terminal this shows a **mode picker** before writing any
-files:
+files. On Windows, omit `--cli` from the PowerShell example above if you want
+the picker:
 
 1. **Install the APS CLI** on this machine
 2. **Initialize APS planning** in this repository
@@ -26,6 +41,13 @@ curl -fsSL .../scaffold/install | bash -s -- --upgrade   # upgrade in place
 curl -fsSL .../scaffold/install | bash -s -- --setup claude-code   # add one integration
 ```
 
+PowerShell uses the same flags after the scriptblock call:
+
+```powershell
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install.ps1))) --init
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install.ps1))) --setup opencode
+```
+
 `--init` is **minimal by default**: it writes planning content (`plans/` with
 rules, templates, `project-context.md`, `issues.md`) and the `.aps/config.yml`
 project contract — nothing else. The global `aps` binary on your PATH drives
@@ -40,6 +62,10 @@ Add hooks, agents, or tool skills any time after init with `aps setup`
 (see [usage](usage.md)). To pick AI agent ports interactively, run `aps init`
 from the installed CLI for the Ratatui onboarding wizard.
 
+On Windows, prefer the native binary (`aps.exe`) from the PowerShell installer
+or Scoop. It supports `init`, `setup`, `lint`, `next`, and `doctor`. Commands
+that still depend on the bash runtime should be run from WSL or Git Bash.
+
 ## Global Install
 
 Install the APS CLI system-wide so `aps` is available in any directory:
@@ -48,7 +74,7 @@ Install the APS CLI system-wide so `aps` is available in any directory:
 # Linux/macOS
 curl -fsSL https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install | bash -s -- --global
 
-# Windows (PowerShell) — `iex` doesn't forward args, so wrap the script in a scriptblock
+# Windows (PowerShell) — scriptblock form forwards flags correctly
 & ([scriptblock]::Create((irm https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install.ps1))) --global
 ```
 
@@ -268,19 +294,37 @@ directly (config discovery finds `plans_dir` — no `--plans` needed). Add
 `--strict` to fail the job on toolchain drift. See
 [usage → CI Integration](usage.md#ci-integration).
 
-## Windows (PowerShell)
+## Windows Details
+
+Recommended PowerShell install:
 
 ```powershell
-irm https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install.ps1 | iex
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install.ps1))) --cli
 ```
 
-To install a specific version:
+To use the interactive picker, omit `--cli`:
 
 ```powershell
-$env:APS_VERSION='v0.3.0'; irm https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install.ps1 | iex
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install.ps1)))
 ```
 
-Or follow the [Manual Setup](#manual-setup) steps below.
+To initialize the current repository directly:
+
+```powershell
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install.ps1))) --init
+```
+
+To install a specific version, set `APS_VERSION` before invoking the script:
+
+```powershell
+$env:APS_VERSION='v0.4.0'
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install.ps1))) --cli
+```
+
+The installer adds `~\.aps\bin` to your user PATH when you agree to the prompt.
+Restart the terminal if a new session cannot find `aps` immediately. If your
+PowerShell execution policy blocks local scripts, use the native `aps.exe`
+installed by `--cli` or install through Scoop.
 
 ## Manual Setup
 
