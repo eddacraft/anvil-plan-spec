@@ -1000,9 +1000,9 @@ EOF
         rc=0
         dep_idx=$(orch_resolve_ref "$dep") || rc=$?
         if [[ $rc -eq 0 ]]; then
-          deps_display+=" $dep[${ORCH_ITEM_STATUSES[$dep_idx]}]"
+          deps_display+=" ${dep}[${ORCH_ITEM_STATUSES[$dep_idx]}]"
         else
-          deps_display+=" $dep[Unknown]"
+          deps_display+=" ${dep}[Unknown]"
         fi
         continue
       fi
@@ -1010,7 +1010,7 @@ EOF
       if [[ -n "$dep_idx" ]]; then
         deps_display+=" ${ORCH_ITEM_IDS[$dep_idx]}[${ORCH_ITEM_STATUSES[$dep_idx]}]"
       else
-        deps_display+=" $dep[${ORCH_MODULE_STATUSES[$dep]:-Unknown}]"
+        deps_display+=" ${dep}[${ORCH_MODULE_STATUSES[$dep]:-Unknown}]"
       fi
     done < <(orch_dep_refs "${ORCH_ITEM_DEPS[$i]}")
 
