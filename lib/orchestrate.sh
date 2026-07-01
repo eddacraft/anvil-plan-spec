@@ -1032,3 +1032,121 @@ EOF
     return 1
   fi
 }
+
+# First actionable item's ID within a child scope, or "—" when none — the same
+# selection cmd_next makes, reused for the roll-up "Next ready item" column.
+orch_child_next_ready() {
+  local child="$1"
+  local i
+  for i in "${!ORCH_ITEM_IDS[@]}"; do
+    orch_item_matches_child "$i" "$child" || continue
+    case "${ORCH_MODULE_STATUSES[${ORCH_ITEM_MODULES[$i]}]:-Unknown}" in
+      Ready|"In Progress") ;;
+      *) continue ;;
+    esac
+    [[ "${ORCH_ITEM_STATUSES[$i]}" == "Ready" ]] || continue
+    orch_deps_complete "${ORCH_ITEM_DEPS[$i]}" || continue
+    printf '%s' "${ORCH_ITEM_IDS[$i]}"
+    return 0
+  done
+  printf '%s' "—"
+}
+
+cmd_rollup() {
+  local plan_root="" strict=false
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --plans)
+        plan_root="${2:-}"
+        [[ -n "$plan_root" ]] || { error "--plans requires a directory"; return 1; }
+        shift 2
+        ;;
+      --strict)
+        strict=true
+        shift
+        ;;
+      --help|-h)
+        cat <<EOF
+Usage: aps rollup [options]
+
+Print a Markdown roll-up table for a federated (nested-plans) parent: one row
+per child plan with modules complete/total, the next ready item, and an overall
+status. The root index stays hand-authored — copy this table into the parent's
+## Roll-up section at session end to keep it current.
+
+Options:
+  --plans DIR  Plan root directory (default: plans)
+  --help       Show this help
+EOF
+        return 0
+        ;;
+      -*)
+        error "Unknown option: $1"
+        return 1
+        ;;
+      *)
+        error "Unexpected argument: $1"
+        return 1
+        ;;
+    esac
+  done
+
+  if [[ -z "$plan_root" ]]; then
+    plan_root="$(aps_default_plans)"
+    aps_check_cli_version "$strict"
+  fi
+
+  if [[ ! -d "$plan_root" ]]; then
+    error "Path not found: $plan_root"
+    return 1
+  fi
+
+  orch_reset_state
+  orch_load_work_items "$plan_root" "true" || {
+    error "No modules directory found: $plan_root/modules"
+    return 1
+  }
+
+  echo "| Child | Modules (complete/total) | Next ready item | Status |"
+  echo "| ----- | ------------------------ | --------------- | ------ |"
+
+  local root child first="true" shown="false"
+  while IFS= read -r root; do
+    # The first root is the federation parent itself; roll-up covers children.
+    if [[ "$first" == "true" ]]; then
+      first="false"
+      continue
+    fi
+    local module_dir="$root/modules"
+    [[ -d "$module_dir" ]] || continue
+    shown="true"
+    child=$(orch_child_name "$root")
+
+    local total=0 complete=0 inprogress=0 mf st
+    while IFS= read -r mf; do
+      [[ -n "$mf" ]] || continue
+      st=$(orch_normalize_status "$(get_status "$mf")" "Draft")
+      total=$((total + 1))
+      [[ "$st" == "Complete" ]] && complete=$((complete + 1))
+      [[ "$st" == "In Progress" ]] && inprogress=$((inprogress + 1))
+    done < <(find "$module_dir" -type f -name "*.aps.md" ! -name ".*" 2>/dev/null | sort)
+
+    local next_ready overall
+    next_ready=$(orch_child_next_ready "$child")
+    if [[ "$total" -gt 0 && "$complete" -eq "$total" ]]; then
+      overall="Complete"
+    elif [[ "$inprogress" -gt 0 ]]; then
+      overall="In Progress"
+    else
+      overall="Ready"
+    fi
+
+    printf '| %s | %s/%s | %s | %s |\n' "$child" "$complete" "$total" "$next_ready" "$overall"
+  done < <(orch_plan_roots "$plan_root")
+
+  if [[ "$shown" != "true" ]]; then
+    warn "No child plans found under $plan_root (rollup is for federated parents)"
+    return 1
+  fi
+}

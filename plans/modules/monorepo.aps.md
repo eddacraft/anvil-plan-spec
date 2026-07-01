@@ -160,7 +160,7 @@ monorepos — this module covers the federated tier above it.
   no PowerShell surface exists for these commands, so no `.psm1` parity was
   required.
 
-### MONO-004: Root roll-up view
+### MONO-004: Root roll-up view — Complete 2026-07-01
 
 - **Intent:** Answer "where is everything?" from the root index
 - **Expected Outcome:** Parent index shows each child plan with aggregated
@@ -170,10 +170,22 @@ monorepos — this module covers the federated tier above it.
   the child plan states
 - **Confidence:** low
 - **Dependencies:** MONO-001 (complete)
-- **Status:** Ready
+- **Status:** Complete
 - **Notes:** The `index-nested` template and fixture root already carry a
   `## Roll-up` stub table — this item populates it and documents the refresh
   ritual.
+- **Results:** New `aps rollup` command (bash `cmd_rollup` in
+  `lib/orchestrate.sh`; Rust `cli/src/rollup.rs`) prints a Markdown roll-up
+  table for a federated parent — one row per child with modules complete/total,
+  the next ready item (the same selection `aps next --child` makes), and an
+  overall status (Complete / In Progress / Ready). The root index stays
+  hand-authored per the module's out-of-scope constraint, so `rollup` is a
+  paste source, not a generator. The fixture root's `## Roll-up` table is
+  populated (`core 0/1 AUTH-001 Ready`, `api 0/1 — Ready`) and a test asserts it
+  stays in sync with `aps rollup` output; the `index-nested` template documents
+  the refresh ritual. **Rust parity** verified byte-identical to bash on the
+  fixture (`cargo test` 136 green, clippy + fmt clean). Refresh ritual
+  documented in `docs/usage.md`; bash coverage in `test/orchestrate-nested.sh`.
 
 ### MONO-005: Scaffold support for nested layouts
 

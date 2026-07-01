@@ -133,4 +133,31 @@ assert_contains "$output" "2 items audited"   # both child trees are traversed
 output=$("$APS" audit --no-run --child core --plans "$PLANS")
 assert_contains "$output" "1 items audited"
 
+# --- rollup (MONO-004): per-child aggregate matches the fixture root table ---
+
+# Collapse runs of spaces so compact `aps rollup` output and the padded,
+# hand-authored fixture table compare on content, not column alignment.
+squeeze() { tr -s ' '; }
+
+output=$("$APS" rollup --plans "$PLANS")
+rollup_norm=$(printf '%s\n' "$output" | squeeze)
+assert_contains "$rollup_norm" "| core | 0/1 | AUTH-001 | Ready |"
+assert_contains "$rollup_norm" "| api | 0/1 | — | Ready |"
+
+# The committed roll-up in the fixture root must match what rollup computes,
+# so the hand-authored table cannot silently drift from child state.
+fixture_norm=$(squeeze < "$PLANS/index.aps.md")
+for row in \
+  "| core | 0/1 | AUTH-001 | Ready |" \
+  "| api | 0/1 | — | Ready |"; do
+  printf '%s\n' "$fixture_norm" | grep -qF -- "$row" \
+    || { printf 'Fixture root Roll-up out of sync with aps rollup:\n%s\n' "$row" >&2; exit 1; }
+done
+
+# rollup on a leaf child (no ## Child Plans) has nothing to summarise.
+if "$APS" rollup --plans "$FIXTURE/packages/core/plans" > /dev/null 2>&1; then
+  printf 'Expected rollup on a leaf child to fail\n' >&2
+  exit 1
+fi
+
 printf 'nested orchestration tests passed\n'

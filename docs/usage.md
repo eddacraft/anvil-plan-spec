@@ -20,6 +20,7 @@ aps next [module]           # Show the next ready work item
 aps start <ID>              # Mark a Ready work item as In Progress
 aps complete <ID>           # Mark an In Progress work item as Complete
 aps graph [module]          # Show work items + dependency arrows
+aps rollup                  # Roll-up table for a federated (nested) parent
 aps audit [module]          # Audit plan state against reality
 aps doctor                  # Diagnose migration state (global binary vs vendored)
 aps --help                  # Top-level help
@@ -348,6 +349,24 @@ aps audit --plans packages --no-run # audit every child plan from the root
 - **Ambiguous bare IDs are rejected.** If the same ID is defined in more than
   one child tree (the [W020](#aps-lint) case), `start`/`complete` refuse the
   bare ID and ask you to disambiguate with `<name>:<ID>` or `--child <name>`.
+
+**Keeping the parent roll-up current.** A federation root carries a
+`## Roll-up` table summarising each child (modules complete/total, next ready
+item, overall status). The root index stays hand-authored, so the table does
+not regenerate itself — `aps rollup` prints the current rows for you to paste:
+
+```bash
+$ aps rollup --plans packages
+| Child | Modules (complete/total) | Next ready item | Status |
+| ----- | ------------------------ | --------------- | ------ |
+| core  | 0/1                      | AUTH-001        | Ready  |
+| api   | 0/1                      | —               | Ready  |
+```
+
+The refresh ritual: at session end (or whenever a child's state changes), run
+`aps rollup` and copy the table body into the parent's `## Roll-up` section.
+Keeping it a manual paste keeps the root a readable, reviewable artifact rather
+than generated output.
 
 See the [nested-plans design](../plans/designs/2026-06-27-nested-plans.design.md)
 and [monorepo guide](monorepo.md) for the full convention.

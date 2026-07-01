@@ -15,6 +15,7 @@ mod migrate;
 mod next;
 mod orchestrate;
 mod parser;
+mod rollup;
 mod scaffold;
 mod setup;
 mod update;
@@ -169,6 +170,12 @@ enum Command {
         /// Scope to one child plan in a federated tree (e.g. core)
         #[arg(long, value_name = "NAME")]
         child: Option<String>,
+    },
+    /// Print a Markdown roll-up table for a federated (nested-plans) parent
+    Rollup {
+        /// Plan root directory (default: plans)
+        #[arg(long, value_name = "DIR")]
+        plans: Option<String>,
     },
     /// Audit plan state against reality (runs Complete items' Validation)
     Audit {
@@ -342,6 +349,10 @@ fn main() {
                 module.as_deref().unwrap_or(""),
                 child.as_deref().unwrap_or(""),
             ));
+        }
+        Some(Command::Rollup { plans }) => {
+            let resolved = resolve_plans(plans, cli.strict, "aps rollup");
+            std::process::exit(rollup::cmd_rollup(&resolved));
         }
         Some(Command::Audit {
             module,
