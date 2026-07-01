@@ -53,3 +53,38 @@ jobs:
             echo "checking $f"
             bash -n "$f"
           done
+
+  tests:
+    name: CLI test suite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Enable pnpm
+        run: corepack enable
+
+      # Install MCP deps so test/run.sh runs the MCP server tests instead of
+      # skipping them (the suite auto-skips when mcp/node_modules is absent).
+      - name: Install MCP dependencies
+        working-directory: mcp
+        run: pnpm install --frozen-lockfile
+
+      - name: Run CLI test suite
+        run: bash test/run.sh
+
+  powershell:
+    name: PowerShell parity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      # ubuntu-latest ships pwsh preinstalled; verify the lib/*.psm1 port
+      # behaviourally against the nested-plans fixtures (MONO-002).
+      - name: Run PowerShell parity harness
+        shell: pwsh
+        run: ./test/ps-parity.ps1
