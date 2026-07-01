@@ -473,43 +473,6 @@ pub fn normalize_status(raw: &str, fallback: &str) -> String {
     "Unknown".to_string()
 }
 
-/// Extract dependency tokens (`grep -oE '[A-Z]+-[0-9]+|[A-Z]{2,}'`):
-/// uppercase runs, optionally followed by `-digits` to form an item ID.
-pub fn dep_tokens(text: &str) -> Vec<String> {
-    let chars: Vec<char> = text.chars().collect();
-    let mut tokens = Vec::new();
-    let mut i = 0;
-
-    while i < chars.len() {
-        if chars[i].is_ascii_uppercase() {
-            let start = i;
-            while i < chars.len() && chars[i].is_ascii_uppercase() {
-                i += 1;
-            }
-            let run_end = i;
-            // Try `-digits` suffix for an item ID.
-            if i < chars.len() && chars[i] == '-' {
-                let mut j = i + 1;
-                while j < chars.len() && chars[j].is_ascii_digit() {
-                    j += 1;
-                }
-                if j > i + 1 {
-                    tokens.push(chars[start..j].iter().collect());
-                    i = j;
-                    continue;
-                }
-            }
-            if run_end - start >= 2 {
-                tokens.push(chars[start..run_end].iter().collect());
-            }
-            continue;
-        }
-        i += 1;
-    }
-
-    tokens
-}
-
 /// True when a dependency token names a work item (`^[A-Z]+-[0-9]+$`).
 pub fn is_item_token(token: &str) -> bool {
     let Some(dash) = token.find('-') else {
@@ -522,9 +485,13 @@ pub fn is_item_token(token: &str) -> bool {
         && digits.chars().all(|c| c.is_ascii_digit())
 }
 
-/// Like [`dep_tokens`] but preserves an optional lowercase `<name>:` cross-tree
-/// prefix (MONO-003), so `core:AUTH-001` survives as one token. Mirrors the bash
-/// grammar `([a-z0-9][a-z0-9-]*:)?[A-Z]+-[0-9]+|[A-Z]{2,}` in `orch_dep_refs`.
+/// Extract dependency tokens, preserving an optional `<name>:` cross-tree
+/// prefix (MONO-003) so `core:AUTH-001` survives as one token. Mirrors the bash
+/// grammar `([A-Za-z0-9][A-Za-z0-9-]*:)?[A-Z]+-[0-9]+|[A-Z]{2,}` in
+/// `orch_dep_refs`: uppercase runs optionally followed by `-digits` to form an
+/// item ID, or a bare `[A-Z]{2,}` module token. The prefix is matched in any
+/// case (child names are compared case-insensitively) so an all-caps
+/// `CORE:AUTH-001` isn't split into a bogus module dep + bare ID.
 pub fn dep_refs(text: &str) -> Vec<String> {
     let chars: Vec<char> = text.chars().collect();
     let n = chars.len();
@@ -534,13 +501,13 @@ pub fn dep_refs(text: &str) -> Vec<String> {
     while i < n {
         let c = chars[i];
 
-        // A lowercase/digit run may be a `<name>:` prefix on an item ref.
-        if c.is_ascii_lowercase() || c.is_ascii_digit() {
+        // Any alnum run followed by `:` and an item ID is a `<name>:<ID>` ref.
+        // This attempt never advances `i` on failure, so a bare uppercase ID
+        // (no colon) falls through to the item/module branch below unchanged.
+        if c.is_ascii_alphanumeric() {
             let start = i;
             let mut j = i;
-            while j < n
-                && (chars[j].is_ascii_lowercase() || chars[j].is_ascii_digit() || chars[j] == '-')
-            {
+            while j < n && (chars[j].is_ascii_alphanumeric() || chars[j] == '-') {
                 j += 1;
             }
             if j < n && chars[j] == ':' {
@@ -561,8 +528,6 @@ pub fn dep_refs(text: &str) -> Vec<String> {
                     }
                 }
             }
-            i += 1;
-            continue;
         }
 
         if c.is_ascii_uppercase() {
@@ -839,14 +804,19 @@ mod tests {
     }
 
     #[test]
-    fn dep_token_extraction_matches_grep() {
+    fn dep_ref_extraction_matches_grep() {
         assert_eq!(
-            dep_tokens("AUTH-001, AUTH-002, CORE-001"),
+            dep_refs("AUTH-001, AUTH-002, CORE-001"),
             vec!["AUTH-001", "AUTH-002", "CORE-001"]
         );
-        assert_eq!(dep_tokens("INSTALL (In Progress)"), vec!["INSTALL"]);
-        assert_eq!(dep_tokens("D-026, D-027"), vec!["D-026", "D-027"]);
-        assert_eq!(dep_tokens("none"), Vec::<String>::new());
+        assert_eq!(dep_refs("INSTALL (In Progress)"), vec!["INSTALL"]);
+        assert_eq!(dep_refs("D-026, D-027"), vec!["D-026", "D-027"]);
+        assert_eq!(dep_refs("none"), Vec::<String>::new());
+        // Cross-tree prefixes survive as one token, in any case (MONO-003).
+        assert_eq!(dep_refs("core:AUTH-001"), vec!["core:AUTH-001"]);
+        assert_eq!(dep_refs("CORE:AUTH-001"), vec!["CORE:AUTH-001"]);
+        // A bare uppercase ID (no colon) is not mistaken for a prefix.
+        assert_eq!(dep_refs("AUTH-001"), vec!["AUTH-001"]);
     }
 
     #[test]

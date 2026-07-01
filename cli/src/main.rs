@@ -59,7 +59,7 @@ enum Command {
         /// AI tools (comma-separated): claude-code, copilot, codex, opencode, gemini, generic
         #[arg(long, value_delimiter = ',')]
         tools: Vec<String>,
-        /// Plan templates (comma-separated): quickstart, module, index, monorepo-index
+        /// Plan templates (comma-separated): quickstart, module, index, monorepo-index, index-nested
         #[arg(long, value_delimiter = ',')]
         templates: Vec<String>,
         /// Path to a custom template file to install

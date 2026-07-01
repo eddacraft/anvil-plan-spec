@@ -219,8 +219,23 @@ fn write_context_package(
     out.push("## Dependency Learnings".to_string());
 
     let mut found_learning = false;
-    for dep in parser::dep_tokens(&item.deps) {
-        let Some(dep_item) = graph.find(&dep) else {
+    for dep in parser::dep_refs(&item.deps) {
+        // Resolve cross-tree (child:ID) refs within the named tree and bare IDs
+        // within the depending item's own tree (matching deps_complete), so a
+        // learning is pulled from the right sibling, not a same-ID first match
+        // in another tree.
+        let dep_item = if dep.contains(':') {
+            match graph.resolve_ref(&dep, "") {
+                RefResolution::Found(it) => Some(it),
+                _ => None,
+            }
+        } else {
+            match graph.resolve_ref(&dep, &item.child) {
+                RefResolution::Found(it) => Some(it),
+                _ => graph.find(&dep),
+            }
+        };
+        let Some(dep_item) = dep_item else {
             continue;
         };
         let Ok(dep_plan) = PlanFile::load(&dep_item.file) else {
@@ -645,6 +660,44 @@ mod tests {
             api_before,
             "sibling tree untouched"
         );
+        fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn context_learnings_resolve_the_named_cross_tree() {
+        // MONO-003 review: the Dependency Learnings section must pull the
+        // explicitly-named tree's learning, not a same-ID first match. core
+        // (loaded first) and api both define AUTH-001 with distinct learnings;
+        // an api item depends on api:AUTH-001 and must see api's learning.
+        let root = monorepo_copy("learn");
+        let plans = root.join("plans");
+        let core = root.join("packages/core/plans/modules/auth.aps.md");
+        let api = root.join("packages/api/plans/modules/handlers.aps.md");
+
+        let mut core_txt = fs::read_to_string(&core).unwrap();
+        core_txt.push_str("- **Learning:** \"core-side learning\"\n");
+        fs::write(&core, core_txt).unwrap();
+
+        let mut api_txt = fs::read_to_string(&api).unwrap();
+        api_txt.push_str(concat!(
+            "\n### AUTH-001: Api twin\n\n",
+            "- **Intent:** twin\n",
+            "- **Expected Outcome:** done\n",
+            "- **Validation:** `true`\n",
+            "- **Status:** Complete\n",
+            "- **Learning:** \"api-side learning\"\n\n",
+            "### DEP-001: Depends on api:AUTH-001\n\n",
+            "- **Intent:** verify context learning\n",
+            "- **Expected Outcome:** ok\n",
+            "- **Validation:** `true`\n",
+            "- **Dependencies:** api:AUTH-001\n",
+        ));
+        fs::write(&api, api_txt).unwrap();
+
+        assert_eq!(cmd_start(plans.to_str().unwrap(), "DEP-001", "api"), 0);
+        let ctx = fs::read_to_string(root.join(".aps/context/DEP-001.md")).unwrap();
+        assert!(ctx.contains("api-side learning"), "shows api's learning");
+        assert!(!ctx.contains("core-side learning"), "not core's");
         fs::remove_dir_all(&root).ok();
     }
 

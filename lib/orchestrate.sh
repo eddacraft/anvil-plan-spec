@@ -364,19 +364,16 @@ orch_deps_display() {
   echo "${deps:-None}"
 }
 
-orch_dep_ids() {
-  local deps="$1"
-
-  printf '%s\n' "$deps" | grep -oE '[A-Z]+-[0-9]+|[A-Z]{2,}' || true
-}
-
-# Like orch_dep_ids but preserves an optional lowercase <name>: cross-tree
-# prefix (MONO-003), so "core:AUTH-001" survives as one token for federated
-# resolution and graph edges. Bare IDs and module deps pass through unchanged.
+# Extract dependency tokens, preserving an optional <name>: cross-tree prefix
+# (MONO-003), so "core:AUTH-001" survives as one token for federated resolution
+# and graph edges. The prefix is matched case-insensitively (child names are
+# path-derived and compared case-insensitively) so an all-caps ref like
+# "CORE:AUTH-001" isn't silently split into a bogus module dep + bare ID. Bare
+# IDs and module deps pass through unchanged.
 orch_dep_refs() {
   local deps="$1"
 
-  printf '%s\n' "$deps" | grep -oE '([a-z0-9][a-z0-9-]*:)?[A-Z]+-[0-9]+|[A-Z]{2,}' || true
+  printf '%s\n' "$deps" | grep -oE '([A-Za-z0-9][A-Za-z0-9-]*:)?[A-Z]+-[0-9]+|[A-Z]{2,}' || true
 }
 
 orch_context_root() {
@@ -432,10 +429,20 @@ orch_context_package() {
     orch_emit_section "$file" "Decisions" || true
     echo
     echo "## Dependency Learnings"
-    local found_learning="false"
+    local self_child="${ORCH_ITEM_CHILDREN[$idx]}"
+    local found_learning="false" dep_rc
     while IFS= read -r dep; do
       [[ -n "$dep" ]] || continue
-      dep_idx=$(orch_item_index "$dep" || true)
+      # Resolve cross-tree (child:ID) refs within the named tree and bare IDs
+      # within the depending item's own tree, matching orch_dependency_complete
+      # — so a learning is pulled from the right sibling, not a same-ID first
+      # match in another tree.
+      if [[ "$dep" == *:* ]]; then
+        dep_rc=0; dep_idx=$(orch_resolve_ref "$dep") || dep_rc=$?
+      else
+        dep_rc=0; dep_idx=$(orch_resolve_ref "$dep" "$self_child") || dep_rc=$?
+        [[ $dep_rc -eq 0 ]] || dep_idx=$(orch_item_index "$dep" || true)
+      fi
       [[ -n "$dep_idx" ]] || continue
       local dep_content dep_learning
       dep_content=$(orch_item_content "${ORCH_ITEM_FILES[$dep_idx]}" "${ORCH_ITEM_LINES[$dep_idx]}")
@@ -444,7 +451,7 @@ orch_context_package() {
         echo "- $dep: $dep_learning"
         found_learning="true"
       fi
-    done < <(orch_dep_ids "$deps")
+    done < <(orch_dep_refs "$deps")
     [[ "$found_learning" == "true" ]] || echo "- None"
     echo
     echo "## Related Files"

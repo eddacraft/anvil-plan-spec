@@ -28,6 +28,15 @@ assert_not_contains() {
   fi
 }
 
+assert_file_contains() {
+  local file="$1" expected="$2"
+  if ! grep -qF -e "$expected" "$file"; then
+    printf 'Expected file %s to contain: %s\n--- file ---\n' "$file" "$expected" >&2
+    cat "$file" >&2
+    exit 1
+  fi
+}
+
 # --- next: federated traversal + child scope ---
 
 # From the federation root, next spans both child trees. The only unblocked
@@ -189,5 +198,51 @@ DEPEOF
 output=$("$APS" next --child api --plans "$DEP_DIR/plans")
 assert_contains "$output" "DEP-001"
 rm -rf "$DEP_DIR"
+
+# --- an all-uppercase cross-tree prefix is not silently split into two deps ---
+# `CORE:AUTH-001` (a natural all-caps typo of `core:AUTH-001`) must render as a
+# single cross-tree edge, not a bogus module dep `CORE` plus a bare `AUTH-001`.
+UP_DIR=$(mktemp -d)
+cp -r "$FIXTURE/." "$UP_DIR/"
+sed -i 's/core:AUTH-001/CORE:AUTH-001/' "$UP_DIR/packages/api/plans/modules/handlers.aps.md"
+output=$("$APS" graph --plans "$UP_DIR/plans")
+assert_contains "$output" "CORE:AUTH-001["
+assert_not_contains "$output" "CORE[Unknown]"
+rm -rf "$UP_DIR"
+
+# --- context-package Dependency Learnings resolve the cross-tree dep's own
+# tree, not a same-ID first match elsewhere ---
+LRN_DIR=$(mktemp -d)
+cp -r "$FIXTURE/." "$LRN_DIR/"
+# core:AUTH-001 (loaded first) gets a distinct learning...
+printf '%s\n' '- **Learning:** "core-side learning"' \
+  >> "$LRN_DIR/packages/core/plans/modules/auth.aps.md"
+# ...and api gets its own AUTH-001 (Complete) with a different learning, plus an
+# item that depends on api:AUTH-001 explicitly.
+cat >> "$LRN_DIR/packages/api/plans/modules/handlers.aps.md" <<'LRNEOF'
+
+### AUTH-001: Api-local complete item
+
+- **Intent:** api-tree twin of the core ID
+- **Expected Outcome:** done
+- **Validation:** `true`
+- **Status:** Complete
+- **Learning:** "api-side learning"
+
+### DEP-001: Depends on api:AUTH-001 explicitly
+
+- **Intent:** verify context learnings resolve the named tree
+- **Expected Outcome:** context shows api's learning
+- **Validation:** `true`
+- **Dependencies:** api:AUTH-001
+LRNEOF
+"$APS" start DEP-001 --child api --plans "$LRN_DIR/plans" > /dev/null
+DEP_CTX="$LRN_DIR/.aps/context/DEP-001.md"
+assert_file_contains "$DEP_CTX" "api-side learning"
+if grep -qF "core-side learning" "$DEP_CTX"; then
+  printf 'Context pulled the wrong tree learning (core instead of api)\n' >&2
+  exit 1
+fi
+rm -rf "$LRN_DIR"
 
 printf 'nested orchestration tests passed\n'
