@@ -126,6 +126,23 @@ grep -qF 'context/' "$INIT_DIR/.aps/.gitignore" || fail "context ignore missing"
 [[ ! -d "$INIT_DIR/.claude/commands" ]] || fail ".claude/commands/ created"
 pass
 
+# Test 17a: nested (federated) scope scaffolds a root + wired child plans that
+# lint clean as one federation (MONO-005).
+echo -n "Test: init --scope nested scaffolds a lint-clean federation... "
+NESTED_DIR=$(mktemp -d)/proj
+APS_LOCAL="$PROJECT_ROOT" $APS init "$NESTED_DIR" --profile solo --scope nested --tools generic > /dev/null 2>&1 || fail "nested init failed"
+[[ -f "$NESTED_DIR/plans/index.aps.md" ]] || fail "nested root index missing"
+grep -q '^## Child Plans' "$NESTED_DIR/plans/index.aps.md" || fail "root missing ## Child Plans"
+[[ -f "$NESTED_DIR/packages/core/plans/index.aps.md" ]] || fail "core child plan missing"
+[[ -f "$NESTED_DIR/packages/api/plans/modules/module-name.aps.md" ]] || fail "api child module missing"
+# Distinct per-package work-item prefixes (no W020 collision)
+grep -q '### CORE-001' "$NESTED_DIR/packages/core/plans/modules/module-name.aps.md" || fail "core prefix not applied"
+grep -q '### API-001' "$NESTED_DIR/packages/api/plans/modules/module-name.aps.md" || fail "api prefix not applied"
+# The whole federation lints clean from the root
+$APS lint "$NESTED_DIR/plans" > /dev/null 2>&1 || fail "scaffolded nested tree failed lint"
+rm -rf "$(dirname "$NESTED_DIR")"
+pass
+
 # Test 17b: --local-cli vendors the bash runtime; --hooks installs hook scripts
 echo -n "Test: init --local-cli vendors runtime... "
 LOCALCLI_DIR=$(mktemp -d)

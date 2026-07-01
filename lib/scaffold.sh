@@ -292,7 +292,7 @@ write_config() {
 
   local project_type="simple"
   local monorepo_tool="~"
-  if [[ "$scope" == "monorepo" ]]; then
+  if [[ "$scope" == "monorepo" || "$scope" == "nested" ]]; then
     project_type="monorepo"
     monorepo_tool="$(detect_monorepo_tool "$target")"
     [[ -z "$monorepo_tool" ]] && monorepo_tool="~"
@@ -386,6 +386,33 @@ v2_install_index() {
   download "scaffold/plans/index.aps.md" "$target/plans/index.aps.md"
   touch "$target/plans/decisions/.gitkeep"
   touch "$target/plans/designs/.gitkeep"
+}
+
+# Install a federated nested-plan layout (MONO-005): a federation root plus two
+# starter child plans wired via `## Child Plans`, each a complete standalone
+# plan with one module. Child work-item prefixes are made distinct (per the
+# package name) so cross-tree IDs don't collide (W020). The resulting tree
+# lints clean out of the box; `aps lint plans` traverses it as one federation.
+v2_install_nested() {
+  local target="$1"
+
+  # Federation root replaces the single-plan seed index.
+  download "templates/index-nested.template.md" "$target/plans/index.aps.md"
+  touch "$target/plans/decisions/.gitkeep"
+  touch "$target/plans/designs/.gitkeep"
+
+  local pkg prefix child_plans mf
+  for pkg in core api; do
+    prefix="$(printf '%s' "$pkg" | tr '[:lower:]' '[:upper:]')"
+    child_plans="$target/packages/$pkg/plans"
+    mkdir -p "$child_plans/modules"
+    download "templates/index-child.template.md" "$child_plans/index.aps.md"
+    download "templates/module.template.md" "$child_plans/modules/module-name.aps.md"
+    # Give each child a package-specific work-item prefix (AUTH -> CORE / API)
+    # so bare IDs stay unique across trees and the federation lints W020-clean.
+    mf="$child_plans/modules/module-name.aps.md"
+    sed "s/AUTH/$prefix/g" "$mf" > "$mf.tmp" && mv "$mf.tmp" "$mf"
+  done
 }
 
 # Install v2 CLI to .aps/
@@ -758,12 +785,14 @@ cmd_init() {
       "Small feature (1-3 work items)" \
       "Module with boundaries" \
       "Multi-module initiative" \
-      "Monorepo (multiple packages/apps)")
+      "Monorepo — tagged modules, one shared backlog" \
+      "Nested monorepo — federated per-package plans")
     case "$choice" in
       1) scope="small" ;;
       2) scope="module" ;;
       3) scope="multi" ;;
       4) scope="monorepo" ;;
+      5) scope="nested" ;;
     esac
   fi
 
@@ -790,8 +819,13 @@ cmd_init() {
 
   # Plans (always — the irreducible core of an APS project)
   v2_install_plans "$target"
-  v2_install_index "$target"
-  info "plans/ (templates, rules, project-context, designs)"
+  if [[ "$scope" == "nested" ]]; then
+    v2_install_nested "$target"
+    info "plans/ + packages/{core,api}/plans/ (federated nested layout)"
+  else
+    v2_install_index "$target"
+    info "plans/ (templates, rules, project-context, designs)"
+  fi
 
   # CLI runtime — opt-in only. Default is the global `aps` binary on PATH;
   # vendoring bash bin/ + lib/ into every project is no longer the default.
@@ -834,6 +868,17 @@ cmd_init() {
   echo "  ├── execution/                        <- Action plans"
   echo "  ├── decisions/                        <- ADRs"
   echo "  └── designs/                          <- Technical designs"
+  if [[ "$scope" == "nested" ]]; then
+    echo ""
+    echo "  packages/                            <- Federated child plans (MONO)"
+    echo "  ├── core/plans/index.aps.md          <- Standalone child plan"
+    echo "  │   └── modules/module-name.aps.md"
+    echo "  └── api/plans/index.aps.md           <- Standalone child plan"
+    echo "      └── modules/module-name.aps.md"
+    echo ""
+    echo "  The root plans/index.aps.md links these via '## Child Plans'."
+    echo "  Refresh its '## Roll-up' with: aps rollup"
+  fi
 
   # --- Step 5: Agent context bootstrap ---
   echo ""
@@ -895,7 +940,7 @@ later with 'aps setup'. Non-interactive mode available via flags.
 
 Options:
   --profile PROFILE     solo | team | agent
-  --scope SCOPE         small | module | multi | monorepo
+  --scope SCOPE         small | module | multi | monorepo | nested
   --tools TOOLS         Comma-separated: claude-code,copilot,codex,opencode,gemini,generic
   --local-cli, --bash   Also vendor the bash CLI into .aps/bin + .aps/lib
                         (for air-gapped or pinned-toolchain projects)

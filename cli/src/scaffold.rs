@@ -31,6 +31,14 @@ const DESIGN_TEMPLATE: &str = include_str!("../scaffold/designs/.design.template
 const QUICKSTART_TEMPLATE: &str = include_str!("../templates/quickstart.template.md");
 const RELEASES_README: &str = include_str!("../scaffold/plans/releases/README.md");
 const RELEASE_TEMPLATE: &str = include_str!("../templates/release.template.md");
+// Federated nested-plans scaffold (MONO-005). The child module uses the same
+// authoring template the bash CLI copies, so both produce byte-identical trees.
+const INDEX_NESTED_TEMPLATE: &str = include_str!("../templates/index-nested.template.md");
+const INDEX_CHILD_TEMPLATE: &str = include_str!("../templates/index-child.template.md");
+const CHILD_MODULE_TEMPLATE: &str = include_str!("../templates/module.template.md");
+/// Starter child packages a nested scaffold creates, each with a distinct
+/// work-item prefix so bare IDs stay unique across trees (W020-clean).
+const NESTED_CHILDREN: &[(&str, &str)] = &[("core", "CORE"), ("api", "API")];
 
 const SKILL_MD: &str = include_str!("../scaffold/aps-planning/SKILL.md");
 const SKILL_REFERENCE: &str = include_str!("../scaffold/aps-planning/reference.md");
@@ -315,7 +323,12 @@ pub fn plan_steps(selections: &Selections) -> Vec<ScaffoldStep> {
 
     // Plan files + templates.
     let mut templates = Vec::new();
-    let index_content = if selections.has_template(Template::Index)
+    // Federated nested layout (MONO-005): the root becomes a federation index
+    // and starter child plans are created under packages/<pkg>/plans/.
+    let nested = selections.has_template(Template::IndexNested);
+    let index_content = if nested {
+        INDEX_NESTED_TEMPLATE
+    } else if selections.has_template(Template::Index)
         || selections.shape == ProjectShape::SingleProject
     {
         INDEX_APS
@@ -328,6 +341,23 @@ pub fn plan_steps(selections: &Selections) -> Vec<ScaffoldStep> {
         path: plans.join("index.aps.md"),
         content: index_content,
     });
+    if nested {
+        // Starter child plans, each a complete standalone plan with one module.
+        // Distinct work-item prefixes (AUTH -> CORE / API) keep bare IDs unique
+        // across trees so the federation lints W020-clean out of the box.
+        for (pkg, prefix) in NESTED_CHILDREN {
+            let child_plans = PathBuf::from(format!("packages/{pkg}/plans"));
+            templates.push(FileOp::Mkdir(child_plans.join("modules")));
+            templates.push(FileOp::Write {
+                path: child_plans.join("index.aps.md"),
+                content: INDEX_CHILD_TEMPLATE,
+            });
+            templates.push(FileOp::WriteOwned {
+                path: child_plans.join("modules/module-name.aps.md"),
+                content: CHILD_MODULE_TEMPLATE.replace("AUTH", prefix),
+            });
+        }
+    }
     templates.push(FileOp::Write {
         path: plans.join("execution/.actions.template.md"),
         content: ACTIONS_TEMPLATE,
@@ -575,6 +605,7 @@ pub fn template_key(template: Template) -> &'static str {
         Template::Module => "module",
         Template::Index => "index",
         Template::MonorepoIndex => "monorepo-index",
+        Template::IndexNested => "index-nested",
     }
 }
 
@@ -863,6 +894,39 @@ mod tests {
         let mut run = ScaffoldRun::new(root.to_path_buf(), selections);
         while run.run_next() {}
         run
+    }
+
+    #[test]
+    fn nested_template_scaffolds_federated_child_plans() {
+        // MONO-005: the index-nested template writes a federation root plus
+        // starter child plans with distinct, W020-clean work-item prefixes.
+        let mut selections = base_selections();
+        selections.templates = vec![Template::IndexNested];
+        let root = temp_root("nested");
+        run_all(&root, &selections);
+
+        // Federation root uses the nested template.
+        let root_index = fs::read_to_string(root.join("plans/index.aps.md")).unwrap();
+        assert!(root_index.contains("## Child Plans"));
+
+        for (pkg, prefix) in NESTED_CHILDREN {
+            let child_index = root.join(format!("packages/{pkg}/plans/index.aps.md"));
+            let child_module =
+                root.join(format!("packages/{pkg}/plans/modules/module-name.aps.md"));
+            assert!(child_index.is_file(), "{pkg} child index written");
+            let module = fs::read_to_string(&child_module).unwrap();
+            // Work-item IDs carry the package prefix, not the template's AUTH.
+            assert!(
+                module.contains(&format!("### {prefix}-001")),
+                "{pkg} prefixed IDs"
+            );
+            assert!(
+                !module.contains("### AUTH-001"),
+                "{pkg} AUTH prefix replaced"
+            );
+        }
+
+        let _ = fs::remove_dir_all(&root);
     }
 
     #[test]

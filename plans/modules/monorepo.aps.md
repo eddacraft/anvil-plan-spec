@@ -187,7 +187,7 @@ monorepos — this module covers the federated tier above it.
   fixture (`cargo test` 136 green, clippy + fmt clean). Refresh ritual
   documented in `docs/usage.md`; bash coverage in `test/orchestrate-nested.sh`.
 
-### MONO-005: Scaffold support for nested layouts
+### MONO-005: Scaffold support for nested layouts — Complete 2026-07-01
 
 - **Intent:** Make the nested layout reachable from `aps init`
 - **Expected Outcome:** Init offers a nested/monorepo option that creates a
@@ -195,10 +195,24 @@ monorepos — this module covers the federated tier above it.
 - **Validation:** Test-suite init run produces a tree that `aps lint` accepts
 - **Confidence:** medium
 - **Dependencies:** MONO-001 (complete)
-- **Status:** Ready
+- **Status:** Complete
 - **Notes:** Scaffold from `templates/index-nested.template.md` +
   `templates/index-child.template.md`; the `test/fixtures/monorepo/` layout is
   the target shape.
+- **Results:** `aps init` gained a nested/federated option. Bash: a new
+  `nested` scope (interactive menu choice 5 + `--scope nested`) drives
+  `v2_install_nested`, which writes a federation root from
+  `templates/index-nested.template.md` plus starter `core` + `api` child plans
+  (`templates/index-child.template.md` + `templates/module.template.md`), giving
+  each child a package-specific work-item prefix (AUTH → CORE / API) so bare IDs
+  stay unique across trees (W020-clean). Rust: a new `Template::IndexNested`
+  (`--templates index-nested`, plus the TUI wizard picker with three-way index
+  mutual-exclusion) writes the same tree — verified **byte-identical to bash**
+  on every scaffolded file. Both produce a tree that `aps lint plans` accepts as
+  one federation (6 files, no issues). Tests: `test/run.sh` test 17a (bash init
+  → lint) and `scaffold::nested_template_scaffolds_federated_child_plans` (Rust,
+  `cargo test` 137 green, clippy + fmt clean). The `index-nested` template's
+  Roll-up note points at `aps rollup` (MONO-004).
 
 ### MONO-006: Documentation and worked example
 
