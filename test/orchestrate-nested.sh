@@ -160,4 +160,34 @@ if "$APS" rollup --plans "$FIXTURE/packages/core/plans" > /dev/null 2>&1; then
   exit 1
 fi
 
+# --- bare dependency IDs resolve within the depending item's own tree ---
+# D-002 lets the same bare ID exist in sibling trees. A bare `Dependencies:`
+# entry must resolve to the depending item's OWN tree, not an arbitrary
+# declaration-order first match in another tree.
+DEP_DIR=$(mktemp -d)
+cp -r "$FIXTURE/." "$DEP_DIR/"
+# core:AUTH-001 stays Ready. Give api its own AUTH-001 (Complete) plus an item
+# that depends on the bare ID AUTH-001.
+cat >> "$DEP_DIR/packages/api/plans/modules/handlers.aps.md" <<'DEPEOF'
+
+### AUTH-001: Api-local complete item
+
+- **Intent:** an api-tree item sharing a bare ID with core
+- **Expected Outcome:** done
+- **Validation:** `true`
+- **Status:** Complete
+
+### DEP-001: Depends on the bare in-tree AUTH-001
+
+- **Intent:** verify bare deps resolve in-tree
+- **Expected Outcome:** unblocked by api's own AUTH-001
+- **Validation:** `true`
+- **Dependencies:** AUTH-001
+DEPEOF
+# api's own AUTH-001 is Complete, so DEP-001 is ready even though core:AUTH-001
+# (the declaration-order first match) is still Ready.
+output=$("$APS" next --child api --plans "$DEP_DIR/plans")
+assert_contains "$output" "DEP-001"
+rm -rf "$DEP_DIR"
+
 printf 'nested orchestration tests passed\n'

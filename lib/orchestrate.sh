@@ -139,12 +139,17 @@ orch_plan_roots() {
 }
 
 # Path-derived child name for a plan root (the directory segment above plans/).
-# Matches lint's build_child_registry naming so cross-tree refs line up.
+# Matches lint's build_child_registry naming so cross-tree refs line up. A root
+# with no directory component (the common single-root "plans" case) has no
+# child segment and yields "" — matching the Rust `child_name` and the
+# ORCH_ITEM_CHILDREN "empty in single-root" invariant.
 # Usage: orch_child_name "path/to/plans"
 orch_child_name() {
-  local root
+  local root parent
   root=$(normalize_path "$1")
-  basename "$(dirname "$root")"
+  parent=$(dirname "$root")
+  [[ "$parent" == "." || "$parent" == "/" ]] && { printf ''; return; }
+  basename "$parent"
 }
 
 orch_item_matches_child() {
@@ -301,6 +306,7 @@ orch_item_index() {
 
 orch_dependency_complete() {
   local dep="$1"
+  local self_child="${2:-}"
 
   # Cross-tree work-item ref (child:ID) — resolve within the named child tree.
   if [[ "$dep" == *:* ]]; then
@@ -314,8 +320,13 @@ orch_dependency_complete() {
     # Decision dependencies (D-NNN) are resolved in the plan text, not as work items.
     [[ "$dep" == D-* ]] && return 0
 
-    local idx
-    idx=$(orch_item_index "$dep" || true)
+    # A bare ID means "an item in my own tree" (D-002: the same bare ID may
+    # exist in sibling trees). Resolve within the depending item's child first
+    # so declaration order can't misattribute it; only fall back to a
+    # federation-wide first match when the ID isn't defined in-tree.
+    local idx rc=0
+    idx=$(orch_resolve_ref "$dep" "$self_child") || rc=$?
+    [[ $rc -eq 0 ]] || idx=$(orch_item_index "$dep" || true)
     [[ -n "$idx" && "${ORCH_ITEM_STATUSES[$idx]}" == "Complete" ]]
     return
   fi
@@ -326,6 +337,7 @@ orch_dependency_complete() {
 
 orch_deps_complete() {
   local deps="$1"
+  local self_child="${2:-}"
   local dep_ids=()
   local dep
 
@@ -339,7 +351,7 @@ orch_deps_complete() {
   [[ ${#dep_ids[@]} -eq 0 ]] && return 1
 
   for dep in "${dep_ids[@]}"; do
-    orch_dependency_complete "$dep" || return 1
+    orch_dependency_complete "$dep" "$self_child" || return 1
   done
 
   return 0
@@ -521,7 +533,7 @@ EOF
       *) continue ;;
     esac
     [[ "${ORCH_ITEM_STATUSES[$i]}" == "Ready" ]] || continue
-    orch_deps_complete "${ORCH_ITEM_DEPS[$i]}" || continue
+    orch_deps_complete "${ORCH_ITEM_DEPS[$i]}" "${ORCH_ITEM_CHILDREN[$i]}" || continue
 
     echo "${ORCH_ITEM_IDS[$i]}: ${ORCH_ITEM_TITLES[$i]}"
     echo "Module: ${ORCH_ITEM_MODULES[$i]} | Dependencies: $(orch_deps_display "${ORCH_ITEM_DEPS[$i]}") | Status: ${ORCH_ITEM_STATUSES[$i]}"
@@ -773,7 +785,7 @@ EOF
       ;;
   esac
 
-  if ! orch_deps_complete "$deps"; then
+  if ! orch_deps_complete "$deps" "${ORCH_ITEM_CHILDREN[$idx]}"; then
     error "$resolved_id has unmet dependencies: $(orch_deps_display "$deps")"
     return 1
   fi
@@ -1045,7 +1057,7 @@ orch_child_next_ready() {
       *) continue ;;
     esac
     [[ "${ORCH_ITEM_STATUSES[$i]}" == "Ready" ]] || continue
-    orch_deps_complete "${ORCH_ITEM_DEPS[$i]}" || continue
+    orch_deps_complete "${ORCH_ITEM_DEPS[$i]}" "${ORCH_ITEM_CHILDREN[$i]}" || continue
     printf '%s' "${ORCH_ITEM_IDS[$i]}"
     return 0
   done

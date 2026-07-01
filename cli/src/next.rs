@@ -237,8 +237,10 @@ impl PlanGraph {
             .unwrap_or("Unknown")
     }
 
-    /// `orch_deps_complete`.
-    pub fn deps_complete(&self, deps: &str) -> bool {
+    /// `orch_deps_complete`. `self_child` is the depending item's child tree,
+    /// so a bare ID resolves in-tree first (D-002 allows the same bare ID in
+    /// sibling trees); empty for single-root plans.
+    pub fn deps_complete(&self, deps: &str, self_child: &str) -> bool {
         let trimmed = deps.trim();
         if trimmed.is_empty() || trimmed == "None" || trimmed == "-" {
             return true;
@@ -264,7 +266,15 @@ impl PlanGraph {
                 if token.starts_with("D-") {
                     return true;
                 }
-                self.item_status(token) == Some("Complete")
+                // Bare ID means "an item in my own tree" — resolve within the
+                // depending item's child first so declaration order can't
+                // misattribute it, falling back to a federation-wide first
+                // match only when the ID isn't defined in-tree.
+                let status = match self.resolve_ref(token, self_child) {
+                    RefResolution::Found(item) => Some(item.status.as_str()),
+                    _ => self.item_status(token),
+                };
+                status == Some("Complete")
             } else {
                 self.module_statuses.get(token).map(String::as_str) == Some("Complete")
             }
@@ -307,7 +317,7 @@ impl PlanGraph {
             if item.status != "Ready" {
                 return false;
             }
-            self.deps_complete(&item.deps)
+            self.deps_complete(&item.deps, &item.child)
         })
     }
 }
@@ -401,10 +411,10 @@ mod tests {
     #[test]
     fn decision_deps_are_auto_complete() {
         let graph = PlanGraph::default();
-        assert!(graph.deps_complete("D-026, D-027"));
-        assert!(graph.deps_complete("None"));
-        assert!(graph.deps_complete(""));
-        assert!(graph.deps_complete("-"));
+        assert!(graph.deps_complete("D-026, D-027", ""));
+        assert!(graph.deps_complete("None", ""));
+        assert!(graph.deps_complete("", ""));
+        assert!(graph.deps_complete("-", ""));
     }
 
     #[test]
@@ -413,12 +423,12 @@ mod tests {
         graph
             .module_statuses
             .insert("INSTALL".to_string(), "In Progress".to_string());
-        assert!(!graph.deps_complete("INSTALL"));
+        assert!(!graph.deps_complete("INSTALL", ""));
 
         graph
             .module_statuses
             .insert("INSTALL".to_string(), "Complete".to_string());
-        assert!(graph.deps_complete("INSTALL"));
+        assert!(graph.deps_complete("INSTALL", ""));
     }
 
     fn monorepo_root() -> PathBuf {
@@ -471,7 +481,34 @@ mod tests {
     fn cross_tree_dependency_gates_readiness() {
         // HND-001 depends on core:AUTH-001, which is Ready (not Complete).
         let graph = PlanGraph::load(&monorepo_root()).unwrap();
-        assert!(!graph.deps_complete("core:AUTH-001"));
+        assert!(!graph.deps_complete("core:AUTH-001", ""));
+    }
+
+    #[test]
+    fn bare_dependency_resolves_in_the_depending_items_own_tree() {
+        // D-002 allows the same bare ID in sibling trees. A bare dep must
+        // resolve to the depending item's own tree, not a declaration-order
+        // first match elsewhere. Build a two-tree graph where `core` and `api`
+        // both define AUTH-001 with different statuses.
+        let mut graph = PlanGraph::default();
+        let mk = |id: &str, status: &str, deps: &str, child: &str| WorkItem {
+            id: id.to_string(),
+            title: String::new(),
+            status: status.to_string(),
+            deps: deps.to_string(),
+            module: "M".to_string(),
+            file: format!("{child}/plans/modules/m.aps.md"),
+            line: 1,
+            child: child.to_string(),
+        };
+        // Declaration order puts core (Ready) before api (Complete).
+        graph.items.push(mk("AUTH-001", "Ready", "", "core"));
+        graph.items.push(mk("AUTH-001", "Complete", "", "api"));
+
+        // A bare dep from the api tree sees api's Complete AUTH-001.
+        assert!(graph.deps_complete("AUTH-001", "api"));
+        // The same bare dep from the core tree sees core's Ready AUTH-001.
+        assert!(!graph.deps_complete("AUTH-001", "core"));
     }
 
     #[test]

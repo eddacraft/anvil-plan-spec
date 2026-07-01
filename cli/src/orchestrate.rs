@@ -313,7 +313,7 @@ pub fn cmd_start(plan_root: &str, id: &str, child_scope: &str) -> i32 {
         }
     };
 
-    if !graph.deps_complete(&item.deps) {
+    if !graph.deps_complete(&item.deps, &item.child) {
         eprintln!(
             "error: {resolved_id} has unmet dependencies: {}",
             deps_display(&item.deps)
