@@ -137,6 +137,7 @@ monorepos — this module covers the federated tier above it.
 - **Confidence:** medium
 - **Dependencies:** MONO-001 (complete), MONO-002 (complete)
 - **Status:** Ready
+- **Action plan:** [../execution/MONO-003.actions.md](../execution/MONO-003.actions.md)
 
 ### MONO-004: Root roll-up view
 
