@@ -4,7 +4,7 @@
 | ---- | ------ | -------- | ------ |
 | MONO | @aneki | medium   | In Progress |
 
-**Last reviewed:** 2026-06-27
+**Last reviewed:** 2026-07-01
 
 ## Purpose
 
@@ -214,7 +214,7 @@ monorepos — this module covers the federated tier above it.
   `cargo test` 137 green, clippy + fmt clean). The `index-nested` template's
   Roll-up note points at `aps rollup` (MONO-004).
 
-### MONO-006: Documentation and worked example
+### MONO-006: Documentation and worked example — Complete 2026-07-01
 
 - **Intent:** Teach when to use tags vs nested indexes, and how to migrate
 - **Expected Outcome:** docs/monorepo.md gains a "Nested Plans" tier with
@@ -224,7 +224,18 @@ monorepos — this module covers the federated tier above it.
   example tree lints clean
 - **Confidence:** high
 - **Dependencies:** MONO-001 through MONO-004
-- **Status:** Draft
+- **Status:** Complete
+- **Results:** `docs/monorepo.md` gained a **Nested Plans (Federated Tier)**
+  section — the convention (D-001..D-003), a CLI walkthrough (lint/next/graph/
+  start/rollup with `--child` and cross-tree refs), scaffolding (`aps init
+  --scope nested` / `--templates index-nested`), a **Tags vs Nested** decision
+  table (D-004), and a step-by-step **tags → nested migration path**. A
+  complete lint-clean worked example lives at `examples/monorepo-nested/` (a
+  `catalog` + `storefront` shop whose cart depends on `catalog:PROD-001` across
+  trees). Validation: `markdownlint docs/monorepo.md examples/` passes and
+  `aps lint examples/monorepo-nested/plans` reports 5 files, no issues. Docs
+  cross-link `docs/usage.md`. (Docs/example only — no CLI code, so no Rust/
+  PowerShell parity applies.)
 
 ### MONO-007: Rust CLI parity for nested-plan lint
 
