@@ -100,6 +100,11 @@ $APS lint "$PROJECT_ROOT/plans/" > /dev/null 2>&1 && pass || fail "our own plans
 echo -n "Test: orchestrate (next/start/complete)... "
 bash "$SCRIPT_DIR/orchestrate.sh" > /dev/null 2>&1 && pass || fail "orchestrate tests failed"
 
+# Test 16b: Nested-plan orchestration (MONO-003) — federated traversal,
+# child scoping, and cross-tree reference resolution.
+echo -n "Test: orchestrate nested (federated next/start/graph/audit)... "
+bash "$SCRIPT_DIR/orchestrate-nested.sh" > /dev/null 2>&1 && pass || fail "nested orchestration tests failed"
+
 # Test 17: Minimal init by default; --local-cli opts into vendored runtime (INSTALL-011)
 echo -n "Test: init is minimal by default... "
 INIT_DIR=$(mktemp -d)

@@ -522,6 +522,149 @@ pub fn is_item_token(token: &str) -> bool {
         && digits.chars().all(|c| c.is_ascii_digit())
 }
 
+/// Like [`dep_tokens`] but preserves an optional lowercase `<name>:` cross-tree
+/// prefix (MONO-003), so `core:AUTH-001` survives as one token. Mirrors the bash
+/// grammar `([a-z0-9][a-z0-9-]*:)?[A-Z]+-[0-9]+|[A-Z]{2,}` in `orch_dep_refs`.
+pub fn dep_refs(text: &str) -> Vec<String> {
+    let chars: Vec<char> = text.chars().collect();
+    let n = chars.len();
+    let mut tokens = Vec::new();
+    let mut i = 0;
+
+    while i < n {
+        let c = chars[i];
+
+        // A lowercase/digit run may be a `<name>:` prefix on an item ref.
+        if c.is_ascii_lowercase() || c.is_ascii_digit() {
+            let start = i;
+            let mut j = i;
+            while j < n
+                && (chars[j].is_ascii_lowercase() || chars[j].is_ascii_digit() || chars[j] == '-')
+            {
+                j += 1;
+            }
+            if j < n && chars[j] == ':' {
+                let mut k = j + 1;
+                let id_start = k;
+                while k < n && chars[k].is_ascii_uppercase() {
+                    k += 1;
+                }
+                if k > id_start && k < n && chars[k] == '-' {
+                    let mut m = k + 1;
+                    while m < n && chars[m].is_ascii_digit() {
+                        m += 1;
+                    }
+                    if m > k + 1 {
+                        tokens.push(chars[start..m].iter().collect());
+                        i = m;
+                        continue;
+                    }
+                }
+            }
+            i += 1;
+            continue;
+        }
+
+        if c.is_ascii_uppercase() {
+            let start = i;
+            while i < n && chars[i].is_ascii_uppercase() {
+                i += 1;
+            }
+            let run_end = i;
+            if i < n && chars[i] == '-' {
+                let mut j = i + 1;
+                while j < n && chars[j].is_ascii_digit() {
+                    j += 1;
+                }
+                if j > i + 1 {
+                    tokens.push(chars[start..j].iter().collect());
+                    i = j;
+                    continue;
+                }
+            }
+            if run_end - start >= 2 {
+                tokens.push(chars[start..run_end].iter().collect());
+            }
+            continue;
+        }
+
+        i += 1;
+    }
+
+    tokens
+}
+
+/// Lexically normalise a path (collapse `.`/`..` without touching disk),
+/// preserving relative vs absolute. Mirrors bash `normalize_path` so child-plan
+/// links dedupe cleanly against recursively-found paths. (MONO-003)
+pub fn normalize_path(path: &str) -> String {
+    let is_abs = path.starts_with('/');
+    let mut out: Vec<&str> = Vec::new();
+    for part in path.split('/') {
+        match part {
+            "" | "." => {}
+            ".." => {
+                if let Some(&last) = out.last() {
+                    if last != ".." {
+                        out.pop();
+                    } else if !is_abs {
+                        out.push("..");
+                    }
+                } else if !is_abs {
+                    out.push("..");
+                }
+            }
+            other => out.push(other),
+        }
+    }
+    let joined = out.join("/");
+    if is_abs {
+        format!("/{joined}")
+    } else if joined.is_empty() {
+        ".".to_string()
+    } else {
+        joined
+    }
+}
+
+/// Child-plan index paths declared in a parent index's `## Child Plans` section
+/// (MONO-003), resolved against the parent dir, normalised, and filtered to
+/// existing files. One link per line (the first `](…)`), mirroring bash
+/// `resolve_child_plan_links`.
+pub fn resolve_child_plan_links(index_path: &Path) -> Vec<String> {
+    let Ok(plan) = PlanFile::load(&index_path.to_string_lossy()) else {
+        return Vec::new();
+    };
+    let dir = index_path
+        .parent()
+        .map(|p| p.to_string_lossy().into_owned())
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| ".".to_string());
+
+    let mut result = Vec::new();
+    let mut in_section = false;
+    for line in &plan.lines {
+        if let Some(rest) = line.strip_prefix("## ") {
+            in_section = rest.trim() == "Child Plans";
+            continue;
+        }
+        if !in_section {
+            continue;
+        }
+        if let Some(open) = line.find("](") {
+            let after = &line[open + 2..];
+            if let Some(close) = after.find(')') {
+                let link = &after[..close];
+                let resolved = normalize_path(&format!("{dir}/{link}"));
+                if Path::new(&resolved).is_file() {
+                    result.push(resolved);
+                }
+            }
+        }
+    }
+    result
+}
+
 /// Module table rows from an index file (`orch_load_index_modules`):
 /// lines `| [name](…) | … | status |` → (NAME uppercased, raw status).
 pub fn index_modules(plan: &PlanFile) -> Vec<(String, String)> {

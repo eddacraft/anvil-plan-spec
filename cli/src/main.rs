@@ -130,18 +130,24 @@ enum Command {
         /// Plan root directory (default: plans)
         #[arg(long, value_name = "DIR")]
         plans: Option<String>,
+        /// Scope to one child plan in a federated tree (e.g. core)
+        #[arg(long, value_name = "NAME")]
+        child: Option<String>,
     },
     /// Mark a Ready work item as In Progress and write its context package
     Start {
-        /// Work item ID, e.g. AUTH-003
+        /// Work item ID (e.g. AUTH-003) or cross-tree ref (e.g. core:AUTH-003)
         id: String,
         /// Plan root directory (default: plans)
         #[arg(long, value_name = "DIR")]
         plans: Option<String>,
+        /// Scope resolution to one child plan (disambiguates a colliding ID)
+        #[arg(long, value_name = "NAME")]
+        child: Option<String>,
     },
     /// Mark an In Progress work item as Complete
     Complete {
-        /// Work item ID, e.g. AUTH-003
+        /// Work item ID (e.g. AUTH-003) or cross-tree ref (e.g. core:AUTH-003)
         id: String,
         /// Append a learning line after Validation (ORCH D-002)
         #[arg(long, value_name = "TEXT")]
@@ -149,6 +155,9 @@ enum Command {
         /// Plan root directory (default: plans)
         #[arg(long, value_name = "DIR")]
         plans: Option<String>,
+        /// Scope resolution to one child plan (disambiguates a colliding ID)
+        #[arg(long, value_name = "NAME")]
+        child: Option<String>,
     },
     /// Show work items and dependency arrows
     Graph {
@@ -157,6 +166,9 @@ enum Command {
         /// Plan root directory (default: plans)
         #[arg(long, value_name = "DIR")]
         plans: Option<String>,
+        /// Scope to one child plan in a federated tree (e.g. core)
+        #[arg(long, value_name = "NAME")]
+        child: Option<String>,
     },
     /// Audit plan state against reality (runs Complete items' Validation)
     Audit {
@@ -174,6 +186,9 @@ enum Command {
         /// Plan root directory (default: plans)
         #[arg(long, value_name = "DIR")]
         plans: Option<String>,
+        /// Scope to one child plan in a federated tree (e.g. core)
+        #[arg(long, value_name = "NAME")]
+        child: Option<String>,
     },
     /// Diagnose migration state (global binary, cli_version, leftover CLI)
     Doctor,
@@ -256,7 +271,11 @@ fn main() {
             let code = lint::cmd_lint(&resolved, json);
             std::process::exit(code);
         }
-        Some(Command::Next { module, plans }) => {
+        Some(Command::Next {
+            module,
+            plans,
+            child,
+        }) => {
             let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
             let resolved = match plans {
                 Some(p) => p,
@@ -268,7 +287,11 @@ fn main() {
                     config::default_plans(&cwd)
                 }
             };
-            let code = next::cmd_next(&resolved, module.as_deref().unwrap_or(""));
+            let code = next::cmd_next(
+                &resolved,
+                module.as_deref().unwrap_or(""),
+                child.as_deref().unwrap_or(""),
+            );
             std::process::exit(code);
         }
         Some(Command::Update { dir }) => {
@@ -286,27 +309,38 @@ fn main() {
             let apply = apply && !dry_run;
             std::process::exit(migrate::cmd_migrate(&start, apply, yes));
         }
-        Some(Command::Start { id, plans }) => {
+        Some(Command::Start { id, plans, child }) => {
             let resolved = resolve_plans(plans, cli.strict, "aps start");
-            std::process::exit(orchestrate::cmd_start(&resolved, &id));
+            std::process::exit(orchestrate::cmd_start(
+                &resolved,
+                &id,
+                child.as_deref().unwrap_or(""),
+            ));
         }
         Some(Command::Complete {
             id,
             learning,
             plans,
+            child,
         }) => {
             let resolved = resolve_plans(plans, cli.strict, "aps complete");
             std::process::exit(orchestrate::cmd_complete(
                 &resolved,
                 &id,
                 learning.as_deref(),
+                child.as_deref().unwrap_or(""),
             ));
         }
-        Some(Command::Graph { module, plans }) => {
+        Some(Command::Graph {
+            module,
+            plans,
+            child,
+        }) => {
             let resolved = resolve_plans(plans, cli.strict, "aps graph");
             std::process::exit(orchestrate::cmd_graph(
                 &resolved,
                 module.as_deref().unwrap_or(""),
+                child.as_deref().unwrap_or(""),
             ));
         }
         Some(Command::Audit {
@@ -315,11 +349,13 @@ fn main() {
             no_run,
             stale_days,
             plans,
+            child,
         }) => {
             let resolved = resolve_plans(plans, cli.strict, "aps audit");
             std::process::exit(audit::cmd_audit(
                 &resolved,
                 module.as_deref().unwrap_or(""),
+                child.as_deref().unwrap_or(""),
                 json,
                 no_run,
                 stale_days,

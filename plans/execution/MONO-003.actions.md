@@ -5,7 +5,7 @@
 | Source     | [../modules/monorepo.aps.md](../modules/monorepo.aps.md) |
 | Work Item  | MONO-003 — Orchestration across nested plans            |
 | Created by | @aneki / AI                                             |
-| Status     | Draft                                                   |
+| Status     | Complete                                                |
 
 ## Goal
 
@@ -217,6 +217,6 @@ npx markdownlint-cli "**/*.md"
 
 ## Completion
 
-- [ ] All checkpoints validated
-- [ ] Parent-wide and child-scoped orchestration commands tested
-- [ ] Work item marked complete in `monorepo.aps.md`
+- [x] All checkpoints validated
+- [x] Parent-wide and child-scoped orchestration commands tested
+- [x] Work item marked complete in `monorepo.aps.md`

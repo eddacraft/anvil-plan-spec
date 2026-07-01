@@ -5,8 +5,8 @@
 //! dependency semantics (D-* decisions auto-complete, bare uppercase
 //! tokens reference modules), same output text and exit codes.
 
-use std::collections::HashMap;
-use std::path::Path;
+use std::collections::{HashMap, HashSet, VecDeque};
+use std::path::{Path, PathBuf};
 
 use crate::parser::{self, PlanFile};
 
@@ -20,6 +20,57 @@ pub struct WorkItem {
     pub file: String,
     /// 1-based line of the `### ID:` header, for re-reading item content.
     pub line: usize,
+    /// Path-derived child-plan name this item belongs to (MONO-003). Empty for
+    /// a plain single-root plan; used to scope and disambiguate federated trees.
+    pub child: String,
+}
+
+/// Outcome of resolving a work-item reference across a federation (MONO-003).
+pub enum RefResolution<'a> {
+    Found(&'a WorkItem),
+    NotFound,
+    /// A bare ID defined in more than one child tree.
+    Ambiguous,
+}
+
+/// Every plan root in a federation: the given root plus each child root
+/// reachable transitively via `## Child Plans`. Deduped on normalised paths.
+/// A plain single-root plan yields just itself. (`orch_plan_roots`)
+pub fn plan_roots(start: &Path) -> Vec<PathBuf> {
+    let mut seen: HashSet<String> = HashSet::new();
+    let mut queue: VecDeque<PathBuf> = VecDeque::new();
+    queue.push_back(start.to_path_buf());
+    let mut roots = Vec::new();
+
+    while let Some(root) = queue.pop_front() {
+        let key = parser::normalize_path(&root.to_string_lossy());
+        if !seen.insert(key) {
+            continue;
+        }
+        roots.push(root.clone());
+
+        let index = root.join("index.aps.md");
+        if index.is_file() {
+            for child_index in parser::resolve_child_plan_links(&index) {
+                if let Some(dir) = Path::new(&child_index).parent() {
+                    queue.push_back(dir.to_path_buf());
+                }
+            }
+        }
+    }
+
+    roots
+}
+
+/// Path-derived child name for a plan root: the directory segment above
+/// `plans/`. (`orch_child_name`)
+fn child_name(root: &Path) -> String {
+    let norm = parser::normalize_path(&root.to_string_lossy());
+    Path::new(&norm)
+        .parent()
+        .and_then(|p| p.file_name())
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_default()
 }
 
 #[derive(Debug, Default)]
@@ -44,71 +95,87 @@ impl PlanGraph {
 
     fn load_inner(plan_root: &Path, with_index: bool) -> Result<Self, String> {
         let mut graph = Self::default();
+        let mut loaded_any = false;
 
-        let index_path = plan_root.join("index.aps.md");
-        if with_index
-            && index_path.is_file()
-            && let Ok(index) = PlanFile::load(&index_path.to_string_lossy())
-        {
-            for (module, status) in parser::index_modules(&index) {
-                graph.module_statuses.insert(module, status);
+        // Traverse the whole federation: the given root plus every child plan
+        // reachable via `## Child Plans` (MONO-003). A single-root plan yields
+        // just itself, preserving the original behaviour.
+        for root in plan_roots(plan_root) {
+            let child = child_name(&root);
+
+            let index_path = root.join("index.aps.md");
+            if with_index
+                && index_path.is_file()
+                && let Ok(index) = PlanFile::load(&index_path.to_string_lossy())
+            {
+                for (module, status) in parser::index_modules(&index) {
+                    graph.module_statuses.insert(module, status);
+                }
+            }
+
+            let module_dir = root.join("modules");
+            if !module_dir.is_dir() {
+                // A federation parent owns no modules of its own — its children
+                // supply the work. Skip roots without a modules/ dir.
+                continue;
+            }
+            loaded_any = true;
+
+            for file in parser::find_aps_files(&module_dir) {
+                if !file.ends_with(".aps.md") {
+                    continue;
+                }
+                let Ok(plan) = PlanFile::load(&file) else {
+                    continue;
+                };
+
+                let module_id = plan.module_id().unwrap_or_else(|| {
+                    Path::new(&file)
+                        .file_stem()
+                        .map(|stem| {
+                            stem.to_string_lossy()
+                                .trim_end_matches(".aps")
+                                .to_uppercase()
+                        })
+                        .unwrap_or_default()
+                });
+                let module_status =
+                    parser::normalize_status(plan.status().as_deref().unwrap_or(""), "Draft");
+                graph
+                    .module_statuses
+                    .insert(module_id.clone(), module_status);
+
+                for item in plan.work_items() {
+                    let Some(id) = parser::parse_work_item_id(&item.header) else {
+                        continue;
+                    };
+                    let content = plan.item_content(item.line);
+                    let mut status = parser::field_value(&content, "Status");
+                    if status.is_empty() && item.header.contains("Complete") {
+                        status = "Complete".to_string();
+                    }
+                    let status = parser::normalize_status(&status, "Ready");
+                    let deps = parser::field_value(&content, "Dependencies");
+
+                    graph.items.push(WorkItem {
+                        id: id.to_string(),
+                        title: parser::work_item_title(&item.header),
+                        status,
+                        deps,
+                        module: module_id.clone(),
+                        file: file.clone(),
+                        line: item.line,
+                        child: child.clone(),
+                    });
+                }
             }
         }
 
-        let module_dir = plan_root.join("modules");
-        if !module_dir.is_dir() {
+        if !loaded_any {
             return Err(format!(
                 "No modules directory found: {}/modules",
                 plan_root.display()
             ));
-        }
-
-        for file in parser::find_aps_files(&module_dir) {
-            if !file.ends_with(".aps.md") {
-                continue;
-            }
-            let Ok(plan) = PlanFile::load(&file) else {
-                continue;
-            };
-
-            let module_id = plan.module_id().unwrap_or_else(|| {
-                Path::new(&file)
-                    .file_stem()
-                    .map(|stem| {
-                        stem.to_string_lossy()
-                            .trim_end_matches(".aps")
-                            .to_uppercase()
-                    })
-                    .unwrap_or_default()
-            });
-            let module_status =
-                parser::normalize_status(plan.status().as_deref().unwrap_or(""), "Draft");
-            graph
-                .module_statuses
-                .insert(module_id.clone(), module_status);
-
-            for item in plan.work_items() {
-                let Some(id) = parser::parse_work_item_id(&item.header) else {
-                    continue;
-                };
-                let content = plan.item_content(item.line);
-                let mut status = parser::field_value(&content, "Status");
-                if status.is_empty() && item.header.contains("Complete") {
-                    status = "Complete".to_string();
-                }
-                let status = parser::normalize_status(&status, "Ready");
-                let deps = parser::field_value(&content, "Dependencies");
-
-                graph.items.push(WorkItem {
-                    id: id.to_string(),
-                    title: parser::work_item_title(&item.header),
-                    status,
-                    deps,
-                    module: module_id.clone(),
-                    file: file.clone(),
-                    line: item.line,
-                });
-            }
         }
 
         Ok(graph)
@@ -121,9 +188,44 @@ impl PlanGraph {
             .map(|item| item.status.as_str())
     }
 
-    /// Locate a work item by ID (`orch_item_index`).
+    /// Locate a work item by bare ID, first match (`orch_item_index`).
     pub fn find(&self, id: &str) -> Option<&WorkItem> {
         self.items.iter().find(|item| item.id == id)
+    }
+
+    /// Resolve a work-item reference across the federation (`orch_resolve_ref`).
+    /// Accepts a bare ID (`AUTH-001`) or a cross-tree ref (`core:AUTH-001`); a
+    /// non-empty `scope` constrains a bare ID to one child tree. A bare ID that
+    /// matches items in more than one tree is [`RefResolution::Ambiguous`].
+    pub fn resolve_ref(&self, reference: &str, scope: &str) -> RefResolution<'_> {
+        let (rchild, rid) = match reference.split_once(':') {
+            Some((c, i)) => (c.to_string(), i.to_string()),
+            None => (String::new(), reference.to_string()),
+        };
+        let rchild = if rchild.is_empty() && !scope.is_empty() {
+            scope.to_string()
+        } else {
+            rchild
+        };
+
+        let matches: Vec<&WorkItem> = self
+            .items
+            .iter()
+            .filter(|item| {
+                item.id == rid && (rchild.is_empty() || item.child.eq_ignore_ascii_case(&rchild))
+            })
+            .collect();
+
+        match matches.len() {
+            0 => RefResolution::NotFound,
+            1 => RefResolution::Found(matches[0]),
+            _ => RefResolution::Ambiguous,
+        }
+    }
+
+    /// Whether an item belongs to the given child scope (`orch_item_matches_child`).
+    pub fn matches_child(&self, item: &WorkItem, child: &str) -> bool {
+        child.is_empty() || item.child.eq_ignore_ascii_case(child)
     }
 
     /// Module status as resolved during load (`ORCH_MODULE_STATUSES[m]`),
@@ -145,13 +247,19 @@ impl PlanGraph {
             return true;
         }
 
-        let tokens = parser::dep_tokens(deps);
+        let tokens = parser::dep_refs(deps);
         if tokens.is_empty() {
             return false;
         }
 
         tokens.iter().all(|token| {
-            if parser::is_item_token(token) {
+            if token.contains(':') {
+                // Cross-tree ref (child:ID) — resolve within the named tree.
+                matches!(
+                    self.resolve_ref(token, ""),
+                    RefResolution::Found(item) if item.status == "Complete"
+                )
+            } else if parser::is_item_token(token) {
                 // Decision dependencies are resolved in plan text.
                 if token.starts_with("D-") {
                     return true;
@@ -179,9 +287,12 @@ impl PlanGraph {
     }
 
     /// First Ready item (in file order) whose module is Ready/In Progress
-    /// and whose dependencies are Complete.
-    pub fn next_ready(&self, module_filter: &str) -> Option<&WorkItem> {
+    /// and whose dependencies are Complete. Optionally scoped to one child plan.
+    pub fn next_ready(&self, module_filter: &str, child_scope: &str) -> Option<&WorkItem> {
         self.items.iter().find(|item| {
+            if !self.matches_child(item, child_scope) {
+                return false;
+            }
             if !self.matches_module(item, module_filter) {
                 return false;
             }
@@ -213,7 +324,7 @@ pub fn deps_display(deps: &str) -> String {
 }
 
 /// CLI entry. Returns the process exit code.
-pub fn cmd_next(plan_root: &str, module_filter: &str) -> i32 {
+pub fn cmd_next(plan_root: &str, module_filter: &str, child_scope: &str) -> i32 {
     let root = Path::new(plan_root);
     if !root.is_dir() {
         eprintln!("error: Path not found: {plan_root}");
@@ -228,7 +339,7 @@ pub fn cmd_next(plan_root: &str, module_filter: &str) -> i32 {
         }
     };
 
-    match graph.next_ready(module_filter) {
+    match graph.next_ready(module_filter, child_scope) {
         Some(item) => {
             println!("{}: {}", item.id, item.title);
             println!(
@@ -241,10 +352,17 @@ pub fn cmd_next(plan_root: &str, module_filter: &str) -> i32 {
             0
         }
         None => {
-            if module_filter.is_empty() {
-                eprintln!("warning: No ready work item found");
+            let scope_note = if child_scope.is_empty() {
+                String::new()
             } else {
-                eprintln!("warning: No ready work item found for module: {module_filter}");
+                format!(" in child: {child_scope}")
+            };
+            if module_filter.is_empty() {
+                eprintln!("warning: No ready work item found{scope_note}");
+            } else {
+                eprintln!(
+                    "warning: No ready work item found for module: {module_filter}{scope_note}"
+                );
             }
             1
         }
@@ -265,7 +383,7 @@ mod tests {
     #[test]
     fn resolves_next_ready_item_from_fixtures() {
         let graph = PlanGraph::load(&fixture_root()).unwrap();
-        let item = graph.next_ready("").expect("a ready item exists");
+        let item = graph.next_ready("", "").expect("a ready item exists");
 
         assert_eq!(item.id, "AUTH-003");
         assert_eq!(item.title, "Add token refresh");
@@ -276,8 +394,8 @@ mod tests {
     fn module_filter_matches_id_and_filename() {
         let graph = PlanGraph::load(&fixture_root()).unwrap();
 
-        assert!(graph.next_ready("auth").is_some());
-        assert!(graph.next_ready("AUTH").is_some());
+        assert!(graph.next_ready("auth", "").is_some());
+        assert!(graph.next_ready("AUTH", "").is_some());
     }
 
     #[test]
@@ -303,6 +421,59 @@ mod tests {
         assert!(graph.deps_complete("INSTALL"));
     }
 
+    fn monorepo_root() -> PathBuf {
+        PathBuf::from("../test/fixtures/monorepo/plans")
+    }
+
+    #[test]
+    fn federation_spans_child_plans() {
+        // The parent root owns no modules; work is pulled from both children.
+        let graph = PlanGraph::load(&monorepo_root()).unwrap();
+        let ids: Vec<&str> = graph.items.iter().map(|i| i.id.as_str()).collect();
+        assert!(ids.contains(&"AUTH-001"), "core child item loaded");
+        assert!(ids.contains(&"HND-001"), "api child item loaded");
+
+        // Only core:AUTH-001 is unblocked (HND-001 waits on the cross-tree dep).
+        let item = graph.next_ready("", "").expect("a ready item exists");
+        assert_eq!(item.id, "AUTH-001");
+        assert_eq!(item.child, "core");
+    }
+
+    #[test]
+    fn child_scope_filters_the_queue() {
+        let graph = PlanGraph::load(&monorepo_root()).unwrap();
+        assert_eq!(
+            graph.next_ready("", "core").map(|i| i.id.as_str()),
+            Some("AUTH-001")
+        );
+        // api's only item is blocked by its cross-tree dependency.
+        assert!(graph.next_ready("", "api").is_none());
+    }
+
+    #[test]
+    fn resolve_ref_handles_bare_and_cross_tree() {
+        let graph = PlanGraph::load(&monorepo_root()).unwrap();
+        assert!(matches!(
+            graph.resolve_ref("AUTH-001", ""),
+            RefResolution::Found(item) if item.child == "core"
+        ));
+        assert!(matches!(
+            graph.resolve_ref("core:AUTH-001", ""),
+            RefResolution::Found(item) if item.child == "core"
+        ));
+        assert!(matches!(
+            graph.resolve_ref("NOPE-999", ""),
+            RefResolution::NotFound
+        ));
+    }
+
+    #[test]
+    fn cross_tree_dependency_gates_readiness() {
+        // HND-001 depends on core:AUTH-001, which is Ready (not Complete).
+        let graph = PlanGraph::load(&monorepo_root()).unwrap();
+        assert!(!graph.deps_complete("core:AUTH-001"));
+    }
+
     #[test]
     fn blocked_modules_hide_their_items() {
         let root = std::env::temp_dir().join(format!("aps-next-test-{}", std::process::id()));
@@ -315,7 +486,7 @@ mod tests {
         .unwrap();
 
         let graph = PlanGraph::load(&root).unwrap();
-        assert!(graph.next_ready("").is_none());
+        assert!(graph.next_ready("", "").is_none());
 
         fs::remove_dir_all(&root).unwrap();
     }

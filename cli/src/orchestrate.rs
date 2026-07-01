@@ -10,7 +10,7 @@ use std::io::{self, IsTerminal, Write};
 use std::path::{Path, PathBuf};
 
 use crate::date;
-use crate::next::{PlanGraph, WorkItem, deps_display};
+use crate::next::{PlanGraph, RefResolution, WorkItem, deps_display};
 use crate::parser::{self, PlanFile};
 
 /// What `rewrite_work_item` edits inside the target item's block.
@@ -258,8 +258,9 @@ fn write_context_package(
     Ok(context_file)
 }
 
-/// `aps start <ID>` — claim a Ready work item (`cmd_start`).
-pub fn cmd_start(plan_root: &str, id: &str) -> i32 {
+/// `aps start <ID>` — claim a Ready work item (`cmd_start`). In a federated
+/// tree the ref may carry a `<child>:` prefix and `--child` scopes resolution.
+pub fn cmd_start(plan_root: &str, id: &str, child_scope: &str) -> i32 {
     let root = Path::new(plan_root);
     if !root.is_dir() {
         eprintln!("error: Path not found: {plan_root}");
@@ -273,15 +274,27 @@ pub fn cmd_start(plan_root: &str, id: &str) -> i32 {
         }
     };
 
-    let Some(item) = graph.find(id) else {
-        eprintln!("error: Work item not found: {id}");
-        return 1;
+    let item = match graph.resolve_ref(id, child_scope) {
+        RefResolution::Found(item) => item,
+        RefResolution::NotFound => {
+            eprintln!("error: Work item not found: {id}");
+            return 1;
+        }
+        RefResolution::Ambiguous => {
+            eprintln!(
+                "error: Ambiguous work item '{id}' defined in multiple child trees; disambiguate with <child>:{id} or --child <name>"
+            );
+            return 1;
+        }
     };
+    // Use the resolved bare ID for markdown rewrites and messaging; the input
+    // may carry a <child>: prefix that never appears in the file.
+    let resolved_id = item.id.clone();
 
     let module_status = graph.module_status(&item.module);
     if !matches!(module_status, "Ready" | "In Progress") {
         eprintln!(
-            "error: {id} belongs to module {} (status: {module_status}) - module must be Ready or In Progress to start work items",
+            "error: {resolved_id} belongs to module {} (status: {module_status}) - module must be Ready or In Progress to start work items",
             item.module
         );
         return 1;
@@ -291,25 +304,26 @@ pub fn cmd_start(plan_root: &str, id: &str) -> i32 {
         "Ready" => false,
         "In Progress" => true,
         "Complete" => {
-            eprintln!("error: {id} is already Complete - cannot restart");
+            eprintln!("error: {resolved_id} is already Complete - cannot restart");
             return 1;
         }
         other => {
-            eprintln!("error: {id} has status '{other}' - cannot start (must be Ready)");
+            eprintln!("error: {resolved_id} has status '{other}' - cannot start (must be Ready)");
             return 1;
         }
     };
 
     if !graph.deps_complete(&item.deps) {
         eprintln!(
-            "error: {id} has unmet dependencies: {}",
+            "error: {resolved_id} has unmet dependencies: {}",
             deps_display(&item.deps)
         );
         return 1;
     }
 
     if !already_started
-        && let Err(err) = rewrite_work_item(&item.file, id, RewriteMode::Status, "In Progress")
+        && let Err(err) =
+            rewrite_work_item(&item.file, &resolved_id, RewriteMode::Status, "In Progress")
     {
         eprintln!("error: {err}");
         return 1;
@@ -324,18 +338,20 @@ pub fn cmd_start(plan_root: &str, id: &str) -> i32 {
     };
 
     if already_started {
-        eprintln!("warning: {id} is already In Progress (no status change)");
+        eprintln!("warning: {resolved_id} is already In Progress (no status change)");
     } else {
-        println!("Marked {id} as In Progress");
+        println!("Marked {resolved_id} as In Progress");
     }
-    println!("Suggested branch: work/{}", id.to_lowercase());
+    println!("Suggested branch: work/{}", resolved_id.to_lowercase());
     println!("File: {}", item.file);
     println!("Context package: {}", context_file.display());
     0
 }
 
 /// `aps complete <ID>` — close out an In Progress work item (`cmd_complete`).
-pub fn cmd_complete(plan_root: &str, id: &str, learning: Option<&str>) -> i32 {
+/// In a federated tree the ref may carry a `<child>:` prefix and `--child`
+/// scopes resolution.
+pub fn cmd_complete(plan_root: &str, id: &str, learning: Option<&str>, child_scope: &str) -> i32 {
     let root = Path::new(plan_root);
     if !root.is_dir() {
         eprintln!("error: Path not found: {plan_root}");
@@ -349,20 +365,32 @@ pub fn cmd_complete(plan_root: &str, id: &str, learning: Option<&str>) -> i32 {
         }
     };
 
-    let Some(item) = graph.find(id) else {
-        eprintln!("error: Work item not found: {id}");
-        return 1;
+    let item = match graph.resolve_ref(id, child_scope) {
+        RefResolution::Found(item) => item,
+        RefResolution::NotFound => {
+            eprintln!("error: Work item not found: {id}");
+            return 1;
+        }
+        RefResolution::Ambiguous => {
+            eprintln!(
+                "error: Ambiguous work item '{id}' defined in multiple child trees; disambiguate with <child>:{id} or --child <name>"
+            );
+            return 1;
+        }
     };
+    let resolved_id = item.id.clone();
     let file = item.file.clone();
 
     match item.status.as_str() {
         "In Progress" => {}
         "Complete" => {
-            eprintln!("warning: {id} is already Complete (no change)");
+            eprintln!("warning: {resolved_id} is already Complete (no change)");
             return 0;
         }
         other => {
-            eprintln!("error: {id} has status '{other}' - cannot complete (must be In Progress)");
+            eprintln!(
+                "error: {resolved_id} has status '{other}' - cannot complete (must be In Progress)"
+            );
             return 1;
         }
     }
@@ -381,7 +409,7 @@ pub fn cmd_complete(plan_root: &str, id: &str, learning: Option<&str>) -> i32 {
     let today = date::today_utc_ymd();
     if let Err(err) = rewrite_work_item(
         &file,
-        id,
+        &resolved_id,
         RewriteMode::Status,
         &format!("Complete: {today}"),
     ) {
@@ -389,22 +417,24 @@ pub fn cmd_complete(plan_root: &str, id: &str, learning: Option<&str>) -> i32 {
         return 1;
     }
     if !learning.is_empty()
-        && let Err(err) = rewrite_work_item(&file, id, RewriteMode::Learning, &learning)
+        && let Err(err) = rewrite_work_item(&file, &resolved_id, RewriteMode::Learning, &learning)
     {
         eprintln!("error: {err}");
         return 1;
     }
 
-    println!("Marked {id} as Complete: {today}");
+    println!("Marked {resolved_id} as Complete: {today}");
     if !learning.is_empty() {
-        println!("Learning recorded for {id}");
+        println!("Learning recorded for {resolved_id}");
     }
     println!("File: {file}");
     0
 }
 
 /// `aps graph [module]` — render items and dependency arrows (`cmd_graph`).
-pub fn cmd_graph(plan_root: &str, module_filter: &str) -> i32 {
+/// From a federated root the graph spans the tree and keeps cross-tree
+/// (`<name>:<ID>`) prefixes on dependency edges; `--child` scopes it.
+pub fn cmd_graph(plan_root: &str, module_filter: &str, child_scope: &str) -> i32 {
     let root = Path::new(plan_root);
     if !root.is_dir() {
         eprintln!("error: Path not found: {plan_root}");
@@ -420,6 +450,9 @@ pub fn cmd_graph(plan_root: &str, module_filter: &str) -> i32 {
 
     let mut shown = false;
     for item in &graph.items {
+        if !graph.matches_child(item, child_scope) {
+            continue;
+        }
         if !graph.matches_module(item, module_filter) {
             continue;
         }
@@ -427,8 +460,16 @@ pub fn cmd_graph(plan_root: &str, module_filter: &str) -> i32 {
         println!("{} [{}] {}", item.id, item.status, item.title);
 
         let mut deps = String::new();
-        for dep in parser::dep_tokens(&item.deps) {
-            if let Some(dep_item) = graph.find(&dep) {
+        for dep in parser::dep_refs(&item.deps) {
+            if dep.contains(':') {
+                // Cross-tree ref: keep the <name>: prefix, resolve in that child.
+                match graph.resolve_ref(&dep, "") {
+                    RefResolution::Found(dep_item) => {
+                        deps.push_str(&format!(" {dep}[{}]", dep_item.status));
+                    }
+                    _ => deps.push_str(&format!(" {dep}[Unknown]")),
+                }
+            } else if let Some(dep_item) = graph.find(&dep) {
                 deps.push_str(&format!(" {}[{}]", dep_item.id, dep_item.status));
             } else {
                 deps.push_str(&format!(" {dep}[{}]", graph.module_status(&dep)));
@@ -442,10 +483,15 @@ pub fn cmd_graph(plan_root: &str, module_filter: &str) -> i32 {
     }
 
     if !shown {
-        if module_filter.is_empty() {
-            eprintln!("warning: No work items found");
+        let scope_note = if child_scope.is_empty() {
+            String::new()
         } else {
-            eprintln!("warning: No work items found for module: {module_filter}");
+            format!(" in child: {child_scope}")
+        };
+        if module_filter.is_empty() {
+            eprintln!("warning: No work items found{scope_note}");
+        } else {
+            eprintln!("warning: No work items found for module: {module_filter}{scope_note}");
         }
         return 1;
     }
@@ -493,7 +539,7 @@ mod tests {
     fn start_marks_in_progress_and_writes_context() {
         let root = work_copy("start");
         let plans = root.join("plans");
-        let code = cmd_start(plans.to_str().unwrap(), "AUTH-003");
+        let code = cmd_start(plans.to_str().unwrap(), "AUTH-003", "");
         assert_eq!(code, 0);
 
         let auth = fs::read_to_string(plans.join("modules/auth.aps.md")).unwrap();
@@ -515,8 +561,8 @@ mod tests {
         let root = work_copy("start-bad");
         let plans = root.join("plans");
         let plans = plans.to_str().unwrap();
-        assert_eq!(cmd_start(plans, "AUTH-004"), 1); // AUTH-003 not complete
-        assert_eq!(cmd_start(plans, "NOPE-999"), 1);
+        assert_eq!(cmd_start(plans, "AUTH-004", ""), 1); // AUTH-003 not complete
+        assert_eq!(cmd_start(plans, "NOPE-999", ""), 1);
         fs::remove_dir_all(&root).ok();
     }
 
@@ -524,7 +570,7 @@ mod tests {
     fn final_item_context_stops_at_next_section() {
         let root = work_copy("start-final");
         let plans = root.join("plans");
-        assert_eq!(cmd_start(plans.to_str().unwrap(), "AUTH-006"), 0);
+        assert_eq!(cmd_start(plans.to_str().unwrap(), "AUTH-006", ""), 0);
         let ctx = fs::read_to_string(root.join(".aps/context/AUTH-006.md")).unwrap();
         // The Work Item section must not bleed into the module's ## Decisions.
         let work_item = ctx.split("## Module Scope").next().unwrap();
@@ -537,8 +583,8 @@ mod tests {
         let root = work_copy("complete");
         let plans = root.join("plans");
         let plans_s = plans.to_str().unwrap();
-        assert_eq!(cmd_start(plans_s, "AUTH-003"), 0);
-        let code = cmd_complete(plans_s, "AUTH-003", Some("Rotate refresh tokens"));
+        assert_eq!(cmd_start(plans_s, "AUTH-003", ""), 0);
+        let code = cmd_complete(plans_s, "AUTH-003", Some("Rotate refresh tokens"), "");
         assert_eq!(code, 0);
 
         let auth = fs::read_to_string(plans.join("modules/auth.aps.md")).unwrap();
@@ -552,7 +598,10 @@ mod tests {
         let root = work_copy("complete-bad");
         let plans = root.join("plans");
         // AUTH-004 is Ready, not In Progress.
-        assert_eq!(cmd_complete(plans.to_str().unwrap(), "AUTH-004", None), 1);
+        assert_eq!(
+            cmd_complete(plans.to_str().unwrap(), "AUTH-004", None, ""),
+            1
+        );
         fs::remove_dir_all(&root).ok();
     }
 
@@ -562,8 +611,64 @@ mod tests {
         let plans = root.join("plans");
         // Capture is awkward; assert exit code and rely on integration tests
         // for text. Unknown module → exit 1.
-        assert_eq!(cmd_graph(plans.to_str().unwrap(), "auth"), 0);
-        assert_eq!(cmd_graph(plans.to_str().unwrap(), "nope"), 1);
+        assert_eq!(cmd_graph(plans.to_str().unwrap(), "auth", ""), 0);
+        assert_eq!(cmd_graph(plans.to_str().unwrap(), "nope", ""), 1);
+        fs::remove_dir_all(&root).ok();
+    }
+
+    fn monorepo_copy(tag: &str) -> PathBuf {
+        let src = PathBuf::from("../test/fixtures/monorepo");
+        let dst = std::env::temp_dir().join(format!("aps-orch-mono-{tag}-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dst);
+        copy_dir(&src, &dst);
+        dst
+    }
+
+    #[test]
+    fn start_writes_only_the_owning_child_file() {
+        // MONO-003: starting a child work item from the federation root mutates
+        // that child's module file and leaves sibling trees untouched.
+        let root = monorepo_copy("start");
+        let plans = root.join("plans");
+        let core = root.join("packages/core/plans/modules/auth.aps.md");
+        let api = root.join("packages/api/plans/modules/handlers.aps.md");
+        let api_before = fs::read_to_string(&api).unwrap();
+
+        assert_eq!(cmd_start(plans.to_str().unwrap(), "AUTH-001", ""), 0);
+        assert!(
+            fs::read_to_string(&core)
+                .unwrap()
+                .contains("- **Status:** In Progress")
+        );
+        assert_eq!(
+            fs::read_to_string(&api).unwrap(),
+            api_before,
+            "sibling tree untouched"
+        );
+        fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn ambiguous_id_requires_disambiguation() {
+        // Rename api's HND-001 to AUTH-001 so the bare ID collides across trees.
+        let root = monorepo_copy("ambig");
+        let plans = root.join("plans");
+        let api = root.join("packages/api/plans/modules/handlers.aps.md");
+        let text = fs::read_to_string(&api)
+            .unwrap()
+            .replace("HND-001", "AUTH-001");
+        fs::write(&api, text).unwrap();
+
+        // Bare ID is now ambiguous.
+        assert_eq!(cmd_start(plans.to_str().unwrap(), "AUTH-001", ""), 1);
+        // A path-qualified ref resolves it and writes the core tree.
+        assert_eq!(cmd_start(plans.to_str().unwrap(), "core:AUTH-001", ""), 0);
+        let core = root.join("packages/core/plans/modules/auth.aps.md");
+        assert!(
+            fs::read_to_string(&core)
+                .unwrap()
+                .contains("- **Status:** In Progress")
+        );
         fs::remove_dir_all(&root).ok();
     }
 }
