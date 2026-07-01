@@ -265,6 +265,29 @@ monorepos — this module covers the federated tier above it.
   (TUI-009 / D-031) behind on nested plans. This item lands the Rust copy
   so all three match. Reuse `test/fixtures/monorepo/` as the parity suite.
 
+### MONO-008: Child-scope module status across trees
+
+- **Intent:** Stop cross-tree module-ID collisions from corrupting orchestration
+  gating (surfaced by MONO-003's adversarial review)
+- **Expected Outcome:** Module statuses are resolved per child tree rather than
+  through a single federation-wide bare-ID map, so a module ID reused across
+  two children (D-002 allows it) no longer lets one tree's status clobber the
+  other's and hide/expose ready work; a lint check (module-level W020 analogue)
+  warns on cross-tree module-ID collisions
+- **Validation:** A fixture with the same module ID in two child trees, one
+  Draft and one Ready, resolves each tree's `aps next` independently in bash and
+  Rust; lint warns on the collision
+- **Confidence:** medium
+- **Dependencies:** MONO-003 (complete)
+- **Status:** Draft
+- **Notes:** `ORCH_MODULE_STATUSES` (bash) / `PlanGraph.module_statuses` (Rust)
+  are single maps keyed by bare module ID, populated federation-wide, so the
+  last child loaded wins on a collision. Work-item IDs already carry child tags
+  (`ORCH_ITEM_CHILDREN` / `WorkItem.child`) and W020 detection; modules need the
+  same treatment. Not exercised by any shipped fixture/example/scaffold (which
+  use distinct module IDs), so it's a correctness hardening for hand-authored
+  federations, not a regression in the MONO-003..006 feature.
+
 ## Decisions
 
 - **D-001:** Child plan location — _decided 2026-06-26: co-located._ Child
