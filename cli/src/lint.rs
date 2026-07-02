@@ -6,11 +6,15 @@
 //! unescaped JSON strings) are preserved deliberately — the parity
 //! contract is byte-identical output on the same input.
 
-use std::collections::HashSet;
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::io::IsTerminal;
 use std::path::Path;
 
 use crate::parser::{self, FileType, PlanFile};
+
+/// Per-child work-item ID registry for cross-tree (`<name>:<ID>`) resolution
+/// (MONO-007). Keyed by the path-derived child name.
+type ChildRegistry = HashMap<String, HashSet<String>>;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Severity {
@@ -84,6 +88,10 @@ pub fn lint_target(target: &str) -> Result<LintReport, String> {
         if (target == "plans" || target == "plans/") && Path::new("designs").is_dir() {
             files.extend(parser::find_aps_files(Path::new("designs")));
         }
+        // MONO-007: follow ## Child Plans links so a federated parent root
+        // validates its child plan trees as one plan (children live outside
+        // the parent dir).
+        expand_child_plans(&mut files);
     }
 
     if files.is_empty() {
@@ -118,11 +126,205 @@ pub fn lint_target(target: &str) -> Result<LintReport, String> {
     }
     let tree_ids = build_id_index(&index_files);
 
+    // MONO-007: per-child ID registry feeds prefix-aware W003; W020 surfaces
+    // cross-tree ID collisions when a federation parent is in scope.
+    let child_ids = build_child_registry(&files);
+
     let mut report = LintReport::default();
+    check_cross_tree_collisions(&mut report, &files, &child_ids);
     for file in &files {
-        lint_file(&mut report, file, &tree_ids);
+        lint_file(&mut report, file, &tree_ids, &child_ids);
     }
     Ok(report)
+}
+
+/// True when `path`'s basename is `index.aps.md`.
+fn is_index(path: &str) -> bool {
+    Path::new(path).file_name().and_then(|n| n.to_str()) == Some("index.aps.md")
+}
+
+/// True when the plan declares a `## Child Plans` section. Trailing-whitespace
+/// tolerant and consistent with the traversal detection in
+/// `parser::resolve_child_plan_links` (bash `^## Child Plans[[:space:]]*$`), so
+/// the W020 parent guard never disagrees with which trees were pulled in.
+fn has_child_plans_section(plan: &PlanFile) -> bool {
+    plan.lines.iter().any(|line| {
+        line.strip_prefix("## ")
+            .is_some_and(|rest| rest.trim() == "Child Plans")
+    })
+}
+
+/// Expand `files` in place by following `## Child Plans` links transitively
+/// (MONO-007 / `expand_child_plans`). Deduped on normalised paths; a federated
+/// parent root thus validates its child plan trees as one plan even though the
+/// children live outside the parent dir.
+fn expand_child_plans(files: &mut Vec<String>) {
+    let mut seen: HashSet<String> = HashSet::new();
+    let mut result: Vec<String> = Vec::new();
+    for f in files.iter() {
+        if seen.insert(parser::normalize_path(f)) {
+            result.push(f.clone());
+        }
+    }
+
+    let mut queue: std::collections::VecDeque<String> = result.iter().cloned().collect();
+    while let Some(current) = queue.pop_front() {
+        if !is_index(&current) {
+            continue;
+        }
+        for child_index in parser::resolve_child_plan_links(Path::new(&current)) {
+            let child_dir = Path::new(&child_index)
+                .parent()
+                .map(Path::to_path_buf)
+                .unwrap_or_else(|| Path::new(".").to_path_buf());
+            for cf in parser::find_aps_files(&child_dir) {
+                if seen.insert(parser::normalize_path(&cf)) {
+                    result.push(cf.clone());
+                    queue.push_back(cf);
+                }
+            }
+        }
+    }
+
+    *files = result;
+}
+
+/// Build the per-child ID registry (`build_child_registry`). For each plan root
+/// present (an `index.aps.md`), derive its child name — the segment above the
+/// `plans/` dir — and collect the work-item IDs defined under that root (its
+/// own index + modules, mirroring `find -maxdepth 2 -name '*.aps.md'`).
+fn build_child_registry(files: &[String]) -> ChildRegistry {
+    let mut registry: ChildRegistry = HashMap::new();
+    for f in files {
+        if !is_index(f) {
+            continue;
+        }
+        // root = .../<name>/plans ; name = <name>
+        let root = match Path::new(f).parent() {
+            Some(root) => root,
+            None => continue,
+        };
+        let name = match root
+            .parent()
+            .and_then(Path::file_name)
+            .and_then(|n| n.to_str())
+        {
+            Some(name) if !name.is_empty() && name != "." && name != "/" => name.to_string(),
+            _ => continue,
+        };
+
+        let root_files = child_root_files(root);
+        if root_files.is_empty() {
+            continue;
+        }
+
+        let entry = registry.entry(name).or_default();
+        for rf in root_files {
+            let Ok(plan) = PlanFile::load(&rf) else {
+                continue;
+            };
+            let mut fence = false;
+            for line in &plan.lines {
+                if line.starts_with("```") || line.starts_with("~~~") {
+                    fence = !fence;
+                    continue;
+                }
+                if fence {
+                    continue;
+                }
+                if let Some(id) = parser::parse_work_item_id(line) {
+                    entry.insert(id.to_string());
+                }
+            }
+        }
+    }
+    registry
+}
+
+/// A child root's own `*.aps.md` files at depth 1–2 below `root`
+/// (`find "$root" -maxdepth 2 -type f -name '*.aps.md'`): the index plus its
+/// `modules/` files, not deeper. Includes dotfiles, matching the bash pattern.
+fn child_root_files(root: &Path) -> Vec<String> {
+    let mut out = Vec::new();
+    let is_aps = |p: &Path| {
+        p.file_name()
+            .and_then(|n| n.to_str())
+            .is_some_and(|n| n.ends_with(".aps.md"))
+    };
+    let Ok(entries) = std::fs::read_dir(root) else {
+        return out;
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_file() {
+            if is_aps(&path) {
+                out.push(path.to_string_lossy().into_owned());
+            }
+        } else if path.is_dir()
+            && let Ok(sub) = std::fs::read_dir(&path)
+        {
+            for e2 in sub.flatten() {
+                let p2 = e2.path();
+                if p2.is_file() && is_aps(&p2) {
+                    out.push(p2.to_string_lossy().into_owned());
+                }
+            }
+        }
+    }
+    out
+}
+
+/// W020 (`check_cross_tree_collisions`): the same work-item ID is defined in
+/// more than one child tree. Bare IDs may legitimately collide across trees
+/// (D-002), so this is a warning attached to the federation parent — the index
+/// declaring `## Child Plans`. Only fires when such a parent is in scope.
+fn check_cross_tree_collisions(
+    report: &mut LintReport,
+    files: &[String],
+    child_ids: &ChildRegistry,
+) {
+    if child_ids.is_empty() {
+        return;
+    }
+
+    let parent = files.iter().find(|f| {
+        is_index(f)
+            && PlanFile::load(f)
+                .map(|p| has_child_plans_section(&p))
+                .unwrap_or(false)
+    });
+    let Some(parent) = parent else {
+        return;
+    };
+
+    // Map each ID to the distinct child names that define it. Sorted (BTree)
+    // for deterministic, byte-identical output across all three linters — the
+    // bash and PowerShell peers sort their W020 owners the same way (D-039).
+    let mut id_owners: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
+    for (name, ids) in child_ids {
+        for id in ids {
+            id_owners
+                .entry(id.clone())
+                .or_default()
+                .insert(name.clone());
+        }
+    }
+
+    for (id, owners) in &id_owners {
+        if owners.len() > 1 {
+            let names: Vec<&str> = owners.iter().map(String::as_str).collect();
+            report.add(
+                parent,
+                Severity::Warning,
+                "W020",
+                format!(
+                    "Work-item ID '{id}' defined in multiple child trees: {}",
+                    names.join(" ")
+                ),
+                None,
+            );
+        }
+    }
 }
 
 /// Work item and decision IDs from the plan tree (`build_id_index`).
@@ -159,7 +361,12 @@ fn build_id_index(files: &[String]) -> HashSet<String> {
     ids
 }
 
-fn lint_file(report: &mut LintReport, path: &str, tree_ids: &HashSet<String>) {
+fn lint_file(
+    report: &mut LintReport,
+    path: &str,
+    tree_ids: &HashSet<String>,
+    child_ids: &ChildRegistry,
+) {
     let kind = parser::file_type(path);
     report.files.push((path.to_string(), kind));
 
@@ -170,7 +377,7 @@ fn lint_file(report: &mut LintReport, path: &str, tree_ids: &HashSet<String>) {
 
     match kind {
         FileType::Index => lint_index(report, &plan),
-        FileType::Module | FileType::Simple => lint_module(report, &plan, tree_ids),
+        FileType::Module | FileType::Simple => lint_module(report, &plan, tree_ids, child_ids),
         FileType::Issues => lint_issues(report, &plan),
         FileType::Design => lint_design(report, &plan),
         FileType::Release => lint_release(report, &plan),
@@ -381,7 +588,12 @@ fn check_empty_section(report: &mut LintReport, plan: &PlanFile, section: &str) 
 
 // --- Module / simple rules -------------------------------------------------------
 
-fn lint_module(report: &mut LintReport, plan: &PlanFile, tree_ids: &HashSet<String>) {
+fn lint_module(
+    report: &mut LintReport,
+    plan: &PlanFile,
+    tree_ids: &HashSet<String>,
+    child_ids: &ChildRegistry,
+) {
     if !plan.has_section("## Purpose") {
         report.add(
             &plan.path,
@@ -431,7 +643,7 @@ fn lint_module(report: &mut LintReport, plan: &PlanFile, tree_ids: &HashSet<Stri
     }
 
     if plan.has_section("## Work Items") {
-        lint_work_items(report, plan, tree_ids);
+        lint_work_items(report, plan, tree_ids, child_ids);
     }
 }
 
@@ -523,7 +735,12 @@ fn check_w017_last_reviewed(report: &mut LintReport, plan: &PlanFile) {
     }
 }
 
-fn lint_work_items(report: &mut LintReport, plan: &PlanFile, tree_ids: &HashSet<String>) {
+fn lint_work_items(
+    report: &mut LintReport,
+    plan: &PlanFile,
+    tree_ids: &HashSet<String>,
+    child_ids: &ChildRegistry,
+) {
     // Uppercase-only IDs for the dependency known-set, matching
     // `grep -oE '^### [A-Z]+-[0-9]+:'`.
     let all_ids: Vec<String> = plan
@@ -543,7 +760,7 @@ fn lint_work_items(report: &mut LintReport, plan: &PlanFile, tree_ids: &HashSet<
     for item in plan.work_items() {
         check_w001_id_format(report, plan, &item.header, item.line);
         check_e005_required_fields(report, plan, &item.header, item.line);
-        check_w003_dependencies(report, plan, item.line, &all_ids, tree_ids);
+        check_w003_dependencies(report, plan, item.line, &all_ids, tree_ids, child_ids);
         check_w018_terminal_validation(report, plan, &item.header, item.line, &module_status);
     }
 }
@@ -697,6 +914,7 @@ fn check_w003_dependencies(
     item_line: usize,
     all_ids: &[String],
     tree_ids: &HashSet<String>,
+    child_ids: &ChildRegistry,
 ) {
     // First `- **Dependencies:**` line after the header, before the next heading.
     let deps_line = plan.lines[item_line..]
@@ -707,29 +925,110 @@ fn check_w003_dependencies(
         return;
     };
 
-    // `grep -oE '[A-Z]+-[0-9]{3}'` over the single line. Resolve in-file
-    // first, then against the plan-tree index (cross-module dependencies
-    // and decision references are legitimate).
-    for dep_id in extract_dep_ids(deps_line) {
-        if !all_ids.iter().any(|id| id == &dep_id) && !tree_ids.contains(&dep_id) {
-            // Line of the first `Dependencies:.*<id>` match in the whole file.
-            let line_num = plan
-                .lines
-                .iter()
-                .position(|l| {
-                    l.find("Dependencies:")
-                        .is_some_and(|at| l[at..].contains(&dep_id))
-                })
-                .map(|index| index + 1);
+    // `grep -oE '([a-z0-9][a-z0-9-]*:)?[A-Z]+-[0-9]{3}'` over the single line,
+    // keeping any cross-tree `<name>:` prefix alongside bare IDs (MONO-007).
+    for tok in extract_dep_tokens(deps_line) {
+        if let Some((cname, cid)) = tok.split_once(':') {
+            // Cross-tree reference: resolve only when the named child is in
+            // scope (present with ≥1 ID); otherwise it is an intentional
+            // external ref and a standalone child must still lint clean
+            // (MONO-007 / D-003).
+            if let Some(ids) = child_ids.get(cname)
+                && !ids.is_empty()
+                && !ids.contains(cid)
+            {
+                report.add(
+                    &plan.path,
+                    Severity::Warning,
+                    "W003",
+                    format!("Cross-tree dependency '{tok}' not found in child '{cname}'"),
+                    dep_line_number(plan, &tok),
+                );
+            }
+        } else if !all_ids.iter().any(|id| id == &tok) && !tree_ids.contains(&tok) {
+            // Bare ID: resolve in-file first, then against the plan-tree index
+            // (cross-module dependencies and decision references are legit).
             report.add(
                 &plan.path,
                 Severity::Warning,
                 "W003",
-                format!("Dependency '{dep_id}' not found in plan"),
-                line_num,
+                format!("Dependency '{tok}' not found in plan"),
+                dep_line_number(plan, &tok),
             );
         }
     }
+}
+
+/// Line of the first `Dependencies:.*<token>` match in the file (1-based),
+/// mirroring bash `grep -n "Dependencies:.*$tok"`.
+fn dep_line_number(plan: &PlanFile, token: &str) -> Option<usize> {
+    plan.lines
+        .iter()
+        .position(|l| {
+            l.find("Dependencies:")
+                .is_some_and(|at| l[at..].contains(token))
+        })
+        .map(|index| index + 1)
+}
+
+/// `grep -oE '([a-z0-9][a-z0-9-]*:)?[A-Z]+-[0-9]{3}'` — a work-item ID with an
+/// optional cross-tree `<name>:` prefix. Leftmost, non-overlapping matches, as
+/// POSIX `grep -oE` yields them.
+fn extract_dep_tokens(line: &str) -> Vec<String> {
+    let chars: Vec<char> = line.chars().collect();
+    let mut tokens = Vec::new();
+    let mut i = 0;
+    while i < chars.len() {
+        if let Some(end) = match_token_at(&chars, i) {
+            tokens.push(chars[i..end].iter().collect());
+            i = end;
+        } else {
+            i += 1;
+        }
+    }
+    tokens
+}
+
+/// End index (exclusive) of a token match beginning exactly at `i`, or None.
+/// A prefix char (lowercase/digit) and an ID start (uppercase) are disjoint at
+/// a given position, so at most one alternative can begin there.
+fn match_token_at(chars: &[char], i: usize) -> Option<usize> {
+    let c = chars[i];
+    if c.is_ascii_lowercase() || c.is_ascii_digit() {
+        // Optional prefix: `[a-z0-9][a-z0-9-]*:` then the ID immediately after.
+        let mut j = i + 1;
+        while j < chars.len()
+            && (chars[j].is_ascii_lowercase() || chars[j].is_ascii_digit() || chars[j] == '-')
+        {
+            j += 1;
+        }
+        if j < chars.len() && chars[j] == ':' {
+            return match_id_at(chars, j + 1);
+        }
+        return None;
+    }
+    match_id_at(chars, i)
+}
+
+/// End index (exclusive) of `[A-Z]+-[0-9]{3}` starting at `i`, or None. Takes
+/// exactly three digits (grep `{3}` matches the first three of a longer run).
+fn match_id_at(chars: &[char], i: usize) -> Option<usize> {
+    if i >= chars.len() || !chars[i].is_ascii_uppercase() {
+        return None;
+    }
+    let mut j = i;
+    while j < chars.len() && chars[j].is_ascii_uppercase() {
+        j += 1;
+    }
+    if j >= chars.len() || chars[j] != '-' {
+        return None;
+    }
+    let ds = j + 1;
+    let mut k = ds;
+    while k < chars.len() && chars[k].is_ascii_digit() && k - ds < 3 {
+        k += 1;
+    }
+    (k - ds == 3).then_some(k)
 }
 
 /// `grep -oE '[A-Z]+-[0-9]{3}'` — uppercase run + dash + exactly 3 digits
@@ -1211,12 +1510,13 @@ mod tests {
             .files
             .push((path.to_string(), parser::file_type(path)));
         let tree_ids = HashSet::new();
+        let child_ids = ChildRegistry::new();
         match parser::file_type(path) {
             FileType::Index => lint_index(&mut report, &plan),
             FileType::Issues => lint_issues(&mut report, &plan),
             FileType::Design => lint_design(&mut report, &plan),
             FileType::Release => lint_release(&mut report, &plan),
-            _ => lint_module(&mut report, &plan, &tree_ids),
+            _ => lint_module(&mut report, &plan, &tree_ids, &child_ids),
         }
         report
     }
@@ -1448,5 +1748,133 @@ mod tests {
             json,
             "{\"files\":[{\"path\":\"plans/index.aps.md\",\"type\":\"index\",\"errors\":[],\"warnings\":[{\"code\":\"W019\",\"message\":\"Module link target not found: x\",\"line\":3}]}],\"summary\":{\"files\":1,\"errors\":0,\"warnings\":1}}"
         );
+    }
+
+    // --- MONO-007: nested-plan (federated) lint parity ---------------------
+
+    use std::path::PathBuf;
+
+    fn w003(report: &LintReport) -> Vec<&Finding> {
+        report
+            .findings
+            .iter()
+            .filter(|f| f.code == "W003")
+            .collect()
+    }
+    fn w020(report: &LintReport) -> Vec<&Finding> {
+        report
+            .findings
+            .iter()
+            .filter(|f| f.code == "W020")
+            .collect()
+    }
+
+    /// Recursively copy `src` into `dst` (created if absent).
+    fn copy_tree(src: &Path, dst: &Path) {
+        std::fs::create_dir_all(dst).unwrap();
+        for entry in std::fs::read_dir(src).unwrap() {
+            let entry = entry.unwrap();
+            let from = entry.path();
+            let to = dst.join(entry.file_name());
+            if from.is_dir() {
+                copy_tree(&from, &to);
+            } else {
+                std::fs::copy(&from, &to).unwrap();
+            }
+        }
+    }
+
+    /// Copy the monorepo fixture into a fresh temp tree and return its root.
+    fn stage_fixture(tag: &str) -> PathBuf {
+        let root = std::env::temp_dir().join(format!("aps_mono007_{tag}"));
+        let _ = std::fs::remove_dir_all(&root);
+        copy_tree(Path::new("../test/fixtures/monorepo"), &root);
+        root
+    }
+
+    #[test]
+    fn extract_dep_tokens_keeps_prefix_and_truncates_long_ids() {
+        assert_eq!(
+            extract_dep_tokens("- **Dependencies:** core:AUTH-001, MONO-002"),
+            vec!["core:AUTH-001", "MONO-002"]
+        );
+        // grep `{3}` takes the first three digits of a longer run.
+        assert_eq!(extract_dep_tokens("AUTH-0012"), vec!["AUTH-001"]);
+        // A prefix with no following ID yields nothing.
+        assert!(extract_dep_tokens("core: nothing here").is_empty());
+    }
+
+    #[test]
+    fn nested_traversal_lints_child_trees_from_parent_root() {
+        // Scenario 1 (federation clean): the parent root pulls both child trees
+        // into the lint set and the cross-tree dep `core:AUTH-001` resolves.
+        let report = lint_target("../test/fixtures/monorepo/plans").unwrap();
+        let paths: Vec<&str> = report.files.iter().map(|(p, _)| p.as_str()).collect();
+        assert_eq!(paths.len(), 5, "parent + two child trees: {paths:?}");
+        assert!(paths.iter().any(|p| p.ends_with("core/plans/index.aps.md")));
+        assert!(
+            paths
+                .iter()
+                .any(|p| p.ends_with("core/plans/modules/auth.aps.md"))
+        );
+        assert!(
+            paths
+                .iter()
+                .any(|p| p.ends_with("api/plans/modules/handlers.aps.md"))
+        );
+        assert!(w003(&report).is_empty(), "cross-tree dep should resolve");
+        assert!(w020(&report).is_empty(), "no ID collides across trees");
+    }
+
+    #[test]
+    fn isolated_child_keeps_external_cross_tree_ref_silent() {
+        // Scenario 2 (child-alone clean): linted without its sibling `core`,
+        // the `core:AUTH-001` ref is an intentional external ref — stays silent.
+        let report = lint_target("../test/fixtures/monorepo/packages/api/plans").unwrap();
+        assert!(
+            w003(&report).is_empty(),
+            "isolated child must not flag an external cross-tree ref: {:?}",
+            w003(&report)
+        );
+    }
+
+    #[test]
+    fn bad_cross_tree_ref_warns_when_child_in_scope() {
+        // Scenario 3: point the dep at a non-existent ID in an in-scope child.
+        let root = stage_fixture("badref");
+        let handlers = root.join("packages/api/plans/modules/handlers.aps.md");
+        let text = std::fs::read_to_string(&handlers)
+            .unwrap()
+            .replace("core:AUTH-001", "core:AUTH-999");
+        std::fs::write(&handlers, text).unwrap();
+
+        let report = lint_target(root.join("plans").to_str().unwrap()).unwrap();
+        let hits = w003(&report);
+        assert_eq!(hits.len(), 1, "exactly one bad cross-tree ref: {hits:?}");
+        assert_eq!(
+            hits[0].message,
+            "Cross-tree dependency 'core:AUTH-999' not found in child 'core'"
+        );
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn cross_tree_id_collision_warns_w020_on_parent() {
+        // Scenario 4: reuse core's AUTH-001 in the api tree.
+        let root = stage_fixture("collision");
+        let handlers = root.join("packages/api/plans/modules/handlers.aps.md");
+        let text = std::fs::read_to_string(&handlers)
+            .unwrap()
+            .replace("HND-001", "AUTH-001");
+        std::fs::write(&handlers, text).unwrap();
+
+        let report = lint_target(root.join("plans").to_str().unwrap()).unwrap();
+        let hits = w020(&report);
+        assert_eq!(hits.len(), 1, "one colliding ID: {hits:?}");
+        assert!(hits[0].message.contains("AUTH-001"));
+        assert!(hits[0].message.contains("multiple child trees"));
+        // Attached to the federation parent (the index declaring child plans).
+        assert!(hits[0].path.ends_with("/plans/index.aps.md"));
+        let _ = std::fs::remove_dir_all(&root);
     }
 }
