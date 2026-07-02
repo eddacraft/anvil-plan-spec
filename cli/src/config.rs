@@ -42,8 +42,9 @@ pub fn template_from_key(key: &str) -> Result<Template, String> {
         "module" => Ok(Template::Module),
         "index" => Ok(Template::Index),
         "monorepo-index" => Ok(Template::MonorepoIndex),
+        "index-nested" => Ok(Template::IndexNested),
         other => Err(format!(
-            "unknown template '{other}' (expected quickstart, module, index, or monorepo-index)"
+            "unknown template '{other}' (expected quickstart, module, index, monorepo-index, or index-nested)"
         )),
     }
 }

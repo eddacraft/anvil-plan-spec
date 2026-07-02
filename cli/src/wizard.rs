@@ -72,6 +72,9 @@ pub enum Template {
     Module,
     Index,
     MonorepoIndex,
+    /// Federated nested-plans root (MONO-005): a federation `index.aps.md` plus
+    /// starter child plans under `packages/<pkg>/plans/`.
+    IndexNested,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -200,11 +203,12 @@ impl WizardState {
         AiTool::Gemini,
         AiTool::Generic,
     ];
-    const TEMPLATES: [Template; 4] = [
+    const TEMPLATES: [Template; 5] = [
         Template::Quickstart,
         Template::Module,
         Template::Index,
         Template::MonorepoIndex,
+        Template::IndexNested,
     ];
     const COMPONENTS: [Component; 6] = [
         Component::LintRules,
@@ -656,17 +660,19 @@ impl WizardState {
         {
             self.selected_templates.remove(index);
         } else {
-            // Index and MonorepoIndex both scaffold index.aps.md — selecting
-            // one deselects the other so the scaffold never writes one over
-            // the other (council-b2bd78ac C-001).
-            match template {
-                Template::Index => self
-                    .selected_templates
-                    .retain(|selected| *selected != Template::MonorepoIndex),
-                Template::MonorepoIndex => self
-                    .selected_templates
-                    .retain(|selected| *selected != Template::Index),
-                _ => {}
+            // Index, MonorepoIndex, and IndexNested all scaffold the root
+            // index.aps.md — selecting one deselects the others so the scaffold
+            // never writes one over another (council-b2bd78ac C-001; MONO-005).
+            if matches!(
+                template,
+                Template::Index | Template::MonorepoIndex | Template::IndexNested
+            ) {
+                self.selected_templates.retain(|selected| {
+                    !matches!(
+                        selected,
+                        Template::Index | Template::MonorepoIndex | Template::IndexNested
+                    )
+                });
             }
             self.selected_templates.push(template);
             self.selected_templates
@@ -1465,6 +1471,7 @@ impl Template {
             Self::Module => "module",
             Self::Index => "index",
             Self::MonorepoIndex => "monorepo-index",
+            Self::IndexNested => "index-nested",
         }
     }
 
@@ -1474,6 +1481,7 @@ impl Template {
             Self::Module => "full module plan with work items",
             Self::Index => "top-level plans/index.aps.md",
             Self::MonorepoIndex => "index with per-package plan links",
+            Self::IndexNested => "federated root + starter child plans",
         }
     }
 }

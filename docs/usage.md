@@ -20,6 +20,7 @@ aps next [module]           # Show the next ready work item
 aps start <ID>              # Mark a Ready work item as In Progress
 aps complete <ID>           # Mark an In Progress work item as Complete
 aps graph [module]          # Show work items + dependency arrows
+aps rollup                  # Roll-up table for a federated (nested) parent
 aps audit [module]          # Audit plan state against reality
 aps doctor                  # Diagnose migration state (global binary vs vendored)
 aps --help                  # Top-level help
@@ -27,7 +28,9 @@ aps <cmd> --help            # Per-command help
 ```
 
 Every command accepts `--plans <dir>` if your plans aren't at the default
-`plans/` location.
+`plans/` location. The orchestration commands (`next`, `start`, `complete`,
+`graph`, `audit`) additionally accept `--child <name>` to scope a
+[federated nested plan](#nested-plans-federated-orchestration) to one child.
 
 ### Project config discovery
 
@@ -311,6 +314,62 @@ optional companion to `aps lint`.
 > `--no-run`. **In CI, use `--no-run` for pull-request-triggered jobs** —
 > running with execution enabled on PR-modified plans hands code execution
 > to the PR author. Reserve execution for trusted branches.
+
+### Nested plans: federated orchestration
+
+When you point an orchestration command at a **federated parent**
+`index.aps.md` (one with a `## Child Plans` section), it treats the whole
+nested tree as one queue — the same traversal `aps lint` uses. `aps next`,
+`start`, `complete`, `graph`, and `audit` all see the parent plus every child
+plan reachable through `## Child Plans`:
+
+```bash
+aps next  --plans packages          # next ready item across all child plans
+aps graph --plans packages          # dependency graph spanning every tree
+aps audit --plans packages --no-run # audit every child plan from the root
+```
+
+- **Scope to one child** with `--child <name>`, where `<name>` is the
+  path-derived child name (the directory above its `plans/`, e.g. `core`):
+
+  ```bash
+  aps next --child core --plans packages
+  aps audit --child api --plans packages --no-run
+  ```
+
+- **Cross-tree dependencies** written as `<name>:<ID>` (e.g. `core:AUTH-001`,
+  per [D-002](../plans/modules/monorepo.aps.md)) are resolved against the named
+  child, gate `aps next`/`start`, and appear as prefixed edges in `aps graph`.
+
+- **Mutations target the owning child file.** `aps start`/`complete` rewrite
+  the work item in the child module file it actually lives in, never a parent
+  or a same-ID sibling. Accepts a bare ID, a `<name>:<ID>` ref, or a bare ID
+  plus `--child`.
+
+- **Ambiguous bare IDs are rejected.** If the same ID is defined in more than
+  one child tree (the [W020](#aps-lint) case), `start`/`complete` refuse the
+  bare ID and ask you to disambiguate with `<name>:<ID>` or `--child <name>`.
+
+**Keeping the parent roll-up current.** A federation root carries a
+`## Roll-up` table summarising each child (modules complete/total, next ready
+item, overall status). The root index stays hand-authored, so the table does
+not regenerate itself — `aps rollup` prints the current rows for you to paste:
+
+```bash
+$ aps rollup --plans packages
+| Child | Modules (complete/total) | Next ready item | Status |
+| ----- | ------------------------ | --------------- | ------ |
+| core  | 0/1                      | AUTH-001        | Ready  |
+| api   | 0/1                      | —               | Ready  |
+```
+
+The refresh ritual: at session end (or whenever a child's state changes), run
+`aps rollup` and copy the table body into the parent's `## Roll-up` section.
+Keeping it a manual paste keeps the root a readable, reviewable artifact rather
+than generated output.
+
+See the [nested-plans design](../plans/designs/2026-06-27-nested-plans.design.md)
+and [monorepo guide](monorepo.md) for the full convention.
 
 ### `aps doctor` — diagnose migration state
 

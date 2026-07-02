@@ -502,6 +502,7 @@ fn print_json(audited: usize, verifications: &[Verification], findings: &[Findin
 pub fn cmd_audit(
     plan_root: &str,
     module_filter: &str,
+    child_scope: &str,
     json: bool,
     no_run: bool,
     stale_days_flag: Option<u32>,
@@ -559,6 +560,9 @@ pub fn cmd_audit(
     let mut audited = 0usize;
 
     for idx in 0..graph.items.len() {
+        if !graph.matches_child(&graph.items[idx], child_scope) {
+            continue;
+        }
         if !graph.matches_module(&graph.items[idx], module_filter) {
             continue;
         }
@@ -586,8 +590,12 @@ pub fn cmd_audit(
         }
     }
 
-    if module_filter.is_empty() {
-        findings.extend(index_link_findings(root));
+    // Index-link integrity: skip when scoped to a module or child; otherwise
+    // check every plan root across the federation (MONO-003).
+    if module_filter.is_empty() && child_scope.is_empty() {
+        for fed_root in crate::next::plan_roots(root) {
+            findings.extend(index_link_findings(&fed_root));
+        }
     }
 
     if json {
@@ -643,14 +651,14 @@ mod tests {
     #[test]
     fn audit_no_run_reports_all_classes_without_executing() {
         // --no-run: A002/A003/A004 still fire; A001 does not (no execution).
-        let code = cmd_audit(&fixture(), "", false, true, None);
+        let code = cmd_audit(&fixture(), "", "", false, true, None);
         assert_eq!(code, 1);
     }
 
     #[test]
     fn audit_module_scope_suppresses_index_links() {
         // Scoped to demo: A004 (index links) is skipped, but items still audit.
-        let code = cmd_audit(&fixture(), "demo", false, true, None);
+        let code = cmd_audit(&fixture(), "demo", "", false, true, None);
         assert_eq!(code, 1);
     }
 }

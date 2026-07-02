@@ -32,8 +32,8 @@ single shared backlog does not fit.
 
 | Child | Modules (complete/total) | Next ready item | Status |
 | ----- | ------------------------ | --------------- | ------ |
-| core  | —/—                      | —               | —      |
-| api   | —/—                      | —               | —      |
+| core  | 0/1                      | AUTH-001        | Ready  |
+| api   | 0/1                      | —               | Ready  |
 
 ## Modules
 

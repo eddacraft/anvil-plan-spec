@@ -302,6 +302,7 @@ cmd_audit() {
   local plan_root=""
   local strict=false
   local module_filter=""
+  local child_scope=""
   local json_output=false
   local run_validation=true
   local stale_days="${APS_STALE_DAYS:-60}"
@@ -312,6 +313,11 @@ cmd_audit() {
       --plans)
         plan_root="${2:-}"
         [[ -n "$plan_root" ]] || { error "--plans requires a directory"; return 1; }
+        shift 2
+        ;;
+      --child)
+        child_scope="${2:-}"
+        [[ -n "$child_scope" ]] || { error "--child requires a child plan name"; return 1; }
         shift 2
         ;;
       --strict)
@@ -346,8 +352,12 @@ Checks:
 Arguments:
   module    Optional module ID or file name to scope the audit
 
+From a federated root (a plan with a ## Child Plans section) the audit spans
+the whole nested tree; --child scopes it to one child plan.
+
 Options:
   --plans DIR      Plan root directory (default: plans)
+  --child NAME     Scope to one child plan (path-derived name, e.g. core)
   --json           Output results in JSON format
   --no-run         Do not execute Validation commands (verification reports
                    PARTIAL; no A001 findings are produced)
@@ -413,6 +423,7 @@ EOF
   local audited=0
   local i
   for i in "${!ORCH_ITEM_IDS[@]}"; do
+    orch_item_matches_child "$i" "$child_scope" || continue
     orch_item_matches_module "$i" "$module_filter" || continue
 
     case "${ORCH_ITEM_STATUSES[$i]}" in
@@ -431,9 +442,14 @@ EOF
     esac
   done
 
-  # Index link integrity (skip when scoped to a single module)
-  if [[ -z "$module_filter" ]]; then
-    audit_index_links "$plan_root"
+  # Index link integrity (skip when scoped to a single module or child).
+  # Across a federation, check every plan root's index (MONO-003).
+  if [[ -z "$module_filter" && -z "$child_scope" ]]; then
+    local root
+    while IFS= read -r root; do
+      [[ -n "$root" ]] || continue
+      audit_index_links "$root"
+    done < <(orch_plan_roots "$plan_root")
   fi
 
   if [[ "$json_output" == true ]]; then

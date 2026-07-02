@@ -473,24 +473,72 @@ pub fn normalize_status(raw: &str, fallback: &str) -> String {
     "Unknown".to_string()
 }
 
-/// Extract dependency tokens (`grep -oE '[A-Z]+-[0-9]+|[A-Z]{2,}'`):
-/// uppercase runs, optionally followed by `-digits` to form an item ID.
-pub fn dep_tokens(text: &str) -> Vec<String> {
+/// True when a dependency token names a work item (`^[A-Z]+-[0-9]+$`).
+pub fn is_item_token(token: &str) -> bool {
+    let Some(dash) = token.find('-') else {
+        return false;
+    };
+    let (prefix, digits) = (&token[..dash], &token[dash + 1..]);
+    !prefix.is_empty()
+        && prefix.chars().all(|c| c.is_ascii_uppercase())
+        && !digits.is_empty()
+        && digits.chars().all(|c| c.is_ascii_digit())
+}
+
+/// Extract dependency tokens, preserving an optional `<name>:` cross-tree
+/// prefix (MONO-003) so `core:AUTH-001` survives as one token. Mirrors the bash
+/// grammar `([A-Za-z0-9][A-Za-z0-9-]*:)?[A-Z]+-[0-9]+|[A-Z]{2,}` in
+/// `orch_dep_refs`: uppercase runs optionally followed by `-digits` to form an
+/// item ID, or a bare `[A-Z]{2,}` module token. The prefix is matched in any
+/// case (child names are compared case-insensitively) so an all-caps
+/// `CORE:AUTH-001` isn't split into a bogus module dep + bare ID.
+pub fn dep_refs(text: &str) -> Vec<String> {
     let chars: Vec<char> = text.chars().collect();
+    let n = chars.len();
     let mut tokens = Vec::new();
     let mut i = 0;
 
-    while i < chars.len() {
-        if chars[i].is_ascii_uppercase() {
+    while i < n {
+        let c = chars[i];
+
+        // Any alnum run followed by `:` and an item ID is a `<name>:<ID>` ref.
+        // This attempt never advances `i` on failure, so a bare uppercase ID
+        // (no colon) falls through to the item/module branch below unchanged.
+        if c.is_ascii_alphanumeric() {
             let start = i;
-            while i < chars.len() && chars[i].is_ascii_uppercase() {
+            let mut j = i;
+            while j < n && (chars[j].is_ascii_alphanumeric() || chars[j] == '-') {
+                j += 1;
+            }
+            if j < n && chars[j] == ':' {
+                let mut k = j + 1;
+                let id_start = k;
+                while k < n && chars[k].is_ascii_uppercase() {
+                    k += 1;
+                }
+                if k > id_start && k < n && chars[k] == '-' {
+                    let mut m = k + 1;
+                    while m < n && chars[m].is_ascii_digit() {
+                        m += 1;
+                    }
+                    if m > k + 1 {
+                        tokens.push(chars[start..m].iter().collect());
+                        i = m;
+                        continue;
+                    }
+                }
+            }
+        }
+
+        if c.is_ascii_uppercase() {
+            let start = i;
+            while i < n && chars[i].is_ascii_uppercase() {
                 i += 1;
             }
             let run_end = i;
-            // Try `-digits` suffix for an item ID.
-            if i < chars.len() && chars[i] == '-' {
+            if i < n && chars[i] == '-' {
                 let mut j = i + 1;
-                while j < chars.len() && chars[j].is_ascii_digit() {
+                while j < n && chars[j].is_ascii_digit() {
                     j += 1;
                 }
                 if j > i + 1 {
@@ -504,22 +552,82 @@ pub fn dep_tokens(text: &str) -> Vec<String> {
             }
             continue;
         }
+
         i += 1;
     }
 
     tokens
 }
 
-/// True when a dependency token names a work item (`^[A-Z]+-[0-9]+$`).
-pub fn is_item_token(token: &str) -> bool {
-    let Some(dash) = token.find('-') else {
-        return false;
+/// Lexically normalise a path (collapse `.`/`..` without touching disk),
+/// preserving relative vs absolute. Mirrors bash `normalize_path` so child-plan
+/// links dedupe cleanly against recursively-found paths. (MONO-003)
+pub fn normalize_path(path: &str) -> String {
+    let is_abs = path.starts_with('/');
+    let mut out: Vec<&str> = Vec::new();
+    for part in path.split('/') {
+        match part {
+            "" | "." => {}
+            ".." => {
+                if let Some(&last) = out.last() {
+                    if last != ".." {
+                        out.pop();
+                    } else if !is_abs {
+                        out.push("..");
+                    }
+                } else if !is_abs {
+                    out.push("..");
+                }
+            }
+            other => out.push(other),
+        }
+    }
+    let joined = out.join("/");
+    if is_abs {
+        format!("/{joined}")
+    } else if joined.is_empty() {
+        ".".to_string()
+    } else {
+        joined
+    }
+}
+
+/// Child-plan index paths declared in a parent index's `## Child Plans` section
+/// (MONO-003), resolved against the parent dir, normalised, and filtered to
+/// existing files. One link per line (the first `](…)`), mirroring bash
+/// `resolve_child_plan_links`.
+pub fn resolve_child_plan_links(index_path: &Path) -> Vec<String> {
+    let Ok(plan) = PlanFile::load(&index_path.to_string_lossy()) else {
+        return Vec::new();
     };
-    let (prefix, digits) = (&token[..dash], &token[dash + 1..]);
-    !prefix.is_empty()
-        && prefix.chars().all(|c| c.is_ascii_uppercase())
-        && !digits.is_empty()
-        && digits.chars().all(|c| c.is_ascii_digit())
+    let dir = index_path
+        .parent()
+        .map(|p| p.to_string_lossy().into_owned())
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| ".".to_string());
+
+    let mut result = Vec::new();
+    let mut in_section = false;
+    for line in &plan.lines {
+        if let Some(rest) = line.strip_prefix("## ") {
+            in_section = rest.trim() == "Child Plans";
+            continue;
+        }
+        if !in_section {
+            continue;
+        }
+        if let Some(open) = line.find("](") {
+            let after = &line[open + 2..];
+            if let Some(close) = after.find(')') {
+                let link = &after[..close];
+                let resolved = normalize_path(&format!("{dir}/{link}"));
+                if Path::new(&resolved).is_file() {
+                    result.push(resolved);
+                }
+            }
+        }
+    }
+    result
 }
 
 /// Module table rows from an index file (`orch_load_index_modules`):
@@ -696,14 +804,19 @@ mod tests {
     }
 
     #[test]
-    fn dep_token_extraction_matches_grep() {
+    fn dep_ref_extraction_matches_grep() {
         assert_eq!(
-            dep_tokens("AUTH-001, AUTH-002, CORE-001"),
+            dep_refs("AUTH-001, AUTH-002, CORE-001"),
             vec!["AUTH-001", "AUTH-002", "CORE-001"]
         );
-        assert_eq!(dep_tokens("INSTALL (In Progress)"), vec!["INSTALL"]);
-        assert_eq!(dep_tokens("D-026, D-027"), vec!["D-026", "D-027"]);
-        assert_eq!(dep_tokens("none"), Vec::<String>::new());
+        assert_eq!(dep_refs("INSTALL (In Progress)"), vec!["INSTALL"]);
+        assert_eq!(dep_refs("D-026, D-027"), vec!["D-026", "D-027"]);
+        assert_eq!(dep_refs("none"), Vec::<String>::new());
+        // Cross-tree prefixes survive as one token, in any case (MONO-003).
+        assert_eq!(dep_refs("core:AUTH-001"), vec!["core:AUTH-001"]);
+        assert_eq!(dep_refs("CORE:AUTH-001"), vec!["CORE:AUTH-001"]);
+        // A bare uppercase ID (no colon) is not mistaken for a prefix.
+        assert_eq!(dep_refs("AUTH-001"), vec!["AUTH-001"]);
     }
 
     #[test]

@@ -43,14 +43,15 @@ links child plans and rolls up their status; it does not own their modules.]
 ## Roll-up
 
 <!--
-  Aggregated status of each child plan. Populated and kept current per the
-  convention introduced in MONO-004; leave the stub table here until then.
+  Aggregated status of each child plan. Regenerate the rows with `aps rollup`
+  and paste them here at session end (the root stays hand-authored). One row
+  per child, matching the ## Child Plans list above.
 -->
 
 | Child | Modules (complete/total) | Next ready item | Status |
 | ----- | ------------------------ | --------------- | ------ |
-| core  | —/—                      | —               | —      |
-| api   | —/—                      | —               | —      |
+| core  | 0/0                      | —               | —      |
+| api   | 0/0                      | —               | —      |
 
 ## Modules
 

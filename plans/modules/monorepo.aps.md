@@ -4,7 +4,7 @@
 | ---- | ------ | -------- | ------ |
 | MONO | @aneki | medium   | In Progress |
 
-**Last reviewed:** 2026-06-27
+**Last reviewed:** 2026-07-01
 
 ## Purpose
 
@@ -126,7 +126,7 @@ monorepos — this module covers the federated tier above it.
   CI by a string-parity check (test 46). W020 documented in `docs/usage.md`
   and the [design doc](../designs/2026-06-27-nested-plans.design.md).
 
-### MONO-003: Orchestration across nested plans
+### MONO-003: Orchestration across nested plans — Complete 2026-07-01
 
 - **Intent:** Let agents navigate a federated plan as one queue
 - **Expected Outcome:** `aps next`/`start`/`complete`/`graph`/`audit` operate
@@ -136,10 +136,31 @@ monorepos — this module covers the federated tier above it.
   across trees; scoped invocation returns only the child's items
 - **Confidence:** medium
 - **Dependencies:** MONO-001 (complete), MONO-002 (complete)
-- **Status:** Ready
+- **Status:** Complete
 - **Action plan:** [../execution/MONO-003.actions.md](../execution/MONO-003.actions.md)
+- **Results:** Orchestration now traverses a federation the same way lint does.
+  Shared helpers `orch_plan_roots`/`orch_child_name` follow `## Child Plans`
+  links transitively (reusing MONO-002's `resolve_child_plan_links` /
+  `normalize_path`); `orch_load_work_items` loads the parent plus every child,
+  tagging each item with its path-derived child name. `next`/`start`/`complete`/
+  `graph`/`audit` accept `--child <name>` to scope to one child, and cross-tree
+  `<name>:<ID>` refs resolve to the owning tree (`orch_resolve_ref` +
+  `orch_dep_refs`) — gating `next`/`start`, disambiguating mutations, and
+  rendering as prefixed edges in `graph`. Mutating commands write the owning
+  child's module file only; an ambiguous bare ID (a W020 collision) is refused
+  with a disambiguation hint. **Rust parity delivered** (the published
+  `aps-cli`, which had never received MONO-002's nested support): `plan_roots`,
+  `child_name`, `resolve_ref`, `dep_refs`, `normalize_path`,
+  `resolve_child_plan_links`, federated `PlanGraph::load`, and `--child` across
+  all five commands — output verified byte-identical to bash on the fixture,
+  `cargo test` 133 green, clippy + fmt clean. Bash coverage in
+  `test/orchestrate-nested.sh` (federated next, child scope, cross-tree deps,
+  mutation isolation, ambiguity) wired into `test/run.sh` (test 16b). Command
+  behaviour documented in `docs/usage.md`. Orchestration is bash + Rust only;
+  no PowerShell surface exists for these commands, so no `.psm1` parity was
+  required.
 
-### MONO-004: Root roll-up view
+### MONO-004: Root roll-up view — Complete 2026-07-01
 
 - **Intent:** Answer "where is everything?" from the root index
 - **Expected Outcome:** Parent index shows each child plan with aggregated
@@ -149,12 +170,24 @@ monorepos — this module covers the federated tier above it.
   the child plan states
 - **Confidence:** low
 - **Dependencies:** MONO-001 (complete)
-- **Status:** Ready
+- **Status:** Complete
 - **Notes:** The `index-nested` template and fixture root already carry a
   `## Roll-up` stub table — this item populates it and documents the refresh
   ritual.
+- **Results:** New `aps rollup` command (bash `cmd_rollup` in
+  `lib/orchestrate.sh`; Rust `cli/src/rollup.rs`) prints a Markdown roll-up
+  table for a federated parent — one row per child with modules complete/total,
+  the next ready item (the same selection `aps next --child` makes), and an
+  overall status (Complete / In Progress / Ready). The root index stays
+  hand-authored per the module's out-of-scope constraint, so `rollup` is a
+  paste source, not a generator. The fixture root's `## Roll-up` table is
+  populated (`core 0/1 AUTH-001 Ready`, `api 0/1 — Ready`) and a test asserts it
+  stays in sync with `aps rollup` output; the `index-nested` template documents
+  the refresh ritual. **Rust parity** verified byte-identical to bash on the
+  fixture (`cargo test` 136 green, clippy + fmt clean). Refresh ritual
+  documented in `docs/usage.md`; bash coverage in `test/orchestrate-nested.sh`.
 
-### MONO-005: Scaffold support for nested layouts
+### MONO-005: Scaffold support for nested layouts — Complete 2026-07-01
 
 - **Intent:** Make the nested layout reachable from `aps init`
 - **Expected Outcome:** Init offers a nested/monorepo option that creates a
@@ -162,12 +195,26 @@ monorepos — this module covers the federated tier above it.
 - **Validation:** Test-suite init run produces a tree that `aps lint` accepts
 - **Confidence:** medium
 - **Dependencies:** MONO-001 (complete)
-- **Status:** Ready
+- **Status:** Complete
 - **Notes:** Scaffold from `templates/index-nested.template.md` +
   `templates/index-child.template.md`; the `test/fixtures/monorepo/` layout is
   the target shape.
+- **Results:** `aps init` gained a nested/federated option. Bash: a new
+  `nested` scope (interactive menu choice 5 + `--scope nested`) drives
+  `v2_install_nested`, which writes a federation root from
+  `templates/index-nested.template.md` plus starter `core` + `api` child plans
+  (`templates/index-child.template.md` + `templates/module.template.md`), giving
+  each child a package-specific work-item prefix (AUTH → CORE / API) so bare IDs
+  stay unique across trees (W020-clean). Rust: a new `Template::IndexNested`
+  (`--templates index-nested`, plus the TUI wizard picker with three-way index
+  mutual-exclusion) writes the same tree — verified **byte-identical to bash**
+  on every scaffolded file. Both produce a tree that `aps lint plans` accepts as
+  one federation (6 files, no issues). Tests: `test/run.sh` test 17a (bash init
+  → lint) and `scaffold::nested_template_scaffolds_federated_child_plans` (Rust,
+  `cargo test` 137 green, clippy + fmt clean). The `index-nested` template's
+  Roll-up note points at `aps rollup` (MONO-004).
 
-### MONO-006: Documentation and worked example
+### MONO-006: Documentation and worked example — Complete 2026-07-01
 
 - **Intent:** Teach when to use tags vs nested indexes, and how to migrate
 - **Expected Outcome:** docs/monorepo.md gains a "Nested Plans" tier with
@@ -177,7 +224,69 @@ monorepos — this module covers the federated tier above it.
   example tree lints clean
 - **Confidence:** high
 - **Dependencies:** MONO-001 through MONO-004
+- **Status:** Complete
+- **Results:** `docs/monorepo.md` gained a **Nested Plans (Federated Tier)**
+  section — the convention (D-001..D-003), a CLI walkthrough (lint/next/graph/
+  start/rollup with `--child` and cross-tree refs), scaffolding (`aps init
+  --scope nested` / `--templates index-nested`), a **Tags vs Nested** decision
+  table (D-004), and a step-by-step **tags → nested migration path**. A
+  complete lint-clean worked example lives at `examples/monorepo-nested/` (a
+  `catalog` + `storefront` shop whose cart depends on `catalog:PROD-001` across
+  trees). Validation: `markdownlint docs/monorepo.md examples/` passes and
+  `aps lint examples/monorepo-nested/plans` reports 5 files, no issues. Docs
+  cross-link `docs/usage.md`. (Docs/example only — no CLI code, so no Rust/
+  PowerShell parity applies.)
+
+### MONO-007: Rust CLI parity for nested-plan lint
+
+- **Intent:** Port MONO-002's federated lint work to the canonical Rust
+  binary so the primary `aps` (per D-031) traverses nested plans like the
+  bash and PowerShell linters already do
+- **Expected Outcome:** `cli/src/lint.rs` follows a parent index's
+  `## Child Plans` links and pulls each child tree into the lint set
+  transitively; W003 becomes `<name>:<ID>`-prefix-aware (cross-tree refs
+  resolve against an in-scope child registry, silent when the child is
+  absent, warn on a genuine miss); new **W020** warns on a work-item ID
+  defined in more than one child tree. Same E/W codes and exit behavior as
+  the bash linter (TUI-009's parity contract)
+- **Validation:** Rust `aps lint` output matches `./bin/aps lint` on
+  `test/fixtures/monorepo/` for all four MONO-002 scenarios (federation
+  clean, child-alone clean, bad cross-tree ref warns, collision warns);
+  wire into the existing parity suite
+- **Confidence:** high
+- **Dependencies:** MONO-002 (complete)
+- **Status:** Ready
+- **Notes:** Completes MONO-002's parity contract (index D-039: the CLI's
+  three implementations stay in lockstep). MONO-002 landed child-plan
+  traversal, prefix-aware W003, and W020 in `lib/lint.sh` +
+  `lib/rules/workitem.sh` (bash) and `lib/Lint.psm1` +
+  `lib/rules/WorkItem.psm1` (PowerShell), but not in `cli/src/lint.rs`,
+  whose rule codes stop at W019 — leaving the primary Rust binary
+  (TUI-009 / D-031) behind on nested plans. This item lands the Rust copy
+  so all three match. Reuse `test/fixtures/monorepo/` as the parity suite.
+
+### MONO-008: Child-scope module status across trees
+
+- **Intent:** Stop cross-tree module-ID collisions from corrupting orchestration
+  gating (surfaced by MONO-003's adversarial review)
+- **Expected Outcome:** Module statuses are resolved per child tree rather than
+  through a single federation-wide bare-ID map, so a module ID reused across
+  two children (D-002 allows it) no longer lets one tree's status clobber the
+  other's and hide/expose ready work; a lint check (module-level W020 analogue)
+  warns on cross-tree module-ID collisions
+- **Validation:** A fixture with the same module ID in two child trees, one
+  Draft and one Ready, resolves each tree's `aps next` independently in bash and
+  Rust; lint warns on the collision
+- **Confidence:** medium
+- **Dependencies:** MONO-003 (complete)
 - **Status:** Draft
+- **Notes:** `ORCH_MODULE_STATUSES` (bash) / `PlanGraph.module_statuses` (Rust)
+  are single maps keyed by bare module ID, populated federation-wide, so the
+  last child loaded wins on a collision. Work-item IDs already carry child tags
+  (`ORCH_ITEM_CHILDREN` / `WorkItem.child`) and W020 detection; modules need the
+  same treatment. Not exercised by any shipped fixture/example/scaffold (which
+  use distinct module IDs), so it's a correctness hardening for hand-authored
+  federations, not a regression in the MONO-003..006 feature.
 
 ## Decisions
 
