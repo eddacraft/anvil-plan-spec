@@ -256,7 +256,7 @@ monorepos — this module covers the federated tier above it.
 - **Confidence:** high
 - **Dependencies:** MONO-002 (complete)
 - **Status:** Ready
-- **Notes:** Completes MONO-002's parity contract (index D-038: the CLI's
+- **Notes:** Completes MONO-002's parity contract (index D-039: the CLI's
   three implementations stay in lockstep). MONO-002 landed child-plan
   traversal, prefix-aware W003, and W020 in `lib/lint.sh` +
   `lib/rules/workitem.sh` (bash) and `lib/Lint.psm1` +
