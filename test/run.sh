@@ -605,5 +605,21 @@ grep -qF 'Cross-tree dependency' "$PS_WI" || fail "WorkItem.psm1 missing prefix-
 grep -qF '[a-z0-9][a-z0-9-]*:' "$PS_WI" || fail "WorkItem.psm1 missing <name>:<ID> token grammar"
 pass
 
+# Test 47: MONO-007 — Rust parity for nested-plans traversal/W003/W020.
+# The Rust binary is the canonical `aps` (D-031); cli/src/lint.rs must carry the
+# same federated-lint surface as bash (lib/lint.sh) and PowerShell. This CI job
+# has no cargo, so — like the pwsh check above — guard by string-matching the
+# ported surface; byte-for-byte behaviour is asserted by the cargo tests over
+# test/fixtures/monorepo/ (see cli/src/lint.rs, run by the `cargo test` job).
+echo -n "Test: nested-plans Rust parity surface present... "
+RS_LINT="$PROJECT_ROOT/cli/src/lint.rs"
+grep -q 'fn expand_child_plans' "$RS_LINT" || fail "lint.rs missing expand_child_plans (child-plan traversal)"
+grep -q 'fn build_child_registry' "$RS_LINT" || fail "lint.rs missing build_child_registry"
+grep -q 'fn check_cross_tree_collisions' "$RS_LINT" || fail "lint.rs missing check_cross_tree_collisions (W020)"
+grep -q '"W020"' "$RS_LINT" || fail "lint.rs missing W020 code"
+grep -qF 'Cross-tree dependency' "$RS_LINT" || fail "lint.rs missing prefix-aware W003"
+grep -qF '[a-z0-9][a-z0-9-]*:' "$RS_LINT" || fail "lint.rs missing <name>:<ID> token grammar"
+pass
+
 echo ""
 echo -e "${GREEN}All tests passed!${NC}"

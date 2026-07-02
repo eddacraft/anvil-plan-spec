@@ -209,9 +209,12 @@ function Test-ApsCrossTreeCollisions {
         }
     }
 
-    foreach ($id in $idOwners.Keys) {
+    # Emit deterministically: sort the colliding IDs, and sort each ID's owner
+    # names, so all three linters (bash/PowerShell/Rust) produce byte-identical
+    # W020 lines regardless of hash-iteration order (D-039).
+    foreach ($id in ($idOwners.Keys | Sort-Object)) {
         if ($idOwners[$id].Count -gt 1) {
-            $owners = ($idOwners[$id] -join ' ')
+            $owners = (($idOwners[$id] | Sort-Object) -join ' ')
             Add-ApsResult -Path $parentFile -Type "warning" -Code "W020" `
                 -Message "Work-item ID '$id' defined in multiple child trees: $owners"
         }

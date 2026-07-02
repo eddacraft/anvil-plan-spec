@@ -261,12 +261,18 @@ check_cross_tree_collisions() {
     done
   done
 
-  for id in "${!id_owners[@]}"; do
-    if [[ $(echo "${id_owners[$id]}" | wc -w) -gt 1 ]]; then
+  # Emit deterministically: sort the colliding IDs, and sort each ID's owner
+  # names, so all three linters (bash/PowerShell/Rust) produce byte-identical
+  # W020 lines regardless of hash-iteration order (D-039).
+  local sorted_id owners_sorted
+  while IFS= read -r sorted_id; do
+    [[ -n "$sorted_id" ]] || continue
+    owners_sorted=$(printf '%s\n' ${id_owners[$sorted_id]} | sort | tr '\n' ' ' | sed 's/ *$//')
+    if [[ $(echo "$owners_sorted" | wc -w) -gt 1 ]]; then
       add_result "$parent_file" "warning" "W020" \
-        "Work-item ID '$id' defined in multiple child trees:${id_owners[$id]}"
+        "Work-item ID '$sorted_id' defined in multiple child trees: $owners_sorted"
     fi
-  done
+  done < <(printf '%s\n' "${!id_owners[@]}" | sort)
 }
 
 # Lint a single file
