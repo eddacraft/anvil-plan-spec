@@ -255,7 +255,7 @@ monorepos — this module covers the federated tier above it.
   wire into the existing parity suite
 - **Confidence:** high
 - **Dependencies:** MONO-002 (complete)
-- **Status:** In Progress
+- **Status:** Merged
 - **Notes:** Completes MONO-002's parity contract (index D-039: the CLI's
   three implementations stay in lockstep). MONO-002 landed child-plan
   traversal, prefix-aware W003, and W020 in `lib/lint.sh` +
@@ -264,6 +264,21 @@ monorepos — this module covers the federated tier above it.
   whose rule codes stop at W019 — leaving the primary Rust binary
   (TUI-009 / D-031) behind on nested plans. This item lands the Rust copy
   so all three match. Reuse `test/fixtures/monorepo/` as the parity suite.
+- **Results:** `cli/src/lint.rs` gained `expand_child_plans` (transitive
+  `## Child Plans` traversal, reusing MONO-003's parser helpers),
+  `build_child_registry` (per-child ID registry), prefix-aware **W003**
+  (cross-tree `<name>:<ID>` refs resolve in-scope, stay silent when the
+  child is absent, warn on a genuine miss), and **W020** (cross-tree ID
+  collision on the federation parent). Verified byte-identical to
+  `./bin/aps lint` on `test/fixtures/monorepo/` for all four MONO-002
+  scenarios plus JSON, single-file, and a 3-tree collision. A review-found
+  W020 non-determinism (bash hash-order) was retired by sorting IDs +
+  owner names in all three linters (`lib/lint.sh`, `lib/Lint.psm1`,
+  `cli/src/lint.rs`), so W020 is now genuinely byte-identical across
+  bash/PowerShell/Rust. Tests: 5 new cargo tests over the shared fixture
+  (144 green), `run.sh` Test 47 Rust parity-surface guard; clippy + fmt
+  clean; CI green incl. the PowerShell-parity job. Rebase-merged in PR #97
+  (commit 1a92c49).
 
 ### MONO-008: Child-scope module status across trees
 
