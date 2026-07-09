@@ -53,7 +53,7 @@ APS needs continued development to:
 | [orchestrate](./modules/orchestrate.aps.md) | CLI orchestration, dependency resolution, state machine | Complete |
 | [tui](./modules/tui.aps.md)                 | Ratatui TUI customization wizard for project setup      | Complete |
 | [dogfood](./modules/dogfood.aps.md)         | Keep this repo's own APS plans accurate and validated   | Complete |
-| [conductor](./modules/conductor.aps.md)     | New module type for cross-module concerns               | Complete |
+| [conductor](./modules/conductor.aps.md)     | New module type for cross-module concerns               | In Progress |
 
 ### Conductor / Crosscutting (Adopted)
 

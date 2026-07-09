@@ -1,8 +1,10 @@
 # Crosscutting / Conductor Modules
 
-| ID   | Owner  | Priority | Status   |
-| ---- | ------ | -------- | -------- |
-| COND | @aneki | medium   | Complete |
+| ID   | Owner  | Priority | Status      |
+| ---- | ------ | -------- | ----------- |
+| COND | @aneki | medium   | In Progress |
+
+**Last reviewed:** 2026-07-02
 
 ## Purpose
 
@@ -266,6 +268,33 @@ Conductor` metadata; references work items from other modules without
   (release-planning), which is acceptable — the type earns its keep on the
   concern it models, not on headcount.
 
+### COND-007: Backport W002 and W006 to the bash + PowerShell linters
+
+- **Intent:** Restore three-way lint lockstep (index D-038). The conductor
+  rules W002 and W006 shipped in the Rust linter only (COND-003, COND-004),
+  so a conductor typo or a mis-tagged index section passes `./bin/aps lint`
+  (bash) and the PowerShell fallback while failing the primary Rust binary —
+  a real cross-implementation behaviour split.
+- **Expected Outcome:** `lib/rules/*.sh` (bash) and `lib/rules/*.psm1`
+  (PowerShell) gain **W002** (a conductor module's `## Coordinated Modules` /
+  `## Cross-Module Work Items` sections referencing a work-item ID that
+  resolves nowhere in the tree) and **W006** (a module listed under a
+  `### Conductor / Crosscutting` index subsection whose file is not
+  `Type: Conductor`), matching the Rust semantics, codes, and exit behaviour.
+- **Validation:** bash and PowerShell `aps lint` reproduce the Rust results
+  on the COND-003/COND-004 fixtures — a typo'd conductor ref warns W002, a
+  mis-tagged index entry warns W006, a clean plan is silent — verified against
+  a fetched pwsh; string-parity guard added to `test/run.sh`.
+- **Confidence:** high
+- **Dependencies:** COND-003 (complete), COND-004 (complete)
+- **Status:** Ready
+- **Notes:** The mirror image of monorepo MONO-007 (which ports MONO-002's
+  bash/PS federated-lint rules the other way, into Rust). Surfaced by the
+  2026-07-02 bash-vs-Rust rule-set audit: the two linters were non-superset —
+  Rust carried W002/W006 but not W020 or child-plan traversal; bash/PS the
+  inverse. Small adjacent cleanup: drop the stale `E012` reference in
+  `cli/src/audit.rs` — no linter emits E012.
+
 ## Execution Strategy
 
 ### Wave 1: Trial validation
@@ -282,6 +311,10 @@ Conductor` metadata; references work items from other modules without
 
 - COND-005: Documentation
 - COND-006: Audit existing modules
+
+### Wave 4: Parity (depends on Wave 2)
+
+- COND-007: Backport W002/W006 to bash + PowerShell
 
 ## Notes
 
