@@ -85,6 +85,7 @@ release narratives live in [`plans/releases/`](./releases/).
 | [prompts](./modules/prompts.aps.md)           | Tool-specific prompt variants                             | Ready    |
 | [integrations](./modules/integrations.aps.md) | JSON export, GitHub sync                                  | Draft    |
 | [monorepo](./modules/monorepo.aps.md)         | Nested index.aps.md plans, federated lint + orchestration | In Progress |
+| [ci-parity](./modules/ci-parity.aps.md)       | Behavioural pwsh + cross-CLI parity checks in CI          | Ready    |
 
 ### Long Term
 
