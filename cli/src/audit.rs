@@ -407,7 +407,7 @@ fn audit_draft_item(graph: &PlanGraph, idx: usize, repo_root: &Path, findings: &
 
 fn audit_ready_item(graph: &PlanGraph, idx: usize, stale_days: i64, findings: &mut Vec<Finding>) {
     let item = &graph.items[idx];
-    match graph.module_status(&item.module) {
+    match graph.module_status(&item.module, &item.child) {
         "Ready" | "In Progress" => {}
         _ => return,
     }

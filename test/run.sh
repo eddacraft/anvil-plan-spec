@@ -601,6 +601,9 @@ grep -q 'function Expand-ApsChildPlans' "$PS_LINT" || fail "Lint.psm1 missing Ex
 grep -q 'function Build-ApsChildRegistry' "$PS_LINT" || fail "Lint.psm1 missing Build-ApsChildRegistry"
 grep -q 'function Test-ApsCrossTreeCollisions' "$PS_LINT" || fail "Lint.psm1 missing Test-ApsCrossTreeCollisions (W020)"
 grep -q 'W020' "$PS_LINT" || fail "Lint.psm1 missing W020 code"
+grep -q 'function Build-ApsChildModuleRegistry' "$PS_LINT" || fail "Lint.psm1 missing Build-ApsChildModuleRegistry"
+grep -q 'function Test-ApsCrossTreeModuleCollisions' "$PS_LINT" || fail "Lint.psm1 missing Test-ApsCrossTreeModuleCollisions (W021)"
+grep -q 'W021' "$PS_LINT" || fail "Lint.psm1 missing W021 code"
 grep -qF 'Cross-tree dependency' "$PS_WI" || fail "WorkItem.psm1 missing prefix-aware W003"
 grep -qF '[a-z0-9][a-z0-9-]*:' "$PS_WI" || fail "WorkItem.psm1 missing <name>:<ID> token grammar"
 pass
@@ -617,6 +620,9 @@ grep -q 'fn expand_child_plans' "$RS_LINT" || fail "lint.rs missing expand_child
 grep -q 'fn build_child_registry' "$RS_LINT" || fail "lint.rs missing build_child_registry"
 grep -q 'fn check_cross_tree_collisions' "$RS_LINT" || fail "lint.rs missing check_cross_tree_collisions (W020)"
 grep -q '"W020"' "$RS_LINT" || fail "lint.rs missing W020 code"
+grep -q 'fn build_child_module_registry' "$RS_LINT" || fail "lint.rs missing build_child_module_registry"
+grep -q 'fn check_cross_tree_module_collisions' "$RS_LINT" || fail "lint.rs missing check_cross_tree_module_collisions (W021)"
+grep -q '"W021"' "$RS_LINT" || fail "lint.rs missing W021 code"
 grep -qF 'Cross-tree dependency' "$RS_LINT" || fail "lint.rs missing prefix-aware W003"
 grep -qF '[a-z0-9][a-z0-9-]*:' "$RS_LINT" || fail "lint.rs missing <name>:<ID> token grammar"
 pass

@@ -109,7 +109,9 @@ impl PlanGraph {
                 && let Ok(index) = PlanFile::load(&index_path.to_string_lossy())
             {
                 for (module, status) in parser::index_modules(&index) {
-                    graph.module_statuses.insert(module, status);
+                    graph
+                        .module_statuses
+                        .insert(module_status_key(&module, &child), status);
                 }
             }
 
@@ -143,7 +145,7 @@ impl PlanGraph {
                     parser::normalize_status(plan.status().as_deref().unwrap_or(""), "Draft");
                 graph
                     .module_statuses
-                    .insert(module_id.clone(), module_status);
+                    .insert(module_status_key(&module_id, &child), module_status);
 
                 for item in plan.work_items() {
                     let Some(id) = parser::parse_work_item_id(&item.header) else {
@@ -228,11 +230,13 @@ impl PlanGraph {
         child.is_empty() || item.child.eq_ignore_ascii_case(child)
     }
 
-    /// Module status as resolved during load (`ORCH_MODULE_STATUSES[m]`),
-    /// defaulting to `Unknown`.
-    pub fn module_status(&self, module: &str) -> &str {
+    /// Module status within its owning child tree (`ORCH_MODULE_STATUSES`).
+    /// A bare-key fallback preserves single-root plans and direct unit fixtures.
+    pub fn module_status(&self, module: &str, self_child: &str) -> &str {
+        let (child, module) = module.split_once(':').unwrap_or((self_child, module));
         self.module_statuses
-            .get(module)
+            .get(&module_status_key(module, child))
+            .or_else(|| self.module_statuses.get(module))
             .map(String::as_str)
             .unwrap_or("Unknown")
     }
@@ -276,7 +280,7 @@ impl PlanGraph {
                 };
                 status == Some("Complete")
             } else {
-                self.module_statuses.get(token).map(String::as_str) == Some("Complete")
+                self.module_status(token, self_child) == "Complete"
             }
         })
     }
@@ -306,11 +310,7 @@ impl PlanGraph {
             if !self.matches_module(item, module_filter) {
                 return false;
             }
-            let module_status = self
-                .module_statuses
-                .get(&item.module)
-                .map(String::as_str)
-                .unwrap_or("Unknown");
+            let module_status = self.module_status(&item.module, &item.child);
             if !matches!(module_status, "Ready" | "In Progress") {
                 return false;
             }
@@ -319,6 +319,14 @@ impl PlanGraph {
             }
             self.deps_complete(&item.deps, &item.child)
         })
+    }
+}
+
+fn module_status_key(module: &str, child: &str) -> String {
+    if child.is_empty() {
+        module.to_uppercase()
+    } else {
+        format!("{}:{}", child.to_ascii_lowercase(), module.to_uppercase())
     }
 }
 
@@ -526,5 +534,42 @@ mod tests {
         assert!(graph.next_ready("", "").is_none());
 
         fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
+    fn colliding_module_ids_are_scoped_to_their_child_tree() {
+        let mut graph = PlanGraph::default();
+        graph
+            .module_statuses
+            .insert("core:AUTH".to_string(), "Ready".to_string());
+        graph
+            .module_statuses
+            .insert("api:AUTH".to_string(), "Draft".to_string());
+        graph.items.push(WorkItem {
+            id: "AUTH-001".to_string(),
+            title: "Core work".to_string(),
+            status: "Ready".to_string(),
+            deps: String::new(),
+            module: "AUTH".to_string(),
+            file: "core/plans/modules/auth.aps.md".to_string(),
+            line: 1,
+            child: "core".to_string(),
+        });
+        graph.items.push(WorkItem {
+            id: "AUTH-002".to_string(),
+            title: "Api work".to_string(),
+            status: "Ready".to_string(),
+            deps: String::new(),
+            module: "AUTH".to_string(),
+            file: "api/plans/modules/auth.aps.md".to_string(),
+            line: 1,
+            child: "api".to_string(),
+        });
+
+        assert_eq!(
+            graph.next_ready("", "core").map(|item| item.id.as_str()),
+            Some("AUTH-001")
+        );
+        assert!(graph.next_ready("", "api").is_none());
     }
 }

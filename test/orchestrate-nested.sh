@@ -56,6 +56,30 @@ if output=$("$APS" next --child api --plans "$PLANS" 2>&1); then
 fi
 assert_contains "$output" "No ready work item found in child: api"
 
+# --- module IDs are scoped to their child tree (MONO-008) ---
+# D-002 permits a module ID in both children. The API module is Draft while
+# core's same-ID module is Ready; loading api after core must not hide core's
+# ready work behind a federation-wide `AUTH -> Draft` status entry.
+MOD_DIR=$(mktemp -d)
+cp -r "$FIXTURE/." "$MOD_DIR/"
+MOD_CORE="$MOD_DIR/packages/core/plans/modules/auth.aps.md"
+MOD_API="$MOD_DIR/packages/api/plans/modules/handlers.aps.md"
+sed -i '5s/HND/AUTH/; 5s/Ready/Draft/' "$MOD_API"
+
+output=$("$APS" next --child core --plans "$MOD_DIR/plans")
+assert_contains "$output" "AUTH-001: Implement token issuance"
+
+if output=$("$APS" next --child api --plans "$MOD_DIR/plans" 2>&1); then
+  printf 'Expected Draft api module to hide its ready work\n' >&2
+  exit 1
+fi
+assert_contains "$output" "No ready work item found in child: api"
+
+output=$("$APS" lint "$MOD_DIR/plans" 2>&1) || true
+assert_contains "$output" "W021"
+assert_contains "$output" "Module ID 'AUTH' defined in multiple child trees: api core"
+rm -rf "$MOD_DIR"
+
 # --- mutation across trees writes only the owning child file ---
 
 WORK_DIR=$(mktemp -d)

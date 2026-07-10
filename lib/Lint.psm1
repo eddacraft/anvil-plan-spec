@@ -221,6 +221,66 @@ function Test-ApsCrossTreeCollisions {
     }
 }
 
+# MONO-008: child plans may reuse bare module IDs (D-002). Track those IDs
+# independently so a federation can warn without invalidating either child.
+function Build-ApsChildModuleRegistry {
+    param([string[]]$Files)
+    $registry = @{}
+    foreach ($f in $Files) {
+        if ((Split-Path -Leaf $f) -ne 'index.aps.md') { continue }
+        $root = Split-Path -Parent $f
+        $name = Split-Path -Leaf (Split-Path -Parent $root)
+        if ([string]::IsNullOrEmpty($name) -or $name -eq '.' -or $name -eq '/') { continue }
+        $modules = Join-Path $root 'modules'
+        if (-not (Test-Path -LiteralPath $modules -PathType Container)) { continue }
+        foreach ($moduleFile in (Get-ChildItem -LiteralPath $modules -Recurse -File -Filter '*.aps.md')) {
+            $id = Get-ApsModuleId -FilePath $moduleFile.FullName
+            if ([string]::IsNullOrEmpty($id)) { continue }
+            if (-not $registry.ContainsKey($name)) {
+                $registry[$name] = [System.Collections.Generic.HashSet[string]]::new()
+            }
+            $null = $registry[$name].Add($id)
+        }
+    }
+    $out = @{}
+    foreach ($k in $registry.Keys) { $out[$k] = @($registry[$k]) }
+    return $out
+}
+
+# W021: module-level counterpart to W020. Module ID reuse is allowed by D-002,
+# but it is operationally significant for child-scoped orchestration.
+function Test-ApsCrossTreeModuleCollisions {
+    param([string[]]$Files, [hashtable]$ChildModuleIds)
+    if ($ChildModuleIds.Count -eq 0) { return }
+    $parentFile = $null
+    foreach ($f in $Files) {
+        if ((Split-Path -Leaf $f) -ne 'index.aps.md') { continue }
+        $lines = Get-Content -LiteralPath $f -ErrorAction SilentlyContinue
+        if ($lines | Where-Object { $_ -match '^## Child Plans[ \t]*$' }) {
+            $parentFile = $f
+            break
+        }
+    }
+    if (-not $parentFile) { return }
+
+    $idOwners = @{}
+    foreach ($name in $ChildModuleIds.Keys) {
+        foreach ($id in $ChildModuleIds[$name]) {
+            if (-not $idOwners.ContainsKey($id)) {
+                $idOwners[$id] = [System.Collections.Generic.List[string]]::new()
+            }
+            if (-not $idOwners[$id].Contains($name)) { $idOwners[$id].Add($name) }
+        }
+    }
+    foreach ($id in ($idOwners.Keys | Sort-Object)) {
+        if ($idOwners[$id].Count -gt 1) {
+            $owners = (($idOwners[$id] | Sort-Object) -join ' ')
+            Add-ApsResult -Path $parentFile -Type "warning" -Code "W021" `
+                -Message "Module ID '$id' defined in multiple child trees: $owners"
+        }
+    }
+}
+
 function Invoke-ApsFileLint {
     param([string]$File, [string[]]$TreeIds = @(), [hashtable]$ChildIds = @{})
     $fileType = Get-ApsFileType -FilePath $File
@@ -295,7 +355,9 @@ function Invoke-ApsLint {
     # MONO-002: per-child ID registry feeds prefix-aware W003; W020 surfaces
     # cross-tree ID collisions when a federation parent is in scope.
     $childIds = Build-ApsChildRegistry -Files $files
+    $childModuleIds = Build-ApsChildModuleRegistry -Files $files
     Test-ApsCrossTreeCollisions -Files $files -ChildIds $childIds
+    Test-ApsCrossTreeModuleCollisions -Files $files -ChildModuleIds $childModuleIds
 
     # Lint each file
     foreach ($file in $files) {
