@@ -691,5 +691,14 @@ grep -q '"W002"' "$RS_LINT" || fail "lint.rs missing W002 code"
 grep -q '"W006"' "$RS_LINT" || fail "lint.rs missing W006 code"
 pass
 
+# Test 53: CIP-002 — cross-CLI parity harness present and wired into CI.
+# The harness itself (test/cli-parity.sh) needs the Rust binary + pwsh and runs
+# in its own `cli-parity` CI job; this guard just keeps it from silently
+# disappearing (same rationale as the string guards above).
+echo -n "Test: cross-CLI parity harness present and wired into CI... "
+[[ -x "$PROJECT_ROOT/test/cli-parity.sh" ]] || fail "test/cli-parity.sh missing or not executable"
+grep -q 'cli-parity.sh' "$PROJECT_ROOT/.github/workflows/ci.yml" || fail "ci.yml does not run test/cli-parity.sh"
+pass
+
 echo ""
 echo -e "${GREEN}All tests passed!${NC}"

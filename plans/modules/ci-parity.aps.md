@@ -1,8 +1,8 @@
 # CI Cross-Implementation Parity
 
-| ID  | Owner  | Priority | Status      |
-| --- | ------ | -------- | ----------- |
-| CIP | @aneki | medium   | In Progress |
+| ID  | Owner  | Priority | Status   |
+| --- | ------ | -------- | -------- |
+| CIP | @aneki | medium   | Complete |
 
 **Last reviewed:** 2026-07-10
 
@@ -77,7 +77,16 @@ widens the behavioural harness to the corpus that would have caught them, and
   COND-007.
 - **Confidence:** medium
 - **Dependencies:** CIP-001
-- **Status:** Ready
+- **Status:** Complete
+- **Notes:** Done 2026-07-10. `test/cli-parity.sh` lints seven fixture
+  directories with bash, the Rust binary, and pwsh, extracts the order-preserving
+  finding sequence (`CODE: message (line N)`) from each, and diffs them; any
+  divergence fails with a per-fixture diff and exit 1. Wired as the `cli-parity`
+  CI job (builds the Rust binary; ubuntu-latest supplies bash + pwsh). Teeth
+  verified: reintroducing the COND-007 `Get-ApsStatus` bug fails 5 of 7 fixtures
+  (missing W005/W017 plus spurious W018) — a strictly broader catch than the
+  curated `ps-parity.ps1` scenario. Locally the PowerShell leg self-skips with a
+  loud warning when `pwsh` is absent; CI always runs the full three-way.
 
 ## Notes
 
