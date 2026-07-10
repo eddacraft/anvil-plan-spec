@@ -1,12 +1,21 @@
 #!/usr/bin/env pwsh
 #
-# PowerShell parity harness for the nested-plans lint behaviour (MONO-002).
+# PowerShell behavioural parity harness (CIP-001).
 #
-# The bash linter is canonical and test/run.sh covers it (tests 42-46). This
-# script runs the same four scenarios through the PowerShell entry point
-# (bin/aps.ps1) so the lib/*.psm1 port is verified *behaviourally*, not just by
-# the string-parity grep in test/run.sh. Run locally with `pwsh test/ps-parity.ps1`;
-# CI runs it on a runner with pwsh preinstalled.
+# The bash linter is canonical and test/run.sh covers it. This script runs the
+# PowerShell entry point (bin/aps.ps1) over the fixture corpus so the lib/*.psm1
+# port is verified *behaviourally*, not just by the string-parity greps in
+# test/run.sh. Run locally with `pwsh test/ps-parity.ps1`; CI runs it on a runner
+# with pwsh preinstalled (see the `powershell` job in .github/workflows/ci.yml).
+#
+# Coverage:
+#   - nested-plans / federated lint (MONO-002): W003, W020, traversal
+#   - cross-tree module-ID collision (MONO-008): W021
+#   - conductor rules (COND-007): W002, W006
+#   - status gating (COND-007 regression guard): W017 fires for an active
+#     module and is emitted before W002 — this exercises Get-ApsStatus, whose
+#     spaced-separator misparse once silently disabled W005/W017/W018 in
+#     PowerShell and passed every string guard.
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
@@ -14,7 +23,8 @@ $ErrorActionPreference = 'Stop'
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $ProjectRoot = Split-Path -Parent $ScriptDir
 $ApsPs1 = Join-Path $ProjectRoot 'bin/aps.ps1'
-$Fixtures = Join-Path $ScriptDir 'fixtures/monorepo'
+$FixturesRoot = Join-Path $ScriptDir 'fixtures'
+$Fixtures = Join-Path $FixturesRoot 'monorepo'
 
 $script:failed = 0
 function Pass($msg) { Write-Host "PASS $msg" -ForegroundColor Green }
@@ -109,6 +119,39 @@ try {
     }
 } finally {
     Remove-Item -Recurse -Force $moduleCol
+}
+
+Write-Host "`nConductor rules (COND-007)...`n"
+
+# Scenario 6: conductor typo (W002) and mislisted index entry (W006)
+$out = Invoke-Lint (Join-Path $FixturesRoot 'conductor/plans')
+if ($out -match 'W002' -and $out -match 'AUTH-999' -and
+    $out -match 'W006' -and $out -match 'auth\.aps\.md') {
+    Pass 'conductor typo (W002) and mislisted index entry (W006) detected'
+} else {
+    Fail "conductor W002/W006 not detected (got: $out)"
+}
+
+# Scenario 7: clean conductor plan trips neither W002 nor W006
+$out = Invoke-Lint (Join-Path $FixturesRoot 'conductor-clean/plans')
+if ($out -notmatch 'W002' -and $out -notmatch 'W006') {
+    Pass 'no W002/W006 false positive on the clean conductor fixture'
+} else {
+    Fail "W002/W006 false positive on clean conductor fixture (got: $out)"
+}
+
+# Scenario 8: an active (Ready) conductor emits W017 before W002. This is the
+# COND-007 regression guard — if Get-ApsStatus mis-reads the spaced separator
+# row, W017 silently vanishes and this fails (it would still "pass" a string
+# guard, which is the whole point of running behaviourally).
+$orderFile = Join-Path $FixturesRoot 'conductor-order/plans/modules/release-planning.aps.md'
+$out = Invoke-Lint $orderFile
+$p17 = $out.IndexOf('W017')
+$p02 = $out.IndexOf('W002')
+if ($p17 -ge 0 -and $p02 -ge 0 -and $p17 -lt $p02) {
+    Pass 'active conductor emits W017 before W002 (status gating + order)'
+} else {
+    Fail "expected W017 before W002 on active conductor (got: $out)"
 }
 
 Write-Host ""

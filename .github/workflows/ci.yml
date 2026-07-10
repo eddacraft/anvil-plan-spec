@@ -84,7 +84,10 @@ jobs:
       - uses: actions/checkout@v5
 
       # ubuntu-latest ships pwsh preinstalled; verify the lib/*.psm1 port
-      # behaviourally against the nested-plans fixtures (MONO-002).
+      # behaviourally across the fixture corpus — nested-plans (MONO-002),
+      # cross-tree module IDs (MONO-008), conductor rules and status gating
+      # (COND-007/CIP-001). String guards in test/run.sh prove a rule exists;
+      # this proves it behaves.
       - name: Run PowerShell parity harness
         shell: pwsh
         run: ./test/ps-parity.ps1
