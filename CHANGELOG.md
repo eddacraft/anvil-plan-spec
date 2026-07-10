@@ -33,6 +33,31 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Fixed
 
+- **Three-way linter parity for conductor rules (COND-007)** — lint codes
+  **W002** (a conductor module's `## Coordinated Modules` / `## Cross-Module
+  Work Items` referencing a work-item ID that resolves nowhere in the tree) and
+  **W006** (a module listed under a `### Conductor / Crosscutting` index
+  subsection whose file is not `Type: Conductor`) shipped in the Rust linter
+  only, so a conductor typo or a mis-tagged index entry passed `./bin/aps lint`
+  (bash) and the PowerShell fallback while failing the primary Rust binary. Both
+  rules are now mirrored in bash (`lib/rules/{module,index}.sh`) and PowerShell
+  (`lib/rules/{Module,Index}.psm1`) with byte-identical codes, messages, line
+  numbers, and check ordering (W017 before W002, per Rust `lint_module`),
+  restoring the CLI lockstep contract (index D-038/D-039). Verified with a
+  fetched pwsh 7.4.6 producing output identical to bash and Rust across every
+  fixture.
+- **PowerShell `Get-ApsStatus` misread spaced separator rows (parity)** — the
+  separator-skip guard (`^\|[^-]`) treated a standard `| --- |` row (a space
+  after the leading pipe) as the status data row and returned `------`, so the
+  W005 / W017 / W018 status gates silently never matched in PowerShell. It now
+  skips any `^[|: -]+$` row, matching bash and Rust. Latent because CI runs no
+  pwsh; surfaced by the COND-007 fetched-pwsh parity sweep.
+- **PowerShell W017 rounded the review age (parity)** — `[int](…).TotalDays`
+  rounds to nearest, reporting one day more than bash (which truncates) and Rust
+  (whole civil days) at some times of day. Now floors via `[math]::Floor`.
+- Stale `E012` lint-code references in `cli/src/audit.rs` and `lib/audit.sh`
+  corrected to `W019`, the code that actually implements the broken-index-link
+  contract (no linter emits E012).
 - Documentation and the README version badge corrected to 0.4.0; usage and
   installation guides reconciled with the binary's actual command surface
   (`update`, `migrate`, orchestration), removing references to commands the

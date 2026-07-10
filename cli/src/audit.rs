@@ -186,7 +186,7 @@ fn json_escape(s: &str) -> String {
 }
 
 /// Scan an index's `## Modules` section for links to missing files
-/// (`audit_index_links`, same contract as lint E012).
+/// (`audit_index_links`, same contract as lint W019).
 fn index_link_findings(plan_root: &Path) -> Vec<Finding> {
     let index_path = plan_root.join("index.aps.md");
     let Ok(text) = fs::read_to_string(&index_path) else {

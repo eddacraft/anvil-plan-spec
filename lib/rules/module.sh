@@ -85,6 +85,41 @@ check_w017_last_reviewed() {
   fi
 }
 
+# W002: a conductor module's coordination sections reference a work-item ID
+# that resolves nowhere in the plan tree — most likely a typo. Conductor
+# modules legitimately reference IDs owned by other modules (that is the point),
+# so cross-file references are expected; only unresolved ones are flagged.
+# Vertical-module dependency typos remain W003's job, so this only runs for
+# `Type: Conductor` modules. Mirrors the Rust check_w002_conductor_refs.
+check_w002_conductor_refs() {
+  local file="$1"
+  is_conductor "$file" || return 0
+
+  local section
+  for section in "## Coordinated Modules" "## Cross-Module Work Items"; do
+    has_section "$file" "$section" || continue
+    # Walk the section body with absolute line numbers, skipping HTML comments.
+    local line_num content id
+    while IFS=: read -r line_num content; do
+      for id in $(echo "$content" | grep -oE '[A-Z]+-[0-9]{3}'); do
+        if ! echo " ${APS_TREE_IDS:-} " | grep -qw "$id"; then
+          add_result "$file" "warning" "W002" "Cross-module reference '$id' not found in plan tree" "$line_num"
+        fi
+      done
+    done < <(awk -v sect="$section" '
+      $0 == sect { found = 1; next }
+      found && /^## / { exit }
+      found {
+        if (incomment) { if ($0 ~ /-->/) incomment = 0; next }
+        t = $0; sub(/^[[:space:]]+/, "", t)
+        if (t ~ /^<!--/) { if (t !~ /-->/) incomment = 1; next }
+        print NR ":" $0
+      }
+    ' "$file")
+  done
+  return 0
+}
+
 # W005: Status=Ready but no work items
 check_w005_ready_no_items() {
   local file="$1"
@@ -111,7 +146,10 @@ lint_module() {
 
   check_w004_empty_sections_module "$file"
   check_w005_ready_no_items "$file"
+  # W017 then W002 — mirror the Rust lint_module call order so byte-level diffs
+  # of lint output stay identical across all three CLIs (D-038/D-039).
   check_w017_last_reviewed "$file"
+  check_w002_conductor_refs "$file"
 
   # Check work items if the section exists
   if has_section "$file" "## Work Items"; then

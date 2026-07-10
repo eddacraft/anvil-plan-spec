@@ -50,6 +50,44 @@ function Test-W019ModuleLinks {
     }
 }
 
+# W006: a module listed under a `### Conductor / Crosscutting` index subsection
+# whose file exists but is not marked `Type: Conductor`. Keeps the index's
+# conductor grouping honest — the inverse of COND-003's module check. Missing
+# link targets are W019's job, so they are skipped. Mirrors the Rust
+# check_w006_conductor_index / bash check_w006_conductor_index.
+function Test-W006ConductorIndex {
+    param([string]$File)
+    $dir = Split-Path $File -Parent
+    if (-not $dir) { $dir = "." }
+
+    $lines = Get-Content -LiteralPath $File -ErrorAction SilentlyContinue
+    $inConductor = $false
+    $lineNum = 0
+    foreach ($line in $lines) {
+        $lineNum++
+        if ($line -match '^### ') {
+            $h = $line.ToLower()
+            $inConductor = ($h -match 'conductor' -or $h -match 'crosscutting')
+            continue
+        }
+        if ($line -match '^## ') { $inConductor = $false }
+        if (-not $inConductor) { continue }
+
+        foreach ($m in [regex]::Matches($line, '\]\(([^)]+)\)')) {
+            $target = $m.Groups[1].Value
+            $target = $target -replace '\s+["''].*$', ''   # strip link titles
+            $target = ($target -split '#')[0]              # strip anchor
+            if ($target -notmatch '\.aps\.md$') { continue }
+            $path = Join-Path $dir $target
+            if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { continue }
+            if (-not (Test-ApsConductor -FilePath $path)) {
+                Add-ApsResult -Path $File -Type "warning" -Code "W006" `
+                    -Message "Module '$target' is listed under Conductor / Crosscutting but its file is not marked ``Type: Conductor``" -Line "$lineNum"
+            }
+        }
+    }
+}
+
 # W004: Empty section check (index-specific sections)
 function Test-W004EmptySectionsIndex {
     param([string]$File)
@@ -70,6 +108,7 @@ function Invoke-ApsIndexLint {
 
     if (-not (Test-E004Modules -File $File)) { $hasErrors = $true }
     Test-W019ModuleLinks -File $File
+    Test-W006ConductorIndex -File $File
     Test-W004EmptySectionsIndex -File $File
 
     return (-not $hasErrors)

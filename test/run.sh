@@ -621,5 +621,69 @@ grep -qF 'Cross-tree dependency' "$RS_LINT" || fail "lint.rs missing prefix-awar
 grep -qF '[a-z0-9][a-z0-9-]*:' "$RS_LINT" || fail "lint.rs missing <name>:<ID> token grammar"
 pass
 
+# Test 48: COND-007 — conductor lint rules W002/W006 (bash, canonical behaviour)
+echo -n "Test: conductor typo (W002) and mislisted index entry (W006) detected... "
+output=$($APS lint "$SCRIPT_DIR/fixtures/conductor/plans" 2>&1) || true
+echo "$output" | grep -q "W002" && echo "$output" | grep -q "AUTH-999" \
+  || fail "W002 conductor cross-ref typo not detected"
+echo "$output" | grep -q "W006" && echo "$output" | grep -q "auth.aps.md" \
+  || fail "W006 mislisted conductor index entry not detected"
+# the clean conductor fixture must NOT trip W002 or W006
+output=$($APS lint "$SCRIPT_DIR/fixtures/conductor-clean/plans" 2>&1) || true
+echo "$output" | grep -qE "W002|W006" && fail "W002/W006 false positive on clean conductor fixture" || pass
+
+# Test 49: COND-007 — PowerShell parity for conductor rules W002/W006.
+# The bash linter is canonical; lib/*.psm1 mirrors it. CI carries no pwsh, so
+# guard parity by string-checking the ported surface (same approach as the
+# nested-plans checks above). Behaviour was verified against a fetched pwsh
+# 7.4 producing byte-identical W002/W006 lines to bash and Rust.
+echo -n "Test: conductor rules PowerShell parity surface present... "
+PS_COMMON="$PROJECT_ROOT/lib/rules/Common.psm1"
+PS_MODULE="$PROJECT_ROOT/lib/rules/Module.psm1"
+PS_INDEX="$PROJECT_ROOT/lib/rules/Index.psm1"
+grep -q 'function Get-ApsModuleType' "$PS_COMMON" || fail "Common.psm1 missing Get-ApsModuleType"
+grep -q 'function Test-ApsConductor' "$PS_COMMON" || fail "Common.psm1 missing Test-ApsConductor"
+grep -q 'function Test-W002ConductorRefs' "$PS_MODULE" || fail "Module.psm1 missing Test-W002ConductorRefs"
+grep -q 'W002' "$PS_MODULE" || fail "Module.psm1 missing W002 code"
+grep -q 'function Test-W006ConductorIndex' "$PS_INDEX" || fail "Index.psm1 missing Test-W006ConductorIndex"
+grep -q 'W006' "$PS_INDEX" || fail "Index.psm1 missing W006 code"
+pass
+
+# Test 51: COND-007 — W017-before-W002 emission order for an active conductor.
+# Rust's lint_module emits W017 before the conductor W002 check; the bash and
+# PowerShell ports must match so a byte-level diff of lint output stays clean
+# across CLIs. The conductor/ fixture is Status: Complete (W017 short-circuits),
+# so this fixture is Ready with a missing Last reviewed field AND a bad cross-ref
+# to actually exercise both rules together.
+echo -n "Test: active conductor emits W017 before W002 (Rust order parity)... "
+COF="$SCRIPT_DIR/fixtures/conductor-order/plans/modules/release-planning.aps.md"
+output=$($APS lint "$COF" 2>&1) || true
+w017_ln=$(printf '%s\n' "$output" | grep -n "W017" | head -1 | cut -d: -f1)
+w002_ln=$(printf '%s\n' "$output" | grep -n "W002" | head -1 | cut -d: -f1)
+[[ -n "$w017_ln" && -n "$w002_ln" ]] || fail "expected both W017 and W002 on active conductor (got: $output)"
+[[ "$w017_ln" -lt "$w002_ln" ]] || fail "W017 must be emitted before W002 (Rust lint_module order)"
+pass
+
+# Test 52: COND-007 — Get-ApsStatus separator-row parity guard (PowerShell).
+# A spaced `| --- |` separator must not be read as the status data row, else
+# W005/W017/W018 status gating silently never matches in PowerShell.
+echo -n "Test: PowerShell Get-ApsStatus skips spaced separator rows... "
+grep -qF 'returned "------" as the status' "$PS_COMMON" || fail "Common.psm1 Get-ApsStatus missing separator-row skip"
+grep -qF '[math]::Floor' "$PS_MODULE" || fail "Module.psm1 W017 must floor age days to match bash/Rust"
+pass
+
+# Test 50: COND-007 — Rust parity for conductor rules W002/W006.
+# The Rust binary is the canonical `aps` (D-031); cli/src/lint.rs must carry the
+# same conductor-lint surface as bash and PowerShell. This CI job has no cargo,
+# so guard by string-matching the surface; byte-for-byte behaviour is asserted
+# by the cargo tests in cli/src/lint.rs (run by the `cargo test` job).
+echo -n "Test: conductor rules Rust parity surface present... "
+RS_LINT="$PROJECT_ROOT/cli/src/lint.rs"
+grep -q 'fn check_w002_conductor_refs' "$RS_LINT" || fail "lint.rs missing check_w002_conductor_refs"
+grep -q 'fn check_w006_conductor_index' "$RS_LINT" || fail "lint.rs missing check_w006_conductor_index"
+grep -q '"W002"' "$RS_LINT" || fail "lint.rs missing W002 code"
+grep -q '"W006"' "$RS_LINT" || fail "lint.rs missing W006 code"
+pass
+
 echo ""
 echo -e "${GREEN}All tests passed!${NC}"

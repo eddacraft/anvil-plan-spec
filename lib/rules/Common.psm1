@@ -104,12 +104,54 @@ function Get-ApsStatus {
             $foundHeader = $true
             continue
         }
-        if ($foundHeader -and $statusCol -ge 0 -and $line -match '^\|[^-]' -and $line -notmatch '^\| *ID *\|') {
+        # Skip the header row and the `| --- | --- |` separator (which may carry
+        # a space after the leading pipe). The prior `^\|[^-]` guard mis-read a
+        # spaced separator as the data row and returned "------" as the status,
+        # so W005/W017/W018 status gating never matched in PowerShell.
+        if ($foundHeader -and $statusCol -ge 0 -and $line -match '^\|' -and
+            $line -notmatch '^\| *ID *\|' -and $line -notmatch '^[|: -]+$') {
             $vals = ($line -split '\|') | ForEach-Object { $_.Trim() }
             if ($statusCol -lt $vals.Count) { return $vals[$statusCol] }
         }
     }
     return ""
+}
+
+# Extract the `Type` column value from the metadata table, or "".
+# Mirrors the Rust module_type() / bash get_module_type: find the `| ID |`
+# header row, locate the `Type` column, then read the first data row's value.
+function Get-ApsModuleType {
+    param([string]$FilePath)
+    $lines = Get-Content -LiteralPath $FilePath -ErrorAction SilentlyContinue
+    if (-not $lines) { return "" }
+    $typeCol = -1
+    $foundHeader = $false
+    foreach ($line in $lines) {
+        if (-not $foundHeader -and $line -match '^\| *ID *\|') {
+            $cols = ($line -split '\|') | ForEach-Object { $_.Trim() }
+            for ($i = 0; $i -lt $cols.Count; $i++) {
+                if ($cols[$i] -ceq "Type") { $typeCol = $i }
+            }
+            $foundHeader = $true
+            continue
+        }
+        if ($foundHeader -and $typeCol -ge 0 -and $line -match '^\|') {
+            if ($line -match '^\| *ID *\|') { continue }   # repeated header
+            if ($line -match '^[|: -]+$') { continue }      # separator row
+            # First data row is authoritative (mirrors Rust module_type, which
+            # returns here even when the Type cell is empty).
+            $vals = ($line -split '\|') | ForEach-Object { $_.Trim() }
+            if ($typeCol -lt $vals.Count) { return $vals[$typeCol] }
+            return ""
+        }
+    }
+    return ""
+}
+
+# True when a module file carries `Type: Conductor` (case-insensitive).
+function Test-ApsConductor {
+    param([string]$FilePath)
+    return ((Get-ApsModuleType -FilePath $FilePath) -match '^(?i)conductor$')
 }
 
 function Get-ApsLineNumber {
@@ -141,6 +183,8 @@ Export-ModuleMember -Function @(
     'Test-ApsSectionHasContent'
     'Get-ApsWorkItems'
     'Get-ApsModuleId'
+    'Get-ApsModuleType'
+    'Test-ApsConductor'
     'Get-ApsStatus'
     'Get-ApsLineNumber'
     'Get-ApsWorkItemContent'

@@ -51,6 +51,49 @@ check_w019_module_links() {
   return 0
 }
 
+# W006: a module listed under a `### Conductor / Crosscutting` index subsection
+# whose file exists but is not marked `Type: Conductor`. Keeps the index's
+# conductor grouping honest — the inverse of COND-003's module check. Missing
+# link targets are W019's job, so they are skipped here. Mirrors the Rust
+# check_w006_conductor_index.
+check_w006_conductor_index() {
+  local file="$1"
+  local dir
+  dir=$(dirname "$file")
+
+  local line_num target path t
+  while IFS=: read -r line_num target; do
+    [[ -z "$target" ]] && continue
+    target="${target%%#*}"                 # strip anchor fragment
+    [[ "$target" == *.aps.md ]] || continue
+    path="$dir/$target"
+    [[ -f "$path" ]] || continue           # missing file → W019 covers it
+    t=$(get_module_type "$path")
+    if [[ "${t,,}" != "conductor" ]]; then
+      add_result "$file" "warning" "W006" \
+        "Module '$target' is listed under Conductor / Crosscutting but its file is not marked \`Type: Conductor\`" "$line_num"
+    fi
+  done < <(awk '
+    /^### / {
+      h = tolower($0)
+      in_c = (index(h, "conductor") > 0 || index(h, "crosscutting") > 0) ? 1 : 0
+      next
+    }
+    /^## / { in_c = 0 }
+    in_c {
+      line = $0
+      while (match(line, /\]\([^)]+\)/)) {
+        target = substr(line, RSTART + 2, RLENGTH - 3)
+        sub(/[ \t]+["'\''].*$/, "", target)   # strip markdown link titles
+        print NR ":" target
+        line = substr(line, RSTART + RLENGTH)
+      }
+    }
+  ' "$file")
+
+  return 0
+}
+
 # W004: Empty section check (for index-specific sections)
 check_w004_empty_sections_index() {
   local file="$1"
@@ -72,6 +115,7 @@ lint_index() {
 
   check_e004_modules "$file" || has_errors=true
   check_w019_module_links "$file"
+  check_w006_conductor_index "$file"
   check_w004_empty_sections_index "$file"
 
   $has_errors && return 1

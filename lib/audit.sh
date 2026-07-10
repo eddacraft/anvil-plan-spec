@@ -197,7 +197,7 @@ audit_ready_item() {
   fi
 }
 
-# Audit index links (same contract as lint E012)
+# Audit index links (same contract as lint W019)
 audit_index_links() {
   local plan_root="$1"
   local index_file="$plan_root/index.aps.md"
