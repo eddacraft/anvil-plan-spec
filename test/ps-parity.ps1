@@ -132,12 +132,14 @@ if ($out -match 'W002' -and $out -match 'AUTH-999' -and
     Fail "conductor W002/W006 not detected (got: $out)"
 }
 
-# Scenario 7: clean conductor plan trips neither W002 nor W006
+# Scenario 7: clean conductor plan lints fully clean — no W002/W006, and the
+# success summary is present so a run that failed for an unrelated reason (bad
+# path, runtime error) can't pass merely by not emitting those codes.
 $out = Invoke-Lint (Join-Path $FixturesRoot 'conductor-clean/plans')
-if ($out -notmatch 'W002' -and $out -notmatch 'W006') {
+if ($out -match 'no issues' -and $out -notmatch 'W002' -and $out -notmatch 'W006') {
     Pass 'no W002/W006 false positive on the clean conductor fixture'
 } else {
-    Fail "W002/W006 false positive on clean conductor fixture (got: $out)"
+    Fail "clean conductor fixture did not lint cleanly (got: $out)"
 }
 
 # Scenario 8: an active (Ready) conductor emits W017 before W002. This is the
