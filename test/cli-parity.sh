@@ -14,8 +14,9 @@
 # COND-007.
 #
 # Rust binary: taken from APS_RUST_BIN, else a prebuilt cli/target/{release,debug}
-#   /aps, else built on the fly.
-# PowerShell: `pwsh` on PATH, else APS_PWSH. If neither is present the PowerShell
+#   /aps, else built on the fly. A relative APS_RUST_BIN (as CI passes) is
+#   resolved against the repo root — the script cd's there on startup.
+# PowerShell: APS_PWSH, else `pwsh` on PATH. If neither is present the PowerShell
 #   leg is skipped with a loud warning (CI runners always have pwsh); bash-vs-Rust
 #   still runs.
 
@@ -23,6 +24,11 @@ set -u
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+# Run from the repo root so a relative APS_RUST_BIN (e.g. CI's
+# cli/target/debug/aps) resolves regardless of the invocation directory. Every
+# other path below is already absolute ($ROOT/...), so this only affects that.
+cd "$ROOT" || { echo "cannot cd to repo root: $ROOT"; exit 1; }
 
 BASH_APS="$ROOT/bin/aps"
 PS_APS="$ROOT/bin/aps.ps1"
@@ -76,6 +82,25 @@ FIXTURES=(
 # emits — which must match byte-for-byte, order included.
 findings() { grep -oE '(E|W)[0-9]{3}:.*' || true; }
 
+# Run one CLI lint invocation, validate its exit status, and store its findings
+# in the named variable. `aps lint` exits 0 (clean/warnings) or 1 (errors); any
+# other code means the CLI failed to run (bad path, missing binary, panic) —
+# which the findings filter would otherwise reduce to an empty string that could
+# spuriously "match" another CLI. On an abnormal exit this prints the raw output
+# and returns non-zero so the caller fails the fixture rather than comparing junk.
+run_lint() {
+  local __outvar="$1" __label="$2"; shift 2
+  local __out __rc
+  __out=$("$@" 2>&1); __rc=$?
+  if (( __rc != 0 && __rc != 1 )); then
+    echo -e "${RED}ERROR${NC} $__label exited $__rc (not a normal lint result):"
+    printf '%s\n' "$__out" | sed 's/^/    /'
+    return 1
+  fi
+  printf -v "$__outvar" '%s' "$(printf '%s\n' "$__out" | findings)"
+  return 0
+}
+
 echo "Cross-CLI lint parity: bash vs Rust$([[ $HAVE_PWSH == true ]] && echo ' vs PowerShell')"
 echo "  rust: $RUST_APS"
 [[ $HAVE_PWSH == true ]] && echo "  pwsh: $PWSH"
@@ -87,21 +112,25 @@ for fx in "${FIXTURES[@]}"; do
     echo -e "${RED}MISSING${NC} fixture: $fx"; fail=1; continue
   fi
 
-  b=$("$BASH_APS" lint "$target" 2>&1 | findings)
-  r=$("$RUST_APS" lint "$target" 2>&1 | findings)
   ok=true
+  b=""; r=""; p=""
+  run_lint b "bash" "$BASH_APS" lint "$target" || { ok=false; fail=1; }
+  run_lint r "Rust" "$RUST_APS" lint "$target" || { ok=false; fail=1; }
 
-  if [[ "$b" != "$r" ]]; then
+  if $ok && [[ "$b" != "$r" ]]; then
     echo -e "${RED}DIVERGE${NC} bash vs Rust on $fx:"
     diff <(printf '%s\n' "$b") <(printf '%s\n' "$r") | sed 's/^/    /'
     ok=false; fail=1
   fi
 
-  if $HAVE_PWSH; then
-    p=$("$PWSH" -NoProfile -File "$PS_APS" lint "$target" 2>&1 | findings)
-    if [[ "$b" != "$p" ]]; then
-      echo -e "${RED}DIVERGE${NC} bash vs PowerShell on $fx:"
-      diff <(printf '%s\n' "$b") <(printf '%s\n' "$p") | sed 's/^/    /'
+  if $ok && $HAVE_PWSH; then
+    if run_lint p "PowerShell" "$PWSH" -NoProfile -File "$PS_APS" lint "$target"; then
+      if [[ "$b" != "$p" ]]; then
+        echo -e "${RED}DIVERGE${NC} bash vs PowerShell on $fx:"
+        diff <(printf '%s\n' "$b") <(printf '%s\n' "$p") | sed 's/^/    /'
+        ok=false; fail=1
+      fi
+    else
       ok=false; fail=1
     fi
   fi
