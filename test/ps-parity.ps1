@@ -94,6 +94,23 @@ if ($out -notmatch 'W020') {
     Fail "W020 false positive on clean fixture (got: $out)"
 }
 
+# Scenario 5: W021 module ID collision across child trees
+$moduleCol = New-FixtureCopy
+try {
+    $mfile = Join-Path $moduleCol 'packages/api/plans/modules/handlers.aps.md'
+    $lines = Get-Content -LiteralPath $mfile
+    $lines[4] = $lines[4].Replace('HND', 'AUTH')
+    Set-Content -LiteralPath $mfile -Value $lines
+    $out = Invoke-Lint (Join-Path $moduleCol 'plans')
+    if ($out -match 'W021' -and $out -match "Module ID 'AUTH' defined in multiple child trees: api core") {
+        Pass 'cross-tree module collision detected (W021)'
+    } else {
+        Fail "W021 module collision not detected (got: $out)"
+    }
+} finally {
+    Remove-Item -Recurse -Force $moduleCol
+}
+
 Write-Host ""
 if ($script:failed -gt 0) {
     Write-Host "$($script:failed) PowerShell parity test(s) failed" -ForegroundColor Red

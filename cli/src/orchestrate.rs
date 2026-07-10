@@ -306,7 +306,7 @@ pub fn cmd_start(plan_root: &str, id: &str, child_scope: &str) -> i32 {
     // may carry a <child>: prefix that never appears in the file.
     let resolved_id = item.id.clone();
 
-    let module_status = graph.module_status(&item.module);
+    let module_status = graph.module_status(&item.module, &item.child);
     if !matches!(module_status, "Ready" | "In Progress") {
         eprintln!(
             "error: {resolved_id} belongs to module {} (status: {module_status}) - module must be Ready or In Progress to start work items",
@@ -487,7 +487,10 @@ pub fn cmd_graph(plan_root: &str, module_filter: &str, child_scope: &str) -> i32
             } else if let Some(dep_item) = graph.find(&dep) {
                 deps.push_str(&format!(" {}[{}]", dep_item.id, dep_item.status));
             } else {
-                deps.push_str(&format!(" {dep}[{}]", graph.module_status(&dep)));
+                deps.push_str(&format!(
+                    " {dep}[{}]",
+                    graph.module_status(&dep, &item.child)
+                ));
             }
         }
         if deps.is_empty() {

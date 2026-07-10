@@ -129,9 +129,11 @@ pub fn lint_target(target: &str) -> Result<LintReport, String> {
     // MONO-007: per-child ID registry feeds prefix-aware W003; W020 surfaces
     // cross-tree ID collisions when a federation parent is in scope.
     let child_ids = build_child_registry(&files);
+    let child_module_ids = build_child_module_registry(&files);
 
     let mut report = LintReport::default();
     check_cross_tree_collisions(&mut report, &files, &child_ids);
+    check_cross_tree_module_collisions(&mut report, &files, &child_module_ids);
     for file in &files {
         lint_file(&mut report, file, &tree_ids, &child_ids);
     }
@@ -320,6 +322,77 @@ fn check_cross_tree_collisions(
                 format!(
                     "Work-item ID '{id}' defined in multiple child trees: {}",
                     names.join(" ")
+                ),
+                None,
+            );
+        }
+    }
+}
+
+/// Per-child module IDs for MONO-008. D-002 permits bare module IDs in each
+/// child tree; this registry lets lint warn on federation-wide reuse.
+fn build_child_module_registry(files: &[String]) -> ChildRegistry {
+    let mut out: ChildRegistry = HashMap::new();
+    for index in files.iter().filter(|f| is_index(f)) {
+        let root = Path::new(index).parent().unwrap_or_else(|| Path::new(""));
+        let name = root
+            .parent()
+            .and_then(|p| p.file_name())
+            .and_then(|n| n.to_str())
+            .unwrap_or("");
+        if name.is_empty() || name == "." || name == "/" {
+            continue;
+        }
+        let modules = root.join("modules");
+        if !modules.is_dir() {
+            continue;
+        }
+        for file in parser::find_aps_files(&modules) {
+            if let Ok(plan) = PlanFile::load(&file)
+                && let Some(id) = plan.module_id()
+            {
+                out.entry(name.to_string()).or_default().insert(id);
+            }
+        }
+    }
+    out
+}
+
+/// W021: module-level counterpart to W020. It warns on a permitted cross-tree
+/// module-ID collision that would otherwise obscure orchestration gating.
+fn check_cross_tree_module_collisions(
+    report: &mut LintReport,
+    files: &[String],
+    child_module_ids: &ChildRegistry,
+) {
+    if child_module_ids.is_empty() {
+        return;
+    }
+    let parent = files.iter().find(|f| {
+        is_index(f)
+            && PlanFile::load(f)
+                .map(|p| has_child_plans_section(&p))
+                .unwrap_or(false)
+    });
+    let Some(parent) = parent else {
+        return;
+    };
+
+    let mut owners: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
+    for (child, ids) in child_module_ids {
+        for id in ids {
+            owners.entry(id.clone()).or_default().insert(child.clone());
+        }
+    }
+    for (id, children) in owners {
+        if children.len() > 1 {
+            report.add(
+                parent,
+                Severity::Warning,
+                "W021",
+                format!(
+                    "Module ID '{id}' defined in multiple child trees: {}",
+                    children.into_iter().collect::<Vec<_>>().join(" ")
                 ),
                 None,
             );
@@ -1768,6 +1841,13 @@ mod tests {
             .filter(|f| f.code == "W020")
             .collect()
     }
+    fn w021(report: &LintReport) -> Vec<&Finding> {
+        report
+            .findings
+            .iter()
+            .filter(|f| f.code == "W021")
+            .collect()
+    }
 
     /// Recursively copy `src` into `dst` (created if absent).
     fn copy_tree(src: &Path, dst: &Path) {
@@ -1874,6 +1954,26 @@ mod tests {
         assert!(hits[0].message.contains("AUTH-001"));
         assert!(hits[0].message.contains("multiple child trees"));
         // Attached to the federation parent (the index declaring child plans).
+        assert!(hits[0].path.ends_with("/plans/index.aps.md"));
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn cross_tree_module_collision_warns_w021_on_parent() {
+        let root = stage_fixture("module_collision");
+        let handlers = root.join("packages/api/plans/modules/handlers.aps.md");
+        let text = std::fs::read_to_string(&handlers)
+            .unwrap()
+            .replacen("| HND", "| AUTH", 1);
+        std::fs::write(&handlers, text).unwrap();
+
+        let report = lint_target(root.join("plans").to_str().unwrap()).unwrap();
+        let hits = w021(&report);
+        assert_eq!(hits.len(), 1, "one colliding module ID: {hits:?}");
+        assert_eq!(
+            hits[0].message,
+            "Module ID 'AUTH' defined in multiple child trees: api core"
+        );
         assert!(hits[0].path.ends_with("/plans/index.aps.md"));
         let _ = std::fs::remove_dir_all(&root);
     }

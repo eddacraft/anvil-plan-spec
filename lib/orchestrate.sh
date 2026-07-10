@@ -27,6 +27,41 @@ orch_reset_state() {
   ORCH_MODULE_STATUSES=()
 }
 
+# Module IDs are bare within a child plan (D-002), so federated status lookups
+# must retain the owning child as well. Single-root plans keep their historical
+# bare key for compatibility.
+orch_module_status_key() {
+  local module="$1" child="${2:-}"
+  if [[ -n "$child" ]]; then
+    printf '%s:%s' "${child,,}" "${module^^}"
+  else
+    printf '%s' "${module^^}"
+  fi
+}
+
+orch_set_module_status() {
+  local module="$1" status="$2" child="${3:-}" key
+  key=$(orch_module_status_key "$module" "$child")
+  ORCH_MODULE_STATUSES["$key"]="$status"
+}
+
+orch_module_status() {
+  local module="$1" child="${2:-}" key
+  if [[ "$module" == *:* ]]; then
+    child="${module%%:*}"
+    module="${module#*:}"
+  fi
+  if [[ -n "$child" ]]; then
+    key=$(orch_module_status_key "$module" "$child")
+    if [[ -n "${ORCH_MODULE_STATUSES[$key]+x}" ]]; then
+      printf '%s' "${ORCH_MODULE_STATUSES[$key]}"
+      return 0
+    fi
+  fi
+  key=$(orch_module_status_key "$module")
+  printf '%s' "${ORCH_MODULE_STATUSES[$key]:-Unknown}"
+}
+
 orch_trim() {
   local value="$1"
   value="${value#"${value%%[![:space:]]*}"}"
@@ -199,12 +234,13 @@ orch_resolve_ref() {
 
 orch_load_index_modules() {
   local plan_root="$1"
+  local child_name="${2:-}"
   local index_file="$plan_root/index.aps.md"
 
   [[ -f "$index_file" ]] || return 0
 
   while IFS='|' read -r module status; do
-    ORCH_MODULE_STATUSES["$module"]="$status"
+    orch_set_module_status "$module" "$status" "$child_name"
   done < <(awk -F '|' '
     /^\| *\[/ {
       module = $2
@@ -235,7 +271,7 @@ orch_load_root_work_items() {
     module_status=$(orch_normalize_status "$module_status" "Draft")
 
     [[ -n "$module_id" ]] || module_id=$(basename "$file" .aps.md | tr '[:lower:]' '[:upper:]')
-    ORCH_MODULE_STATUSES["$module_id"]="$module_status"
+    orch_set_module_status "$module_id" "$module_status" "$child_name"
 
     if [[ "$load_all" != "true" ]]; then
       [[ "$module_status" == "Complete" || "$module_status" == "Draft" || "$module_status" == "Blocked" ]] && continue
@@ -283,8 +319,8 @@ orch_load_work_items() {
 
   while IFS= read -r root; do
     [[ -n "$root" ]] || continue
-    orch_load_index_modules "$root"
     child=$(orch_child_name "$root")
+    orch_load_index_modules "$root" "$child"
     if orch_load_root_work_items "$root" "$load_all" "$child"; then
       loaded_any=true
     fi
@@ -331,7 +367,8 @@ orch_dependency_complete() {
     return
   fi
 
-  local module_status="${ORCH_MODULE_STATUSES[$dep]:-}"
+  local module_status
+  module_status=$(orch_module_status "$dep" "$self_child")
   [[ "$module_status" == "Complete" ]]
 }
 
@@ -535,7 +572,7 @@ EOF
   for i in "${!ORCH_ITEM_IDS[@]}"; do
     orch_item_matches_child "$i" "$child_scope" || continue
     orch_item_matches_module "$i" "$module_filter" || continue
-    case "${ORCH_MODULE_STATUSES[${ORCH_ITEM_MODULES[$i]}]:-Unknown}" in
+    case "$(orch_module_status "${ORCH_ITEM_MODULES[$i]}" "${ORCH_ITEM_CHILDREN[$i]}")" in
       Ready|"In Progress") ;;
       *) continue ;;
     esac
@@ -765,7 +802,8 @@ EOF
   local current="${ORCH_ITEM_STATUSES[$idx]}"
   local file="${ORCH_ITEM_FILES[$idx]}"
   local module_id="${ORCH_ITEM_MODULES[$idx]}"
-  local module_status="${ORCH_MODULE_STATUSES[$module_id]:-Unknown}"
+  local module_status
+  module_status=$(orch_module_status "$module_id" "${ORCH_ITEM_CHILDREN[$idx]}")
   local deps="${ORCH_ITEM_DEPS[$idx]}"
   local already_started="false"
 
@@ -1029,7 +1067,7 @@ EOF
       if [[ -n "$dep_idx" ]]; then
         deps_display+=" ${ORCH_ITEM_IDS[$dep_idx]}[${ORCH_ITEM_STATUSES[$dep_idx]}]"
       else
-        deps_display+=" ${dep}[${ORCH_MODULE_STATUSES[$dep]:-Unknown}]"
+        deps_display+=" ${dep}[$(orch_module_status "$dep" "${ORCH_ITEM_CHILDREN[$i]}")]"
       fi
     done < <(orch_dep_refs "${ORCH_ITEM_DEPS[$i]}")
 
@@ -1059,7 +1097,7 @@ orch_child_next_ready() {
   local i
   for i in "${!ORCH_ITEM_IDS[@]}"; do
     orch_item_matches_child "$i" "$child" || continue
-    case "${ORCH_MODULE_STATUSES[${ORCH_ITEM_MODULES[$i]}]:-Unknown}" in
+    case "$(orch_module_status "${ORCH_ITEM_MODULES[$i]}" "${ORCH_ITEM_CHILDREN[$i]}")" in
       Ready|"In Progress") ;;
       *) continue ;;
     esac

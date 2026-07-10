@@ -199,6 +199,7 @@ expand_child_plans() {
 # scope (a child linted alone), which is how isolated cross-tree refs stay
 # silent. (MONO-002)
 declare -gA APS_CHILD_IDS=()
+declare -gA APS_CHILD_MODULE_IDS=()
 
 # Build APS_CHILD_IDS from the final `files` list. For each plan root present
 # (an index.aps.md), derive its child name and collect the work-item IDs
@@ -226,6 +227,25 @@ build_child_registry() {
       match($0, /^### [A-Za-z]+-[0-9]+:/) { print substr($0, 5, RLENGTH - 5) }
     ' "${root_files[@]}" 2>/dev/null | sort -u | tr '\n' ' ' || true)
     APS_CHILD_IDS["$name"]="${APS_CHILD_IDS[$name]:-} $ids"
+  done
+}
+
+# Per-child module-ID registry for MONO-008. Module IDs follow the same D-002
+# bare-within-a-tree convention as work items, so lint reports cross-tree reuse
+# without rejecting independently valid child plans.
+build_child_module_registry() {
+  APS_CHILD_MODULE_IDS=()
+  local f root name rf module_id
+  for f in "${files[@]}"; do
+    [[ "$(basename "$f")" == "index.aps.md" ]] || continue
+    root=$(dirname "$f")
+    name=$(basename "$(dirname "$root")")
+    [[ -n "$name" && "$name" != "." && "$name" != "/" ]] || continue
+    while IFS= read -r rf; do
+      module_id=$(get_module_id "$rf")
+      [[ -n "$module_id" ]] || continue
+      APS_CHILD_MODULE_IDS["$name"]="${APS_CHILD_MODULE_IDS[$name]:-} $module_id"
+    done < <(find "$root/modules" -type f -name '*.aps.md' 2>/dev/null || true)
   done
 }
 
@@ -271,6 +291,40 @@ check_cross_tree_collisions() {
     if [[ $(echo "$owners_sorted" | wc -w) -gt 1 ]]; then
       add_result "$parent_file" "warning" "W020" \
         "Work-item ID '$sorted_id' defined in multiple child trees: $owners_sorted"
+    fi
+  done < <(printf '%s\n' "${!id_owners[@]}" | sort)
+}
+
+# W021: module-level counterpart to W020. A repeated module ID can corrupt
+# orchestration status gating unless lookup stays child-scoped (MONO-008).
+check_cross_tree_module_collisions() {
+  [[ ${#APS_CHILD_MODULE_IDS[@]} -gt 0 ]] || return 0
+  local parent_file="" f
+  for f in "${files[@]}"; do
+    [[ "$(basename "$f")" == "index.aps.md" ]] || continue
+    if grep -qE '^## Child Plans[[:space:]]*$' "$f" 2>/dev/null; then
+      parent_file="$f"
+      break
+    fi
+  done
+  [[ -n "$parent_file" ]] || return 0
+
+  local -A id_owners=()
+  local name id sorted_id owners_sorted
+  for name in "${!APS_CHILD_MODULE_IDS[@]}"; do
+    for id in ${APS_CHILD_MODULE_IDS[$name]}; do
+      case " ${id_owners[$id]:-} " in
+        *" $name "*) ;;
+        *) id_owners["$id"]="${id_owners[$id]:-} $name" ;;
+      esac
+    done
+  done
+  while IFS= read -r sorted_id; do
+    [[ -n "$sorted_id" ]] || continue
+    owners_sorted=$(printf '%s\n' ${id_owners[$sorted_id]} | sort | tr '\n' ' ' | sed 's/ *$//')
+    if [[ $(echo "$owners_sorted" | wc -w) -gt 1 ]]; then
+      add_result "$parent_file" "warning" "W021" \
+        "Module ID '$sorted_id' defined in multiple child trees: $owners_sorted"
     fi
   done < <(printf '%s\n' "${!id_owners[@]}" | sort)
 }
@@ -430,7 +484,9 @@ EOF
   fi
   build_id_index "${index_files[@]}"
   build_child_registry
+  build_child_module_registry
   check_cross_tree_collisions
+  check_cross_tree_module_collisions
 
   # Lint each file
   for file in "${files[@]}"; do

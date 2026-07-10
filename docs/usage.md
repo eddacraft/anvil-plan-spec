@@ -101,6 +101,7 @@ narratives). `README.md` and the `.release.template.md` are not linted.
 | W018 | Work Item      | Complete item has no `**Validation:**` field inside a still-active module — completion cannot be audited                |
 | W019 | Index          | Link in `## Modules` points to a non-existent file (warning so seed plans stay clean; `aps audit` gates it as A004)     |
 | W020 | Index          | Work-item ID defined in more than one child tree of a federated (nested-plans) monorepo — collisions make `<name>:<ID>` cross-tree references ambiguous (warning; each child tree stays independently valid) |
+| W021 | Index          | Module ID defined in more than one child tree of a federated monorepo — a warning because IDs remain bare per tree, but orchestration resolves each status within its owning child |
 
 > **Nested plans (monorepos).** When `aps lint` is pointed at a federated
 > **parent** `index.aps.md` (one with a `## Child Plans` section), it follows

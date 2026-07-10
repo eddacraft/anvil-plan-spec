@@ -177,7 +177,8 @@ audit_ready_item() {
 
   # Items default to Ready when unmarked; inside a Draft/Blocked module they
   # are not actionable yet, so staleness is the module's concern, not theirs.
-  local module_status="${ORCH_MODULE_STATUSES[$module]:-}"
+  local module_status
+  module_status=$(orch_module_status "$module" "${ORCH_ITEM_CHILDREN[$i]}")
   case "$module_status" in
     Ready|"In Progress") ;;
     *) return 0 ;;
