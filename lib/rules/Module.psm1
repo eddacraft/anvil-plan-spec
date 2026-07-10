@@ -83,11 +83,60 @@ function Test-W017LastReviewed {
     } catch {
         return
     }
-    $ageDays = [int]((Get-Date) - $reviewedDate).TotalDays
+    # Floor, not round: bash truncates ((now-reviewed)/86400) and Rust counts
+    # whole civil days, so `[int]` (which rounds to nearest) would report one
+    # day more than the other two CLIs at some times of day (D-038/D-039).
+    $ageDays = [int][math]::Floor(((Get-Date) - $reviewedDate).TotalDays)
     if ($ageDays -gt $staleDays) {
         $line = Get-ApsLineNumber -FilePath $File -Pattern '^\*\*Last reviewed:\*\*'
         Add-ApsResult -Path $File -Type "warning" -Code "W017" `
             -Message "Last reviewed $reviewed is $ageDays days old (threshold: $staleDays)" -Line "$line"
+    }
+}
+
+# W002: a conductor module's coordination sections reference a work-item ID
+# that resolves nowhere in the plan tree — most likely a typo. Conductor
+# modules legitimately reference IDs owned by other modules (that is the point),
+# so only unresolved refs are flagged, and only for `Type: Conductor` modules.
+# Mirrors the Rust check_w002_conductor_refs / bash check_w002_conductor_refs.
+function Test-W002ConductorRefs {
+    param([string]$File, [string[]]$TreeIds = @())
+    if (-not (Test-ApsConductor -FilePath $File)) { return }
+
+    $treeSet = [System.Collections.Generic.HashSet[string]]::new()
+    foreach ($id in $TreeIds) { $null = $treeSet.Add($id) }
+
+    $lines = Get-Content -LiteralPath $File -ErrorAction SilentlyContinue
+    if (-not $lines) { return }
+
+    $sections = @("## Coordinated Modules", "## Cross-Module Work Items")
+    foreach ($section in $sections) {
+        $inSection = $false
+        $inComment = $false
+        for ($i = 0; $i -lt $lines.Count; $i++) {
+            $line = $lines[$i]
+            if (-not $inSection) {
+                if ($line -ceq $section) { $inSection = $true }
+                continue
+            }
+            if ($line -match '^## ') { break }
+            $trimmed = $line.TrimStart()
+            if ($inComment) {
+                if ($trimmed -match '-->') { $inComment = $false }
+                continue
+            }
+            if ($trimmed -match '^<!--') {
+                if ($trimmed -notmatch '-->') { $inComment = $true }
+                continue
+            }
+            foreach ($m in [regex]::Matches($line, '[A-Z]+-[0-9]{3}')) {
+                $id = $m.Value
+                if (-not $treeSet.Contains($id)) {
+                    Add-ApsResult -Path $File -Type "warning" -Code "W002" `
+                        -Message "Cross-module reference '$id' not found in plan tree" -Line "$($i + 1)"
+                }
+            }
+        }
     }
 }
 
@@ -114,7 +163,10 @@ function Invoke-ApsModuleLint {
 
     Test-W004EmptySectionsModule -File $File
     Test-W005ReadyNoItems -File $File
+    # W017 then W002 — mirror the Rust lint_module call order so byte-level diffs
+    # of lint output stay identical across all three CLIs (D-038/D-039).
     Test-W017LastReviewed -File $File
+    Test-W002ConductorRefs -File $File -TreeIds $TreeIds
 
     if (Test-ApsSection -FilePath $File -SectionHeader "## Work Items") {
         if (-not (Invoke-ApsWorkItemLint -File $File -TreeIds $TreeIds -ChildIds $ChildIds)) { $hasErrors = $true }

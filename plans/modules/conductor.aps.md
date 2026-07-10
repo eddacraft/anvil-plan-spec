@@ -1,10 +1,10 @@
 # Crosscutting / Conductor Modules
 
-| ID   | Owner  | Priority | Status      |
-| ---- | ------ | -------- | ----------- |
-| COND | @aneki | medium   | In Progress |
+| ID   | Owner  | Priority | Status   |
+| ---- | ------ | -------- | -------- |
+| COND | @aneki | medium   | Complete |
 
-**Last reviewed:** 2026-07-02
+**Last reviewed:** 2026-07-10
 
 ## Purpose
 
@@ -287,13 +287,32 @@ Conductor` metadata; references work items from other modules without
   a fetched pwsh; string-parity guard added to `test/run.sh`.
 - **Confidence:** high
 - **Dependencies:** COND-003 (complete), COND-004 (complete)
-- **Status:** Ready
+- **Status:** Complete
 - **Notes:** The mirror image of monorepo MONO-007 (which ports MONO-002's
   bash/PS federated-lint rules the other way, into Rust). Surfaced by the
   2026-07-02 bash-vs-Rust rule-set audit: the two linters were non-superset —
   Rust carried W002/W006 but not W020 or child-plan traversal; bash/PS the
-  inverse. Small adjacent cleanup: drop the stale `E012` reference in
-  `cli/src/audit.rs` — no linter emits E012.
+  inverse. Small adjacent cleanup: dropped the stale `E012` reference in
+  `cli/src/audit.rs` (and the mirror in `lib/audit.sh`) — no linter emits
+  E012; both now cite W019, the code that actually implements the contract.
+- **Validation evidence (2026-07-10):** `is_conductor` / `get_module_type`
+  helpers added to bash (`lib/rules/common.sh`) and PowerShell
+  (`lib/rules/Common.psm1`); W002 in `lib/rules/module.sh` +
+  `lib/rules/Module.psm1`, W006 in `lib/rules/index.sh` +
+  `lib/rules/Index.psm1`, both wired to emit **W017 before W002** to match the
+  Rust `lint_module` call order. New fixtures
+  `test/fixtures/conductor{,-clean,-order}/`. All three CLIs produce
+  **byte-identical** output — verified by running bash `./bin/aps`, the Rust
+  binary, and a fetched pwsh 7.4.6 across every fixture directory (a full
+  `diff` of every finding line, not just the conductor fixtures). `cargo test`
+  (144 passing) and `test/run.sh` (Tests 48–52) both green.
+- **Two pre-existing PowerShell parity bugs surfaced and fixed** during the
+  fetched-pwsh sweep (both latent because CI runs no pwsh): `Get-ApsStatus`
+  read a spaced `| --- |` separator as the status row and returned `------`
+  (so W005/W017/W018 status gating never matched in PowerShell), and W017 used
+  `[int]` rounding rather than flooring (one-day drift vs bash/Rust). Both now
+  match. Without these, restoring W002/W006 alone would not have achieved the
+  byte-for-byte lockstep D-038/D-039 requires.
 
 ## Execution Strategy
 

@@ -164,6 +164,41 @@ get_status() {
   ' "$file"
 }
 
+# Extract the `Type` column value from the metadata table, or empty.
+# Mirrors the Rust `module_type()`: find the `| ID |` header row, locate the
+# `Type` column, then read the first data row's value at that column.
+# Usage: get_module_type "file"
+get_module_type() {
+  local file="$1"
+  awk -F '|' '
+    !found && /^\| *ID *\|/ {
+      for (i = 1; i <= NF; i++) {
+        c = $i; gsub(/^[[:space:]]+|[[:space:]]+$/, "", c)
+        if (c == "Type") tcol = i
+      }
+      found = 1
+      next
+    }
+    found && tcol && /^\|/ {
+      if ($0 ~ /^\| *ID *\|/) next                 # repeated header
+      if ($0 ~ /^[|: -]+$/) next                   # separator row (|---|---|)
+      # First data row is authoritative (mirrors Rust module_type, which
+      # returns here even when the Type cell is empty).
+      v = $tcol; gsub(/^[[:space:]]+|[[:space:]]+$/, "", v)
+      print v; exit
+    }
+  ' "$file"
+}
+
+# True when a module file carries `Type: Conductor` (case-insensitive).
+# Usage: is_conductor "file"
+is_conductor() {
+  local file="$1"
+  local t
+  t=$(get_module_type "$file")
+  [[ "${t,,}" == "conductor" ]]
+}
+
 # Get line number of a pattern
 # Usage: get_line_number "file" "pattern"
 get_line_number() {
