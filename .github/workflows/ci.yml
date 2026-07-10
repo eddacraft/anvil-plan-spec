@@ -91,3 +91,30 @@ jobs:
       - name: Run PowerShell parity harness
         shell: pwsh
         run: ./test/ps-parity.ps1
+
+  cli-parity:
+    name: Cross-CLI lint parity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: cli -> target
+
+      - name: Build Rust CLI
+        working-directory: cli
+        run: cargo build --locked
+
+      # ubuntu-latest ships bash and pwsh; the Rust binary is built above. The
+      # harness lints the fixture corpus with all three CLIs and fails on any
+      # divergence in findings (code, message, line, order) — the structural
+      # form of the D-038/D-039 lockstep contract (CIP-002).
+      - name: Run cross-CLI parity harness
+        run: bash test/cli-parity.sh
+        env:
+          APS_RUST_BIN: cli/target/debug/aps
