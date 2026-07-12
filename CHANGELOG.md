@@ -6,11 +6,31 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-07-11
+
+**Release narrative:** [plans/releases/v0.5.0.md](./plans/releases/v0.5.0.md)
+for theme, success criteria, and risks.
+
 ### Added
 
+- **Federated nested plans** (MONO-001…008) — large monorepos can keep
+  standalone plans beside independently owned packages and link them from a
+  parent `index.aps.md`. Child plans use bare local IDs and path-qualified
+  cross-tree references such as `core:AUTH-001`; lint traverses the federation,
+  resolves cross-tree dependencies, and reports work-item (**W020**) and module
+  (**W021**) ID collisions deterministically.
+- **Cross-tree orchestration and roll-up** — `aps next`, `start`, `complete`,
+  `graph`, and `audit` operate across a federated tree with `--child` scoping,
+  mutation isolation, and ambiguity checks. New `aps rollup` renders each
+  child's module completion, next ready item, and overall status.
+- **Nested-plan scaffolding and guide** — `aps init --scope nested` (bash) and
+  `aps init --templates index-nested` (Rust/TUI) create a lint-clean parent plus
+  starter child plans. New parent/child index templates, a complete
+  `examples/monorepo-nested/` project, and tags-vs-nested migration guidance
+  make the federated tier usable without inventing a layout.
 - **Full orchestration in the native binary** — `aps start`, `complete`,
   `graph`, and `audit` are now implemented in the Rust CLI, byte-for-byte
-  identical to the feature-frozen bash CLI. Binary-first installs (the default)
+  identical to the maintained bash CLI. Binary-first installs (the default)
   can drive the whole `Draft → Ready → In Progress → Complete` lifecycle, write
   context packages, and run completion audits without the vendored bash CLI.
 - **`aps update`** — reconciles a project's generated footprint: adds missing
@@ -22,9 +42,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   binary: runs the `aps doctor` diagnosis, then (with `--apply`) backs up and
   removes vendored CLI bloat, rewrites stale hook paths, pins `cli_version`, and
   drops a stale direnv `PATH_add bin`. Dry-runs by default.
+- **Canonical APS development loop skills** — Claude and Codex installations
+  now include the planning and development routers plus the APS loop's probe,
+  gate policy, task router, safety rails, landing, escalation queue, resume, and
+  product-vs-technical triage skills.
+- **Behavioral cross-CLI parity in CI** (CIP-001/002) — PowerShell now runs the
+  conductor and status-gating fixtures behaviorally, and `test/cli-parity.sh`
+  compares ordered findings from Rust, bash, and PowerShell over the shared
+  fixture corpus byte-for-byte.
 
 ### Changed
 
+- **Version bumped to 0.5.0** across the Rust crate, project contract, private
+  package metadata, installers, scaffold stamps, and current-version examples.
+- **Three-way CLI lockstep is policy** (D-039) — a lint or orchestration change
+  is not complete until Rust, bash, and PowerShell agree wherever that command
+  exists; bash remains a maintained reference/fallback rather than a frozen
+  implementation.
 - `aps setup upgrade` now reports how many generated templates were refreshed
   and how many were absent (pointing to `aps update`) instead of silently
   refreshing only what already existed.
@@ -33,6 +67,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Fixed
 
+- **Child-scoped module status resolution** (MONO-008) — same-ID modules in
+  different child plans no longer overwrite one another and incorrectly hide
+  or expose ready work. Bash and Rust key statuses by child while preserving
+  single-plan behavior; all three linters emit deterministic W021 warnings.
 - **Three-way linter parity for conductor rules (COND-007)** — lint codes
   **W002** (a conductor module's `## Coordinated Modules` / `## Cross-Module
   Work Items` referencing a work-item ID that resolves nowhere in the tree) and

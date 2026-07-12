@@ -1,7 +1,7 @@
 <!-- markdownlint-disable MD041 -->
 
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.4.0-green.svg)](https://github.com/EddaCraft/anvil-plan-spec/releases/tag/v0.4.0)
+[![Version](https://img.shields.io/badge/version-0.5.0-green.svg)](https://github.com/EddaCraft/anvil-plan-spec/releases/tag/v0.5.0)
 [![Made for AI agents](https://img.shields.io/badge/made%20for-AI%20agents-purple.svg)](docs/ai-agent-guide.md)
 
 <!-- markdownlint-enable MD041 -->
@@ -169,24 +169,25 @@ don't need them.
 
 No plugins. No integrations. No configuration. It's just files.
 
-## What's new in v0.4.0
+## What's in v0.5.0
 
-Released **2026-06-22** — the binary-first release.
+Release candidate prepared **2026-07-11** — publication remains pending.
 
-- **Native binary CLI** — `aps` ships as a single Rust binary (`cargo install
-  aps-cli`, `cargo binstall`, Scoop, or the install script). The full command
-  surface — `init`, `setup`, `update`, `migrate`, `lint`, `next`, `start`,
-  `complete`, `graph`, `audit`, `doctor` — runs from one binary.
-- **TUI init wizard** — Ratatui-based onboarding for `aps init`.
-- **`aps update`** — reconciles a project's generated footprint (adds missing
-  templates, refreshes existing ones) and reports exactly what changed.
-- **`aps migrate` + `aps doctor`** — diagnose toolchain drift and move a project
-  off the vendored bash CLI onto the global binary, backing up what it removes.
-- **`aps audit`** — verifies recorded plan state against reality (runs Complete
-  items' Validation, flags understated drafts, stale items, broken links).
-- **MCP server** — exposes the orchestration surface to MCP-capable agents.
-- **Conductor modules + release planning** — crosscutting module type and a
-  `plans/releases/` narrative layout.
+- **Federated nested plans** — independently owned package plans can be linked
+  from a parent, linted and orchestrated as one tree, or used standalone.
+- **Cross-tree orchestration** — `next`, `start`, `complete`, `graph`, `audit`,
+  and the new `rollup` command understand child plans and `--child` scoping.
+- **Nested scaffolding** — bootstrap a federation with `aps init --scope nested`
+  or `aps init --templates index-nested`; a complete worked example ships in
+  `examples/monorepo-nested/`.
+- **Full native lifecycle** — the Rust binary now implements `start`,
+  `complete`, `graph`, and `audit`, closing the v0.4 bash-only gap.
+- **Safer upgrades** — `aps update` reconciles the generated footprint and
+  `aps migrate` moves projects off vendored CLI files with a dry run and backup.
+- **Three-CLI parity** — Rust, bash, and PowerShell lint behavior is checked
+  byte-for-byte in CI, including conductor and federated-plan rules.
+- **Canonical APS development loop** — Claude and Codex skill bundles cover
+  planning, routing, safety, resume, escalation, and crash-safe landing.
 
 Full notes: [CHANGELOG.md](CHANGELOG.md).
 
