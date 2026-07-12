@@ -67,6 +67,13 @@ for theme, success criteria, and risks.
 
 ### Fixed
 
+- **Windows build of the native binary** — `aps audit` used the Unix-only
+  permissions API (`std::os::unix::fs::PermissionsExt`) unconditionally and
+  split `PATH` on `:`, so the `x86_64-pc-windows-gnu` release build failed at
+  tag time. The executable check is now cfg-gated (any regular file counts on
+  Windows, mirroring `mark_executable`) and `PATH` uses `env::split_paths`.
+  CI now compile-checks the Windows target on every PR so this class of break
+  can't reach a release tag again.
 - **Child-scoped module status resolution** (MONO-008) — same-ID modules in
   different child plans no longer overwrite one another and incorrectly hide
   or expose ready work. Bash and Rust key statuses by child while preserving

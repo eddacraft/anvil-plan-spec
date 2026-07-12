@@ -6,7 +6,6 @@
 //! no recent review), A004 broken index links. Complete items without a
 //! runnable Validation report PARTIAL, not a finding.
 
-use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use std::process::{Command, Stdio};
 use std::{env, fs};
@@ -37,10 +36,20 @@ fn extract_command(validation: &str) -> Option<String> {
     Some(rest[..close].replace('\r', ""))
 }
 
+#[cfg(unix)]
 fn is_executable_file(path: &Path) -> bool {
+    use std::os::unix::fs::PermissionsExt;
     fs::metadata(path)
         .map(|m| m.is_file() && m.permissions().mode() & 0o111 != 0)
         .unwrap_or(false)
+}
+
+/// Windows has no executable bit; any regular file counts. This only feeds
+/// audit's "is this Validation command runnable" heuristic (same spirit as
+/// scaffold.rs `mark_executable`, which is a no-op off Unix).
+#[cfg(not(unix))]
+fn is_executable_file(path: &Path) -> bool {
+    fs::metadata(path).map(|m| m.is_file()).unwrap_or(false)
 }
 
 /// `type -P first_word || [[ -f first_word && -x first_word ]]` — true when
@@ -49,8 +58,10 @@ fn is_runnable(word: &str) -> bool {
     if !word.contains('/')
         && let Ok(path) = env::var("PATH")
     {
-        for dir in path.split(':').filter(|d| !d.is_empty()) {
-            if is_executable_file(&Path::new(dir).join(word)) {
+        // env::split_paths: ':' on Unix (byte-identical to the bash CLI),
+        // ';' on Windows.
+        for dir in env::split_paths(&path).filter(|d| !d.as_os_str().is_empty()) {
+            if is_executable_file(&dir.join(word)) {
                 return true;
             }
         }
@@ -63,8 +74,8 @@ fn is_runnable(word: &str) -> bool {
 fn run_command(cmd: &str, timeout_secs: u32) -> i32 {
     let has_timeout = is_runnable("timeout")
         || env::var("PATH").is_ok_and(|p| {
-            p.split(':')
-                .any(|d| !d.is_empty() && is_executable_file(&Path::new(d).join("timeout")))
+            env::split_paths(&p)
+                .any(|d| !d.as_os_str().is_empty() && is_executable_file(&d.join("timeout")))
         });
     let status = if has_timeout {
         Command::new("timeout")

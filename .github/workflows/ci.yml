@@ -21,6 +21,8 @@ jobs:
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-gnu
 
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
@@ -38,6 +40,14 @@ jobs:
       - name: cargo test
         working-directory: cli
         run: cargo test --locked
+
+      # Compile-check the Windows target on every PR. The release workflow is
+      # the only place that *builds* Windows, so without this a unix-only API
+      # (as in v0.5.0's audit.rs) is first discovered at tag time, failing the
+      # release. `cargo check` needs no mingw linker.
+      - name: cargo check (windows cross)
+        working-directory: cli
+        run: cargo check --locked --target x86_64-pc-windows-gnu
 
   shell:
     name: Shell script syntax
