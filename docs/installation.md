@@ -117,7 +117,7 @@ channel-specific pin.
 
 ```bash
 # 1. Install script (binary-first) — pin an exact release with VERSION:
-VERSION=0.4.0 curl -fsSL .../scaffold/install | bash -s -- --cli
+VERSION=0.5.0 curl -fsSL .../scaffold/install | bash -s -- --cli
 
 # 2. cargo-binstall — fetch the prebuilt binary from GitHub releases (no build):
 cargo binstall aps-cli
@@ -213,7 +213,7 @@ vendored CLI to refresh):
 binary reads by walking up from the current directory. Its contract fields:
 
 ```yaml
-cli_version: 0.4.0       # toolchain semver, stamped from the running binary
+cli_version: 0.5.0       # toolchain semver, stamped from the running binary
 plans_dir: plans/        # where plan documents live
 docs_dir: docs/          # where generated docs live
 tooling_root: .aps/      # APS-owned tooling root
@@ -325,7 +325,7 @@ To initialize the current repository directly:
 To install a specific version, set `APS_VERSION` before invoking the script:
 
 ```powershell
-$env:APS_VERSION='v0.4.0'
+$env:APS_VERSION='v0.5.0'
 & ([scriptblock]::Create((irm https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install.ps1))) --cli
 ```
 

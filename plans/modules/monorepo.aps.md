@@ -294,7 +294,7 @@ monorepos — this module covers the federated tier above it.
   Rust; lint warns on the collision
 - **Confidence:** medium
 - **Dependencies:** MONO-003 (complete)
-- **Status:** In Progress
+- **Status:** Merged: 2026-07-10
 - **Action plan:** [../execution/MONO-008.actions.md](../execution/MONO-008.actions.md)
 - **Notes:** `ORCH_MODULE_STATUSES` (bash) / `PlanGraph.module_statuses` (Rust)
   are single maps keyed by bare module ID, populated federation-wide, so the
@@ -303,8 +303,9 @@ monorepos — this module covers the federated tier above it.
   same treatment. Not exercised by any shipped fixture/example/scaffold (which
   use distinct module IDs), so it's a correctness hardening for hand-authored
   federations, not a regression in the MONO-003..006 feature.
-- **Results:** Implemented locally in the isolated `feat/mono-008-child-module-status`
-  worktree: Bash and Rust scope module-status keys by child and preserve
+- **Results:** Merged in `18258ae` from the isolated
+  `feat/mono-008-child-module-status` worktree. Bash and Rust scope
+  module-status keys by child and preserve
   single-root behavior; W021 warns deterministically on a cross-tree module-ID
   collision in Bash, PowerShell, and Rust. Added shared-fixture, Rust unit, and
   PowerShell parity coverage. `./test/run.sh`, `cargo test` (146), clippy,
