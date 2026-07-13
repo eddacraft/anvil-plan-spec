@@ -140,6 +140,89 @@ function Test-W002ConductorRefs {
     }
 }
 
+# W022: a `Packages:` scope tag (metadata-table column or work-item field)
+# that resolves to no directory in the workspace — most likely a typo
+# (PKG-002, the tagged-monorepo analogue of W002/W006). Resolution tries the
+# entry as given plus the conventional packages/<entry> and apps/<entry>
+# roots. Silent when the workspace has no packages/ or apps/ directory, so
+# single-package projects never pay for the check. Mirrors the Rust/bash
+# check_w022_packages.
+function Test-W022Packages {
+    param([string]$File)
+
+    # Workspace root: the path prefix before the last plans component.
+    $norm = $File -replace '\\', '/'
+    $idx = $norm.LastIndexOf('/plans/')
+    if ($idx -gt 0) {
+        $root = $norm.Substring(0, $idx)
+    } elseif ($norm -match '^plans/') {
+        $root = '.'
+    } else {
+        return
+    }
+    if (-not (Test-Path -LiteralPath (Join-Path $root 'packages') -PathType Container) -and
+        -not (Test-Path -LiteralPath (Join-Path $root 'apps') -PathType Container)) {
+        return
+    }
+
+    $lines = Get-Content -LiteralPath $File -ErrorAction SilentlyContinue
+    if (-not $lines) { return }
+
+    # Collect (line, value) pairs: the metadata table's first data row in the
+    # Packages column (mirrors Get-ApsModuleType semantics), plus every
+    # `- **Packages:**` work-item field.
+    $found = [System.Collections.ArrayList]::new()
+    $pkgCol = -1
+    $headerSeen = $false
+    $tableDone = $false
+    for ($i = 0; $i -lt $lines.Count; $i++) {
+        $line = $lines[$i]
+        if (-not $tableDone) {
+            $isIdHeader = $line -match '^\| *ID *\|'
+            if (-not $headerSeen) {
+                if ($isIdHeader) {
+                    $cols = ($line -split '\|') | ForEach-Object { $_.Trim() }
+                    for ($j = 0; $j -lt $cols.Count; $j++) {
+                        if ($cols[$j] -ceq 'Packages') { $pkgCol = $j }
+                    }
+                    $headerSeen = $true
+                    continue
+                }
+            } elseif ($line -match '^\|') {
+                if ($line -match '^[|: -]+$' -or $isIdHeader) { continue }
+                if ($pkgCol -ge 0) {
+                    $vals = ($line -split '\|') | ForEach-Object { $_.Trim() }
+                    if ($pkgCol -lt $vals.Count -and $vals[$pkgCol] -ne '') {
+                        $null = $found.Add(@(($i + 1), $vals[$pkgCol]))
+                    }
+                }
+                $tableDone = $true
+            }
+        }
+        if ($line -match '^\s*- \*\*Packages:\*\*\s*(.*)$' -and $Matches[1] -ne '') {
+            $null = $found.Add(@(($i + 1), $Matches[1]))
+        }
+    }
+
+    foreach ($pair in $found) {
+        $lineNum = $pair[0]
+        foreach ($raw in ($pair[1] -split ',')) {
+            # Trim whitespace and backticks; skip prose placeholders like
+            # _(monorepo only)_ (anything outside [A-Za-z0-9@._/-]).
+            $entry = $raw.Trim().Trim('`').Trim()
+            if ($entry -eq '') { continue }
+            if ($entry -notmatch '^[A-Za-z0-9@._/-]+$') { continue }
+            $resolves = (Test-Path -LiteralPath (Join-Path $root $entry) -PathType Container) -or
+                (Test-Path -LiteralPath (Join-Path (Join-Path $root 'packages') $entry) -PathType Container) -or
+                (Test-Path -LiteralPath (Join-Path (Join-Path $root 'apps') $entry) -PathType Container)
+            if (-not $resolves) {
+                Add-ApsResult -Path $File -Type "warning" -Code "W022" `
+                    -Message "Packages entry '$entry' does not resolve to a workspace directory" -Line "$lineNum"
+            }
+        }
+    }
+}
+
 # W005: Status=Ready but no work items
 function Test-W005ReadyNoItems {
     param([string]$File)
@@ -163,10 +246,12 @@ function Invoke-ApsModuleLint {
 
     Test-W004EmptySectionsModule -File $File
     Test-W005ReadyNoItems -File $File
-    # W017 then W002 — mirror the Rust lint_module call order so byte-level diffs
-    # of lint output stay identical across all three CLIs (D-038/D-039).
+    # W017 then W002 then W022 — mirror the Rust lint_module call order so
+    # byte-level diffs of lint output stay identical across all three CLIs
+    # (D-038/D-039).
     Test-W017LastReviewed -File $File
     Test-W002ConductorRefs -File $File -TreeIds $TreeIds
+    Test-W022Packages -File $File
 
     if (Test-ApsSection -FilePath $File -SectionHeader "## Work Items") {
         if (-not (Invoke-ApsWorkItemLint -File $File -TreeIds $TreeIds -ChildIds $ChildIds)) { $hasErrors = $true }

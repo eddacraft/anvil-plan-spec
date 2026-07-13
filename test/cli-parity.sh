@@ -75,6 +75,9 @@ FIXTURES=(
   "conductor-order/plans"
   "crossdep"
   "monorepo/plans"
+  "pkgtags/plans"
+  "pkgtags-clean/plans"
+  "pkgtags-nomarker/plans"
 )
 
 # Order-preserving finding lines: `CODE: message (line N)`. Strips the file-path

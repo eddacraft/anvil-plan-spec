@@ -715,8 +715,110 @@ fn lint_module(
         check_w002_conductor_refs(report, plan, tree_ids);
     }
 
+    check_w022_packages(report, plan);
+
     if plan.has_section("## Work Items") {
         lint_work_items(report, plan, tree_ids, child_ids);
+    }
+}
+
+/// Workspace root for `Packages:` resolution: the path prefix before the last
+/// `plans` component. `test/fixtures/x/plans/modules/a.aps.md` → `test/fixtures/x`;
+/// a file with no `plans` ancestor has no workspace and the check is skipped.
+fn workspace_root(path: &str) -> Option<std::path::PathBuf> {
+    let p = Path::new(path);
+    let components: Vec<_> = p.components().collect();
+    let idx = components.iter().rposition(|c| c.as_os_str() == "plans")?;
+    let mut root = std::path::PathBuf::new();
+    if idx == 0 {
+        root.push(".");
+    } else {
+        for c in &components[..idx] {
+            root.push(c);
+        }
+    }
+    Some(root)
+}
+
+/// One `Packages:` value: comma-separated entries, trimmed of whitespace and
+/// backticks. Entries with characters outside `[A-Za-z0-9@._/-]` are prose
+/// placeholders (e.g. `_(monorepo only)_`), not package names — skipped.
+fn check_w022_entries(report: &mut LintReport, path: &str, value: &str, line: usize, root: &Path) {
+    for raw in value.split(',') {
+        let entry = raw.trim().trim_matches('`').trim();
+        if entry.is_empty()
+            || !entry
+                .chars()
+                .all(|c| c.is_ascii_alphanumeric() || matches!(c, '@' | '.' | '_' | '/' | '-'))
+        {
+            continue;
+        }
+        let resolves = root.join(entry).is_dir()
+            || root.join("packages").join(entry).is_dir()
+            || root.join("apps").join(entry).is_dir();
+        if !resolves {
+            report.add(
+                path,
+                Severity::Warning,
+                "W022",
+                format!("Packages entry '{entry}' does not resolve to a workspace directory"),
+                Some(line),
+            );
+        }
+    }
+}
+
+/// W022: a `Packages:` scope tag (metadata-table column or work-item field)
+/// that resolves to no directory in the workspace — most likely a typo
+/// (PKG-002, the tagged-monorepo analogue of W002/W006). Resolution tries the
+/// entry as given plus the conventional `packages/<entry>` and `apps/<entry>`
+/// roots. Silent when the workspace has no `packages/` or `apps/` directory,
+/// so single-package projects never pay for the check.
+fn check_w022_packages(report: &mut LintReport, plan: &PlanFile) {
+    let Some(root) = workspace_root(&plan.path) else {
+        return;
+    };
+    if !root.join("packages").is_dir() && !root.join("apps").is_dir() {
+        return;
+    }
+
+    let is_id_header = |line: &str| {
+        line.starts_with('|') && line.split('|').nth(1).is_some_and(|c| c.trim() == "ID")
+    };
+
+    let mut pkg_col: Option<usize> = None;
+    let mut header_seen = false;
+    let mut table_done = false;
+    for (index, line) in plan.lines.iter().enumerate() {
+        let ln = index + 1;
+        if !table_done {
+            if !header_seen {
+                if is_id_header(line) {
+                    pkg_col = line.split('|').position(|c| c.trim() == "Packages");
+                    header_seen = true;
+                    continue;
+                }
+            } else if line.starts_with('|') {
+                // Skip separator rows and repeated headers; the first data row
+                // is authoritative (mirrors `module_type`).
+                if line.chars().all(|c| matches!(c, '|' | ':' | '-' | ' ')) || is_id_header(line) {
+                    continue;
+                }
+                if let Some(col) = pkg_col {
+                    let value = line.split('|').nth(col).unwrap_or("").trim().to_string();
+                    if !value.is_empty() {
+                        check_w022_entries(report, &plan.path, &value, ln, &root);
+                    }
+                }
+                table_done = true;
+            }
+        }
+        if let Some(rest) = line.trim_start().strip_prefix("- **Packages:**") {
+            let value = rest.trim().to_string();
+            if !value.is_empty() {
+                check_w022_entries(report, &plan.path, &value, ln, &root);
+            }
+        }
     }
 }
 
@@ -1716,6 +1818,47 @@ mod tests {
             codes(&report)
         );
         assert!(w006[0].message.contains("auth.aps.md"));
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn w022_flags_unresolvable_packages_entries_only_in_monorepos() {
+        use std::fs;
+        let root = std::env::temp_dir().join("aps_w022_test");
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(root.join("packages/core")).unwrap();
+        fs::create_dir_all(root.join("apps/api")).unwrap();
+        fs::create_dir_all(root.join("plans/modules")).unwrap();
+        let module = root.join("plans/modules/auth.aps.md");
+        fs::write(
+            &module,
+            "# Auth\n\n| ID | Status | Packages |\n| --- | --- | --- |\n| AUTH | Complete | core, ghost |\n\n## Purpose\n\nx\n\n## Work Items\n\n### AUTH-001: a\n\n- **Status:** Complete\n- **Packages:** api, packages/core, _(monorepo only)_\n",
+        )
+        .unwrap();
+
+        let plan = PlanFile::load(&module.to_string_lossy()).unwrap();
+        let mut report = LintReport::default();
+        check_w022_packages(&mut report, &plan);
+        let w022: Vec<&Finding> = report
+            .findings
+            .iter()
+            .filter(|f| f.code == "W022")
+            .collect();
+        // Only 'ghost' is unresolvable; 'core' (packages/), 'api' (apps/),
+        // 'packages/core' (as given) resolve; placeholder prose is skipped.
+        assert_eq!(w022.len(), 1, "got {:?}", codes(&report));
+        assert!(w022[0].message.contains("ghost"));
+        assert_eq!(w022[0].line, Some(5));
+
+        // Without monorepo markers the check is silent even on bad entries.
+        fs::remove_dir_all(root.join("packages")).unwrap();
+        fs::remove_dir_all(root.join("apps")).unwrap();
+        let mut quiet = LintReport::default();
+        check_w022_packages(&mut quiet, &plan);
+        assert!(
+            !quiet.findings.iter().any(|f| f.code == "W022"),
+            "gate must silence W022 without packages/ or apps/"
+        );
         let _ = fs::remove_dir_all(&root);
     }
 

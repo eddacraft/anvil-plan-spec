@@ -700,5 +700,22 @@ echo -n "Test: cross-CLI parity harness present and wired into CI... "
 grep -q 'cli-parity.sh' "$PROJECT_ROOT/.github/workflows/ci.yml" || fail "ci.yml does not run test/cli-parity.sh"
 pass
 
+# Test 54: PKG-002 — W022 Packages: tag validation (bash, canonical behaviour).
+# A tag that resolves to no workspace directory warns; resolvable tags and
+# single-package projects (no packages/ or apps/ dirs) stay silent. PowerShell
+# and Rust behaviour is asserted byte-for-byte by test/cli-parity.sh, which
+# carries the pkgtags fixtures.
+echo -n "Test: unresolvable Packages: tag detected (W022)... "
+output=$($APS lint "$SCRIPT_DIR/fixtures/pkgtags/plans" 2>&1) || true
+echo "$output" | grep -q "W022" && echo "$output" | grep -q "storefront" \
+  || fail "W022 not raised for typo'd Packages entry"
+echo "$output" | grep -q "packages/wrong" || fail "W022 missed path-as-given typo"
+output=$($APS lint "$SCRIPT_DIR/fixtures/pkgtags-clean/plans" 2>&1) || true
+echo "$output" | grep -q "no issues" || fail "clean pkgtags fixture did not lint cleanly (got: $output)"
+output=$($APS lint "$SCRIPT_DIR/fixtures/pkgtags-nomarker/plans" 2>&1) || true
+echo "$output" | grep -q "W022" && fail "W022 fired without monorepo markers" 
+echo "$output" | grep -q "no issues" || fail "nomarker fixture did not lint cleanly (got: $output)"
+pass
+
 echo ""
 echo -e "${GREEN}All tests passed!${NC}"

@@ -102,6 +102,7 @@ narratives). `README.md` and the `.release.template.md` are not linted.
 | W019 | Index          | Link in `## Modules` points to a non-existent file (warning so seed plans stay clean; `aps audit` gates it as A004)     |
 | W020 | Index          | Work-item ID defined in more than one child tree of a federated (nested-plans) monorepo — collisions make `<name>:<ID>` cross-tree references ambiguous (warning; each child tree stays independently valid) |
 | W021 | Index          | Module ID defined in more than one child tree of a federated monorepo — a warning because IDs remain bare per tree, but orchestration resolves each status within its owning child |
+| W022 | Module         | A `Packages:` scope tag (metadata-table column or work-item field) that resolves to no workspace directory — checked as given plus `packages/<entry>` and `apps/<entry>`; silent unless the workspace has a `packages/` or `apps/` directory (tagged monorepo tier, see [docs/monorepo.md](./monorepo.md)) |
 
 > **Nested plans (monorepos).** When `aps lint` is pointed at a federated
 > **parent** `index.aps.md` (one with a `## Child Plans` section), it follows
