@@ -1,8 +1,10 @@
 # Release Planning Module
 
-| ID  | Type      | Owner  | Priority | Status   |
-| --- | --------- | ------ | -------- | -------- |
-| REL | Conductor | @aneki | medium   | Complete |
+| ID  | Type      | Owner  | Priority | Status      |
+| --- | --------- | ------ | -------- | ----------- |
+| REL | Conductor | @aneki | medium   | In Progress |
+
+**Last reviewed:** 2026-07-13
 
 ## Purpose
 
@@ -186,17 +188,42 @@ The pattern is generic enough to extract.
   equivalent of the anvil-001 trial). Cross-linked from `docs/workflow.md`
   and the README docs list.
 
-### REL-005: `aps release` CLI subcommand (optional, deferred)
+### REL-005: `aps release` CLI subcommand
 
-- **Intent:** Reduce friction for creating and tracking release plans
-- **Expected Outcome:** `aps release new <version>` copies template with
+- **Intent:** Reduce friction for creating, tracking, and — critically —
+  closing out release plans, so post-release status advancement stops being
+  a manual sweep
+- **Expected Outcome:** `aps release new <version>` copies the template with
   date/version pre-filled; `aps release status [version]` summarises work
   item completion; `aps release notes <version>` enumerates Complete items
-  since last release tag as a markdown draft
-- **Validation:** All three commands work end-to-end on anvil-001's plans/
+  since the last release tag as a markdown draft; `aps release close
+  <version>` reads the **prose markdown** release record
+  (`plans/releases/vX.Y.Z.md`) plus the plan tree and advances
+  `Merged`/`Released`-state work items to `Complete` with a release-evidence
+  line (version, date, tag commit), reporting every item advanced, skipped,
+  or unresolved. Dry-run by default; `--apply` mutates.
+- **Validation:** `aps release close 0.5.0 --apply` on this repo's plans
+  reproduces the 2026-07-13 manual v0.5.0 sweep (MONO-007/008 → Complete
+  with evidence, module + index rows advanced); a prose-only record with no
+  structured metadata drives the closeout (no JSON sidecar); dry-run lists
+  the same advancements without writing
 - **Confidence:** medium
 - **Dependencies:** REL-001, REL-003, ORCH-001 (parser reuse)
-- **Notes:** Deferred until trial usage validates the template and lint rules
+- **Status:** Ready
+- **Notes:** Promoted from deferred 2026-07-13 after two field reports made
+  the gap concrete. (1) This repo's v0.5.0 closeout was manual — the
+  `aps-cleanup.sh` the vendored skills mention is anvil-001-specific and was
+  deliberately not ported (2026-06-15 upstream brief carve-out). (2)
+  anvil-001 reported (2026-07-13) that its own
+  `scripts/aps/advance-released.mjs` could not be used directly because the
+  release record is prose Markdown while the script expects JSON
+  `aps.items[]` — their closeout was also manual. **Design constraint:** the
+  closeout must consume prose markdown records directly (APS is
+  markdown-first; "no runtime dependencies" is an index constraint — a JSON
+  sidecar is not an acceptable fix). **Parity:** new CLI surface, so D-039
+  applies — not Complete until Rust, bash, and PowerShell agree with
+  shared-fixture coverage; phasing (Rust first) is fine, shipping
+  one-CLI-only is not.
 
 ## Execution Strategy
 
@@ -210,9 +237,10 @@ The pattern is generic enough to extract.
 - REL-003: Lint rules
 - REL-004: Documentation
 
-### Wave 3 (optional): CLI
+### Wave 3: CLI
 
-- REL-005: `aps release` subcommand — deferred pending trial feedback
+- REL-005: `aps release` subcommand — promoted 2026-07-13 (closeout scope
+  added from the v0.5.0 + anvil-001 field reports)
 
 ## Notes
 

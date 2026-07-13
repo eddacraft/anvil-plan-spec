@@ -5,7 +5,7 @@
 | Status  | Active     |
 | Owner   | @aneki     |
 | Created | 2025-12-31 |
-| Updated | 2026-06-17 |
+| Updated | 2026-07-13 |
 
 ## Problem
 
@@ -64,7 +64,7 @@ APS needs continued development to:
 
 | Module                                                | Purpose                                                     | Status   |
 | ----------------------------------------------------- | ----------------------------------------------------------- | -------- |
-| [release-planning](./modules/release-planning.aps.md) | Release plan template, scaffold, `aps lint` rules, and docs | Complete |
+| [release-planning](./modules/release-planning.aps.md) | Release plan template, scaffold, `aps lint` rules, and docs | In Progress |
 
 ### Compound-Engineering (Complete)
 
@@ -84,7 +84,7 @@ release narratives live in [`plans/releases/`](./releases/).
 | [examples](./modules/examples.aps.md)         | Additional worked examples                                | Draft    |
 | [prompts](./modules/prompts.aps.md)           | Tool-specific prompt variants                             | Ready    |
 | [integrations](./modules/integrations.aps.md) | JSON export, GitHub sync                                  | Draft    |
-| [monorepo](./modules/monorepo.aps.md)         | Nested index.aps.md plans, federated lint + orchestration | In Progress |
+| [monorepo](./modules/monorepo.aps.md)         | Nested index.aps.md plans, federated lint + orchestration | Complete |
 | [ci-parity](./modules/ci-parity.aps.md)       | Behavioural pwsh + cross-CLI parity checks in CI          | Complete |
 
 ### Long Term

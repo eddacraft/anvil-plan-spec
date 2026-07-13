@@ -1,10 +1,13 @@
 # Monorepo Module
 
-| ID   | Owner  | Priority | Status |
-| ---- | ------ | -------- | ------ |
-| MONO | @aneki | medium   | In Progress |
+| ID   | Owner  | Priority | Status   |
+| ---- | ------ | -------- | -------- |
+| MONO | @aneki | medium   | Complete |
 
-**Last reviewed:** 2026-07-01
+**Last reviewed:** 2026-07-13
+
+> Shipped in **v0.5.0** (2026-07-13) — all eight work items released; see
+> [../releases/v0.5.0.md](../releases/v0.5.0.md) for ship evidence.
 
 ## Purpose
 
@@ -255,7 +258,7 @@ monorepos — this module covers the federated tier above it.
   wire into the existing parity suite
 - **Confidence:** high
 - **Dependencies:** MONO-002 (complete)
-- **Status:** Merged
+- **Status:** Complete — released in v0.5.0 (2026-07-13)
 - **Notes:** Completes MONO-002's parity contract (index D-039: the CLI's
   three implementations stay in lockstep). MONO-002 landed child-plan
   traversal, prefix-aware W003, and W020 in `lib/lint.sh` +
@@ -294,7 +297,8 @@ monorepos — this module covers the federated tier above it.
   Rust; lint warns on the collision
 - **Confidence:** medium
 - **Dependencies:** MONO-003 (complete)
-- **Status:** Merged: 2026-07-10
+- **Status:** Complete — merged 2026-07-10 (`18258ae`), released in v0.5.0
+  (2026-07-13)
 - **Action plan:** [../execution/MONO-008.actions.md](../execution/MONO-008.actions.md)
 - **Notes:** `ORCH_MODULE_STATUSES` (bash) / `PlanGraph.module_statuses` (Rust)
   are single maps keyed by bare module ID, populated federation-wide, so the
