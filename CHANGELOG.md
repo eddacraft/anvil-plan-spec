@@ -8,6 +8,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- **`aps next --package <name>` and `--by-package`** (PKG-001) — resolve the
+  next ready item within one package's scope, or list the whole ready queue
+  grouped by package. An item's effective tags are its own `**Packages:**`
+  field, else its module's metadata column; matching is case-insensitive and
+  path-qualified tags (`packages/core`) normalise to their basename. Untagged
+  items appear in an explicit `(untagged)` bucket (never silently filtered)
+  and match no `--package` filter. Implemented in the Rust binary and bash CLI
+  with byte-identical output (the PowerShell CLI does not carry `next`).
 - **W022 — `Packages:` tag validation** (PKG-002) — the tagged monorepo tier's
   first lint support: a `Packages:` scope tag (metadata-table column or
   work-item field) that resolves to no workspace directory warns as a likely

@@ -285,6 +285,38 @@ impl PlanFile {
 
     /// True when the metadata table marks this as a conductor (crosscutting)
     /// module (`Type: Conductor`, case-insensitive).
+    /// The `Packages` column of the metadata table — same first-data-row
+    /// semantics as `module_type` (PKG-001, tagged monorepo tier).
+    pub fn module_packages(&self) -> Option<String> {
+        self.metadata_column("Packages")
+    }
+
+    /// Generic metadata-table column read: find the `| ID |` header row,
+    /// locate the named column, return the first data row's value.
+    fn metadata_column(&self, name: &str) -> Option<String> {
+        let mut col = None;
+        for line in &self.lines {
+            match col {
+                None => {
+                    if is_id_header_row(line) {
+                        col = Some(line.split('|').position(|cell| cell.trim() == name)?);
+                    }
+                }
+                Some(idx) => {
+                    if !line.starts_with('|') || is_id_header_row(line) {
+                        continue;
+                    }
+                    if line.chars().all(|c| matches!(c, '|' | ':' | '-' | ' ')) {
+                        continue;
+                    }
+                    let value = line.split('|').nth(idx).unwrap_or("").trim().to_string();
+                    return Some(value).filter(|v| !v.is_empty());
+                }
+            }
+        }
+        None
+    }
+
     pub fn is_conductor(&self) -> bool {
         self.module_type()
             .is_some_and(|t| t.eq_ignore_ascii_case("Conductor"))

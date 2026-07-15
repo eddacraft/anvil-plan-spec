@@ -198,6 +198,8 @@ File: plans/modules/auth.aps.md
 
 $ aps next auth          # Scope to one module
 $ aps next --plans docs/plans
+$ aps next --package core    # Only items tagged with the core package
+$ aps next --by-package      # Whole ready queue, grouped by package
 ```
 
 `next` walks every work item across every module, picks the first whose status
@@ -205,6 +207,14 @@ is `Ready` and whose dependencies (work-item IDs _and_ module IDs) all resolve
 to Complete. Decision dependencies (`D-NNN`) are treated as resolved inline in
 the plan text. Items in `Complete`, `Draft` (including `Proposed`), or
 `Blocked` modules are skipped.
+
+In a tagged monorepo (see [docs/monorepo.md](./monorepo.md)), `--package
+<name>` restricts resolution to items whose effective `Packages:` tags include
+the name — the item's own field, else its module's metadata column. Matching
+is case-insensitive and `packages/core` matches `core`. `--by-package` prints
+every ready item grouped under its package headings, with untagged items in a
+final `(untagged)` bucket so partial adoption stays visible. Untagged items
+never match a `--package` filter.
 
 ### `aps start <ID>` — claim a work item
 

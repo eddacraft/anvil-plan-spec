@@ -13,7 +13,11 @@ declare -a ORCH_ITEM_FILES=()
 # Path-derived child-plan name each item belongs to (MONO-003). Empty in the
 # common single-root case; used to scope and disambiguate across federated trees.
 declare -a ORCH_ITEM_CHILDREN=()
+# Item-level Packages: scope tags (PKG-001); empty = inherit from the module.
+declare -a ORCH_ITEM_PACKAGES=()
 declare -A ORCH_MODULE_STATUSES=()
+# Module-level Packages: metadata column, keyed like ORCH_MODULE_STATUSES.
+declare -A ORCH_MODULE_PACKAGES=()
 
 orch_reset_state() {
   ORCH_ITEM_IDS=()
@@ -24,7 +28,53 @@ orch_reset_state() {
   ORCH_ITEM_MODULES=()
   ORCH_ITEM_FILES=()
   ORCH_ITEM_CHILDREN=()
+  ORCH_ITEM_PACKAGES=()
   ORCH_MODULE_STATUSES=()
+  ORCH_MODULE_PACKAGES=()
+}
+
+# --- Packages: scope tags (PKG-001, tagged monorepo tier) --------------------
+
+# Normalise one Packages: entry for matching: trim whitespace/backticks, strip
+# a leading packages/ or apps/ root, lowercase. `packages/Core` matches `core`.
+orch_pkg_normalize() {
+  local entry="$1"
+  # shellcheck disable=SC2016 # the backtick is a literal in the sed class
+  entry=$(printf '%s' "$entry" | sed -E 's/^[[:space:]`]+//; s/[[:space:]`]+$//')
+  entry="${entry#packages/}"
+  entry="${entry#apps/}"
+  printf '%s' "${entry,,}"
+}
+
+# Effective Packages: value for item $1 — the item's own field, else its
+# module's metadata-table column (docs/monorepo.md: items inherit from the
+# module when the field is omitted).
+orch_item_packages() {
+  local i="$1"
+  local pkgs="${ORCH_ITEM_PACKAGES[$i]}"
+  if [[ -z "$pkgs" ]]; then
+    local key
+    key=$(orch_module_status_key "${ORCH_ITEM_MODULES[$i]}" "${ORCH_ITEM_CHILDREN[$i]}")
+    pkgs="${ORCH_MODULE_PACKAGES[$key]:-}"
+  fi
+  printf '%s' "$pkgs"
+}
+
+# True when item $1's effective Packages: include $2 (normalised comparison).
+# An untagged item matches no package filter.
+orch_item_matches_package() {
+  local i="$1" filter="$2"
+  [[ -z "$filter" ]] && return 0
+  local want pkgs entry
+  want=$(orch_pkg_normalize "$filter")
+  pkgs=$(orch_item_packages "$i")
+  [[ -n "$pkgs" ]] || return 1
+  local entries
+  IFS=',' read -ra entries <<< "$pkgs"
+  for entry in "${entries[@]}"; do
+    [[ "$(orch_pkg_normalize "$entry")" == "$want" ]] && return 0
+  done
+  return 1
 }
 
 # Module IDs are bare within a child plan (D-002), so federated status lookups
@@ -265,13 +315,15 @@ orch_load_root_work_items() {
 
   local file
   while IFS= read -r file; do
-    local module_id module_status
+    local module_id module_status module_packages
     module_id=$(get_module_id "$file")
     module_status=$(get_status "$file")
     module_status=$(orch_normalize_status "$module_status" "Draft")
+    module_packages=$(get_module_packages "$file")
 
     [[ -n "$module_id" ]] || module_id=$(basename "$file" .aps.md | tr '[:lower:]' '[:upper:]')
     orch_set_module_status "$module_id" "$module_status" "$child_name"
+    ORCH_MODULE_PACKAGES["$(orch_module_status_key "$module_id" "$child_name")"]="$module_packages"
 
     if [[ "$load_all" != "true" ]]; then
       [[ "$module_status" == "Complete" || "$module_status" == "Draft" || "$module_status" == "Blocked" ]] && continue
@@ -302,6 +354,7 @@ orch_load_root_work_items() {
       ORCH_ITEM_MODULES+=("$module_id")
       ORCH_ITEM_FILES+=("$file")
       ORCH_ITEM_CHILDREN+=("$child_name")
+      ORCH_ITEM_PACKAGES+=("$(orch_field_value "$content" "Packages")")
     done <<< "$(get_work_items "$file")"
   done < <(find "$module_dir" -type f -name "*.aps.md" ! -name ".*" 2>/dev/null | sort)
 }
@@ -506,6 +559,8 @@ cmd_next() {
   local plan_root="" strict=false
   local module_filter=""
   local child_scope=""
+  local package_filter=""
+  local by_package=false
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -518,6 +573,15 @@ cmd_next() {
         child_scope="${2:-}"
         [[ -n "$child_scope" ]] || { error "--child requires a child plan name"; return 1; }
         shift 2
+        ;;
+      --package)
+        package_filter="${2:-}"
+        [[ -n "$package_filter" ]] || { error "--package requires a package name"; return 1; }
+        shift 2
+        ;;
+      --by-package)
+        by_package=true
+        shift
         ;;
       --strict)
         strict=true
@@ -535,9 +599,13 @@ Arguments:
   module    Optional module ID or module file name, e.g. AUTH or auth
 
 Options:
-  --plans DIR    Plan root directory (default: plans)
-  --child NAME   Scope to one child plan (path-derived name, e.g. core)
-  --help         Show this help
+  --plans DIR      Plan root directory (default: plans)
+  --child NAME     Scope to one child plan (path-derived name, e.g. core)
+  --package NAME   Only items whose Packages: tags include NAME (item field,
+                   else module metadata; tagged monorepo tier)
+  --by-package     List every ready item, grouped by package; untagged items
+                   appear under (untagged)
+  --help           Show this help
 EOF
         return 0
         ;;
@@ -568,30 +636,71 @@ EOF
     return 1
   }
 
-  local i
+  # Collect the candidate indexes (same gating for both output modes).
+  local i candidates=()
   for i in "${!ORCH_ITEM_IDS[@]}"; do
     orch_item_matches_child "$i" "$child_scope" || continue
     orch_item_matches_module "$i" "$module_filter" || continue
+    orch_item_matches_package "$i" "$package_filter" || continue
     case "$(orch_module_status "${ORCH_ITEM_MODULES[$i]}" "${ORCH_ITEM_CHILDREN[$i]}")" in
       Ready|"In Progress") ;;
       *) continue ;;
     esac
     [[ "${ORCH_ITEM_STATUSES[$i]}" == "Ready" ]] || continue
     orch_deps_complete "${ORCH_ITEM_DEPS[$i]}" "${ORCH_ITEM_CHILDREN[$i]}" || continue
-
-    echo "${ORCH_ITEM_IDS[$i]}: ${ORCH_ITEM_TITLES[$i]}"
-    echo "Module: ${ORCH_ITEM_MODULES[$i]} | Dependencies: $(orch_deps_display "${ORCH_ITEM_DEPS[$i]}") | Status: ${ORCH_ITEM_STATUSES[$i]}"
-    echo "File: ${ORCH_ITEM_FILES[$i]}"
-    return 0
+    candidates+=("$i")
+    # The default mode only needs the first candidate.
+    [[ "$by_package" == true ]] || break
   done
 
-  local scope_note=""
-  [[ -n "$child_scope" ]] && scope_note=" in child: $child_scope"
-  if [[ -n "$module_filter" ]]; then
-    warn "No ready work item found for module: $module_filter$scope_note"
-  else
-    warn "No ready work item found$scope_note"
+  if [[ ${#candidates[@]} -gt 0 ]]; then
+    if [[ "$by_package" == true ]]; then
+      # Group by normalised package name; a multi-tagged item appears under
+      # each of its packages. Headings sort lexically; (untagged) comes last.
+      local -A groups=()
+      local pkgs entry name line
+      for i in "${candidates[@]}"; do
+        line="  ${ORCH_ITEM_IDS[$i]}: ${ORCH_ITEM_TITLES[$i]} (${ORCH_ITEM_MODULES[$i]})"
+        pkgs=$(orch_item_packages "$i")
+        if [[ -z "$pkgs" ]]; then
+          groups["(untagged)"]+="$line"$'\n'
+          continue
+        fi
+        local entries
+        IFS=',' read -ra entries <<< "$pkgs"
+        for entry in "${entries[@]}"; do
+          name=$(orch_pkg_normalize "$entry")
+          [[ -n "$name" ]] || continue
+          groups["$name"]+="$line"$'\n'
+        done
+      done
+      local first=true
+      while IFS= read -r name; do
+        [[ -n "$name" && "$name" != "(untagged)" ]] || continue
+        [[ "$first" == true ]] || echo ""
+        first=false
+        echo "$name:"
+        printf '%s' "${groups[$name]}"
+      done < <(printf '%s\n' "${!groups[@]}" | sort)
+      if [[ -n "${groups[(untagged)]:-}" ]]; then
+        [[ "$first" == true ]] || echo ""
+        echo "(untagged):"
+        printf '%s' "${groups[(untagged)]}"
+      fi
+    else
+      i="${candidates[0]}"
+      echo "${ORCH_ITEM_IDS[$i]}: ${ORCH_ITEM_TITLES[$i]}"
+      echo "Module: ${ORCH_ITEM_MODULES[$i]} | Dependencies: $(orch_deps_display "${ORCH_ITEM_DEPS[$i]}") | Status: ${ORCH_ITEM_STATUSES[$i]}"
+      echo "File: ${ORCH_ITEM_FILES[$i]}"
+    fi
+    return 0
   fi
+
+  local note=""
+  [[ -n "$module_filter" ]] && note+=" for module: $module_filter"
+  [[ -n "$package_filter" ]] && note+=" for package: $package_filter"
+  [[ -n "$child_scope" ]] && note+=" in child: $child_scope"
+  warn "No ready work item found$note"
   return 1
 }
 

@@ -5,7 +5,7 @@
 //! dependency semantics (D-* decisions auto-complete, bare uppercase
 //! tokens reference modules), same output text and exit codes.
 
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
 use std::path::{Path, PathBuf};
 
 use crate::parser::{self, PlanFile};
@@ -23,6 +23,9 @@ pub struct WorkItem {
     /// Path-derived child-plan name this item belongs to (MONO-003). Empty for
     /// a plain single-root plan; used to scope and disambiguate federated trees.
     pub child: String,
+    /// Item-level `Packages:` scope tags (PKG-001); empty = inherit from the
+    /// module's metadata column.
+    pub packages: String,
 }
 
 /// Outcome of resolving a work-item reference across a federation (MONO-003).
@@ -77,6 +80,8 @@ fn child_name(root: &Path) -> String {
 pub struct PlanGraph {
     pub items: Vec<WorkItem>,
     pub module_statuses: HashMap<String, String>,
+    /// Module-level `Packages:` metadata column, keyed like `module_statuses`.
+    pub module_packages: HashMap<String, String>,
 }
 
 impl PlanGraph {
@@ -146,6 +151,10 @@ impl PlanGraph {
                 graph
                     .module_statuses
                     .insert(module_status_key(&module_id, &child), module_status);
+                graph.module_packages.insert(
+                    module_status_key(&module_id, &child),
+                    plan.module_packages().unwrap_or_default(),
+                );
 
                 for item in plan.work_items() {
                     let Some(id) = parser::parse_work_item_id(&item.header) else {
@@ -168,6 +177,7 @@ impl PlanGraph {
                         file: file.clone(),
                         line: item.line,
                         child: child.clone(),
+                        packages: parser::field_value(&content, "Packages"),
                     });
                 }
             }
@@ -303,23 +313,80 @@ impl PlanGraph {
     /// First Ready item (in file order) whose module is Ready/In Progress
     /// and whose dependencies are Complete. Optionally scoped to one child plan.
     pub fn next_ready(&self, module_filter: &str, child_scope: &str) -> Option<&WorkItem> {
-        self.items.iter().find(|item| {
-            if !self.matches_child(item, child_scope) {
-                return false;
-            }
-            if !self.matches_module(item, module_filter) {
-                return false;
-            }
-            let module_status = self.module_status(&item.module, &item.child);
-            if !matches!(module_status, "Ready" | "In Progress") {
-                return false;
-            }
-            if item.status != "Ready" {
-                return false;
-            }
-            self.deps_complete(&item.deps, &item.child)
-        })
+        self.candidates(module_filter, child_scope, "")
+            .into_iter()
+            .next()
     }
+
+    /// Every ready-with-deps-met item passing the module/child/package
+    /// filters, in load order (PKG-001; the shared gate behind `next` and
+    /// `next --by-package`).
+    pub fn candidates(
+        &self,
+        module_filter: &str,
+        child_scope: &str,
+        package_filter: &str,
+    ) -> Vec<&WorkItem> {
+        self.items
+            .iter()
+            .filter(|item| {
+                if !self.matches_child(item, child_scope) {
+                    return false;
+                }
+                if !self.matches_module(item, module_filter) {
+                    return false;
+                }
+                if !self.matches_package(item, package_filter) {
+                    return false;
+                }
+                let module_status = self.module_status(&item.module, &item.child);
+                if !matches!(module_status, "Ready" | "In Progress") {
+                    return false;
+                }
+                if item.status != "Ready" {
+                    return false;
+                }
+                self.deps_complete(&item.deps, &item.child)
+            })
+            .collect()
+    }
+
+    /// Effective `Packages:` value for an item — its own field, else its
+    /// module's metadata column (docs/monorepo.md: items inherit from the
+    /// module when the field is omitted).
+    pub fn item_packages(&self, item: &WorkItem) -> String {
+        if !item.packages.is_empty() {
+            return item.packages.clone();
+        }
+        self.module_packages
+            .get(&module_status_key(&item.module, &item.child))
+            .cloned()
+            .unwrap_or_default()
+    }
+
+    /// True when the item's effective `Packages:` include `filter`
+    /// (normalised comparison). An untagged item matches no package filter.
+    fn matches_package(&self, item: &WorkItem, filter: &str) -> bool {
+        if filter.is_empty() {
+            return true;
+        }
+        let want = pkg_normalize(filter);
+        let pkgs = self.item_packages(item);
+        if pkgs.is_empty() {
+            return false;
+        }
+        pkgs.split(',').any(|entry| pkg_normalize(entry) == want)
+    }
+}
+
+/// Normalise one `Packages:` entry for matching: trim whitespace/backticks,
+/// strip a leading `packages/` or `apps/` root, lowercase. `packages/Core`
+/// matches `core`.
+pub fn pkg_normalize(entry: &str) -> String {
+    let entry = entry.trim().trim_matches('`').trim();
+    let entry = entry.strip_prefix("packages/").unwrap_or(entry);
+    let entry = entry.strip_prefix("apps/").unwrap_or(entry);
+    entry.to_lowercase()
 }
 
 fn module_status_key(module: &str, child: &str) -> String {
@@ -342,7 +409,13 @@ pub fn deps_display(deps: &str) -> String {
 }
 
 /// CLI entry. Returns the process exit code.
-pub fn cmd_next(plan_root: &str, module_filter: &str, child_scope: &str) -> i32 {
+pub fn cmd_next(
+    plan_root: &str,
+    module_filter: &str,
+    child_scope: &str,
+    package_filter: &str,
+    by_package: bool,
+) -> i32 {
     let root = Path::new(plan_root);
     if !root.is_dir() {
         eprintln!("error: Path not found: {plan_root}");
@@ -357,8 +430,51 @@ pub fn cmd_next(plan_root: &str, module_filter: &str, child_scope: &str) -> i32 
         }
     };
 
-    match graph.next_ready(module_filter, child_scope) {
-        Some(item) => {
+    let candidates = graph.candidates(module_filter, child_scope, package_filter);
+    if !candidates.is_empty() {
+        if by_package {
+            // Group by normalised package name; a multi-tagged item appears
+            // under each of its packages. Headings sort lexically; (untagged)
+            // comes last. Byte-identical to the bash cmd_next --by-package.
+            let mut groups: BTreeMap<String, Vec<String>> = BTreeMap::new();
+            let mut untagged: Vec<String> = Vec::new();
+            for item in &candidates {
+                let line = format!("  {}: {} ({})", item.id, item.title, item.module);
+                let pkgs = graph.item_packages(item);
+                if pkgs.is_empty() {
+                    untagged.push(line);
+                    continue;
+                }
+                for entry in pkgs.split(',') {
+                    let name = pkg_normalize(entry);
+                    if name.is_empty() {
+                        continue;
+                    }
+                    groups.entry(name).or_default().push(line.clone());
+                }
+            }
+            let mut first = true;
+            for (name, lines) in &groups {
+                if !first {
+                    println!();
+                }
+                first = false;
+                println!("{name}:");
+                for line in lines {
+                    println!("{line}");
+                }
+            }
+            if !untagged.is_empty() {
+                if !first {
+                    println!();
+                }
+                println!("(untagged):");
+                for line in &untagged {
+                    println!("{line}");
+                }
+            }
+        } else {
+            let item = candidates[0];
             println!("{}: {}", item.id, item.title);
             println!(
                 "Module: {} | Dependencies: {} | Status: {}",
@@ -367,24 +483,22 @@ pub fn cmd_next(plan_root: &str, module_filter: &str, child_scope: &str) -> i32 
                 item.status
             );
             println!("File: {}", item.file);
-            0
         }
-        None => {
-            let scope_note = if child_scope.is_empty() {
-                String::new()
-            } else {
-                format!(" in child: {child_scope}")
-            };
-            if module_filter.is_empty() {
-                eprintln!("warning: No ready work item found{scope_note}");
-            } else {
-                eprintln!(
-                    "warning: No ready work item found for module: {module_filter}{scope_note}"
-                );
-            }
-            1
-        }
+        return 0;
     }
+
+    let mut note = String::new();
+    if !module_filter.is_empty() {
+        note.push_str(&format!(" for module: {module_filter}"));
+    }
+    if !package_filter.is_empty() {
+        note.push_str(&format!(" for package: {package_filter}"));
+    }
+    if !child_scope.is_empty() {
+        note.push_str(&format!(" in child: {child_scope}"));
+    }
+    eprintln!("warning: No ready work item found{note}");
+    1
 }
 
 #[cfg(test)]
@@ -396,6 +510,28 @@ mod tests {
     fn fixture_root() -> PathBuf {
         // cli/ is the cargo working directory in tests.
         PathBuf::from("../test/fixtures/orchestrate/plans")
+    }
+
+    #[test]
+    fn package_filter_and_inheritance_resolve_from_fixtures() {
+        let graph = PlanGraph::load(&PathBuf::from("../test/fixtures/pkgnext/plans")).unwrap();
+        // Inherited module tag: AUTH-001 has no item field but the AUTH
+        // module column says core.
+        let core = graph.candidates("", "", "core");
+        assert_eq!(core[0].id, "AUTH-001");
+        assert!(core.iter().any(|i| i.id == "HND-001"), "item-level tag");
+        // Path-qualified + case-insensitive filter.
+        assert_eq!(graph.candidates("", "", "packages/CORE").len(), core.len());
+        // Item-level tag apps/api normalises to api.
+        let api = graph.candidates("", "", "api");
+        assert_eq!(api.len(), 1);
+        assert_eq!(api[0].id, "HND-001");
+        // Untagged items match no filter but stay in the unfiltered queue.
+        assert!(graph.candidates("", "", "ghost").is_empty());
+        let all = graph.candidates("", "", "");
+        assert!(all.iter().any(|i| i.id == "MISC-001"));
+        let misc = all.iter().find(|i| i.id == "MISC-001").unwrap();
+        assert!(graph.item_packages(misc).is_empty());
     }
 
     #[test]
@@ -508,6 +644,7 @@ mod tests {
             file: format!("{child}/plans/modules/m.aps.md"),
             line: 1,
             child: child.to_string(),
+            packages: String::new(),
         };
         // Declaration order puts core (Ready) before api (Complete).
         graph.items.push(mk("AUTH-001", "Ready", "", "core"));
@@ -554,6 +691,7 @@ mod tests {
             file: "core/plans/modules/auth.aps.md".to_string(),
             line: 1,
             child: "core".to_string(),
+            packages: String::new(),
         });
         graph.items.push(WorkItem {
             id: "AUTH-002".to_string(),
@@ -564,6 +702,7 @@ mod tests {
             file: "api/plans/modules/auth.aps.md".to_string(),
             line: 1,
             child: "api".to_string(),
+            packages: String::new(),
         });
 
         assert_eq!(

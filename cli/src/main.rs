@@ -134,6 +134,14 @@ enum Command {
         /// Scope to one child plan in a federated tree (e.g. core)
         #[arg(long, value_name = "NAME")]
         child: Option<String>,
+        /// Only items whose Packages: tags include NAME (item field, else
+        /// module metadata; tagged monorepo tier)
+        #[arg(long, value_name = "NAME")]
+        package: Option<String>,
+        /// List every ready item, grouped by package; untagged items appear
+        /// under (untagged)
+        #[arg(long)]
+        by_package: bool,
     },
     /// Mark a Ready work item as In Progress and write its context package
     Start {
@@ -282,6 +290,8 @@ fn main() {
             module,
             plans,
             child,
+            package,
+            by_package,
         }) => {
             let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
             let resolved = match plans {
@@ -298,6 +308,8 @@ fn main() {
                 &resolved,
                 module.as_deref().unwrap_or(""),
                 child.as_deref().unwrap_or(""),
+                package.as_deref().unwrap_or(""),
+                by_package,
             );
             std::process::exit(code);
         }

@@ -190,6 +190,29 @@ get_module_type() {
   ' "$file"
 }
 
+# Extract the `Packages` column value from the metadata table, or empty.
+# Same first-data-row semantics as get_module_type. (PKG-001)
+# Usage: get_module_packages "file"
+get_module_packages() {
+  local file="$1"
+  awk -F '|' '
+    !found && /^\| *ID *\|/ {
+      for (i = 1; i <= NF; i++) {
+        c = $i; gsub(/^[[:space:]]+|[[:space:]]+$/, "", c)
+        if (c == "Packages") pcol = i
+      }
+      found = 1
+      next
+    }
+    found && pcol && /^\|/ {
+      if ($0 ~ /^\| *ID *\|/) next                 # repeated header
+      if ($0 ~ /^[|: -]+$/) next                   # separator row (|---|---|)
+      v = $pcol; gsub(/^[[:space:]]+|[[:space:]]+$/, "", v)
+      print v; exit
+    }
+  ' "$file"
+}
+
 # True when a module file carries `Type: Conductor` (case-insensitive).
 # Usage: is_conductor "file"
 is_conductor() {
