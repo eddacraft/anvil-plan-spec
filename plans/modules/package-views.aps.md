@@ -50,8 +50,10 @@ closes that inversion: the default tier gets first-class CLI support.
   filtered/next item in Rust, bash, and PowerShell; untagged bucket asserted
 - **Confidence:** medium
 - **Dependencies:** ORCH-001 (parser reuse)
-- **Status:** Ready
-- **Notes:** D-039 three-way parity applies (orchestration surface).
+- **Status:** In Progress
+- **Notes:** D-039 three-way parity applies (orchestration surface) —
+  wherever the command exists per the D-039 wording; verify whether the
+  PowerShell CLI carries `next` before scoping its port.
 
 ### PKG-002: Lint `Packages:` values (typo guard)
 
@@ -68,11 +70,11 @@ closes that inversion: the default tier gets first-class CLI support.
   `test/cli-parity.sh`
 - **Confidence:** medium
 - **Dependencies:** none
-- **Status:** In Progress
+- **Status:** Merged — PR #106 (`5010fdf`), 2026-07-15
 - **Notes:** D-039 parity; wire fixtures into the cross-CLI corpus so the
   CIP-002 harness covers the new code from day one. Code assigned: **W022**
   (next free after MONO-008's W021).
-- **Results (pending merge):** W022 lands in all three CLIs in the same
+- **Results:** W022 lands in all three CLIs in the same
   `lint_module` position (after W002, before work items): Rust
   `check_w022_packages` (`cli/src/lint.rs` + unit test),
   bash (`lib/rules/module.sh`), PowerShell (`lib/rules/Module.psm1`).
