@@ -184,6 +184,10 @@ enum Command {
         /// Plan root directory (default: plans)
         #[arg(long, value_name = "DIR")]
         plans: Option<String>,
+        /// Print modules grouped by Packages: tag instead (tagged monorepo
+        /// tier; untagged modules appear under (untagged))
+        #[arg(long)]
+        by_package: bool,
     },
     /// Audit plan state against reality (runs Complete items' Validation)
     Audit {
@@ -362,9 +366,9 @@ fn main() {
                 child.as_deref().unwrap_or(""),
             ));
         }
-        Some(Command::Rollup { plans }) => {
+        Some(Command::Rollup { plans, by_package }) => {
             let resolved = resolve_plans(plans, cli.strict, "aps rollup");
-            std::process::exit(rollup::cmd_rollup(&resolved));
+            std::process::exit(rollup::cmd_rollup(&resolved, by_package));
         }
         Some(Command::Audit {
             module,

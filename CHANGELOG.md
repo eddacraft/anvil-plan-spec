@@ -8,6 +8,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- **`aps rollup --by-package`** (PKG-003) — the generated form of the tagged
+  tier's "Modules by Package" view: modules grouped under their `Packages:`
+  tags as markdown tables, untagged modules in a final `(untagged)` section.
+  Print-only (copy into the index); byte-identical in the Rust binary and
+  bash CLI. Completes the package-views module.
 - **`aps next --package <name>` and `--by-package`** (PKG-001) — resolve the
   next ready item within one package's scope, or list the whole ready queue
   grouped by package. An item's effective tags are its own `**Packages:**`

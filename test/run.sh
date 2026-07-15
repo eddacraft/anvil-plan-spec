@@ -734,5 +734,14 @@ echo "$output" | grep -q "^(untagged):$" || fail "--by-package missing (untagged
 echo "$output" | tail -1 | grep -q "MISC-001" || fail "(untagged) bucket must come last"
 pass
 
+# Test 56: PKG-003 — rollup --by-package renders the grouped module view.
+echo -n "Test: rollup --by-package groups modules with (untagged) last... "
+output=$($APS rollup --plans "$SCRIPT_DIR/fixtures/pkgnext/plans" --by-package 2>&1) || fail "rollup --by-package failed"
+echo "$output" | grep -q "^### core$" || fail "missing core heading"
+echo "$output" | grep -q "AUTH | In Progress" || fail "missing tagged module row"
+echo "$output" | grep -q "^### (untagged)$" || fail "missing (untagged) heading"
+echo "$output" | awk '/### \(untagged\)/{f=1} f && /MISC/{found=1} END{exit !found}' || fail "MISC not under (untagged)"
+pass
+
 echo ""
 echo -e "${GREEN}All tests passed!${NC}"

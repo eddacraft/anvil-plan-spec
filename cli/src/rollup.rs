@@ -32,7 +32,81 @@ fn child_next_ready(graph: &PlanGraph, child: &str) -> String {
 }
 
 /// CLI entry. Returns the process exit code.
-pub fn cmd_rollup(plan_root: &str) -> i32 {
+/// PKG-003: grouped module view for the tagged tier — the generated form of
+/// docs/monorepo.md's "Modules by Package" section. Headings sort lexically;
+/// (untagged) comes last. Byte-identical to `bash cmd_rollup --by-package`.
+fn rollup_by_package(root: &Path) -> i32 {
+    use std::collections::BTreeMap;
+    let mut groups: BTreeMap<String, Vec<String>> = BTreeMap::new();
+    let mut untagged: Vec<String> = Vec::new();
+
+    for fed_root in next::plan_roots(root) {
+        let module_dir = fed_root.join("modules");
+        if !module_dir.is_dir() {
+            continue;
+        }
+        let child = child_name(&fed_root);
+        for file in parser::find_aps_files(&module_dir) {
+            if !file.ends_with(".aps.md") {
+                continue;
+            }
+            let Ok(plan) = PlanFile::load(&file) else {
+                continue;
+            };
+            let mut id = plan.module_id().unwrap_or_else(|| {
+                Path::new(&file)
+                    .file_stem()
+                    .map(|stem| {
+                        stem.to_string_lossy()
+                            .trim_end_matches(".aps")
+                            .to_uppercase()
+                    })
+                    .unwrap_or_default()
+            });
+            if !child.is_empty() {
+                id = format!("{child}:{id}");
+            }
+            let status = parser::normalize_status(plan.status().as_deref().unwrap_or(""), "Draft");
+            let row = format!("| {id} | {status} |");
+            let pkgs = plan.module_packages().unwrap_or_default();
+            if pkgs.is_empty() {
+                untagged.push(row);
+                continue;
+            }
+            for entry in pkgs.split(',') {
+                let name = next::pkg_normalize(entry);
+                if name.is_empty() {
+                    continue;
+                }
+                groups.entry(name).or_default().push(row.clone());
+            }
+        }
+    }
+
+    let mut first = true;
+    let mut emit = |name: &str, rows: &[String], first: &mut bool| {
+        if !*first {
+            println!();
+        }
+        *first = false;
+        println!("### {name}");
+        println!();
+        println!("| Module | Status |");
+        println!("| ------ | ------ |");
+        for row in rows {
+            println!("{row}");
+        }
+    };
+    for (name, rows) in &groups {
+        emit(name, rows, &mut first);
+    }
+    if !untagged.is_empty() {
+        emit("(untagged)", &untagged, &mut first);
+    }
+    0
+}
+
+pub fn cmd_rollup(plan_root: &str, by_package: bool) -> i32 {
     let root = Path::new(plan_root);
     if !root.is_dir() {
         eprintln!("error: Path not found: {plan_root}");
@@ -46,6 +120,10 @@ pub fn cmd_rollup(plan_root: &str) -> i32 {
             return 1;
         }
     };
+
+    if by_package {
+        return rollup_by_package(root);
+    }
 
     println!("| Child | Modules (complete/total) | Next ready item | Status |");
     println!("| ----- | ------------------------ | --------------- | ------ |");
@@ -121,13 +199,13 @@ mod tests {
 
     #[test]
     fn rollup_exits_ok_on_federation() {
-        assert_eq!(cmd_rollup(monorepo_root().to_str().unwrap()), 0);
+        assert_eq!(cmd_rollup(monorepo_root().to_str().unwrap(), false), 0);
     }
 
     #[test]
     fn rollup_warns_without_children() {
         // A single child plan (no ## Child Plans) has nothing to roll up.
         let child = monorepo_root().join("../packages/core/plans");
-        assert_eq!(cmd_rollup(child.to_str().unwrap()), 1);
+        assert_eq!(cmd_rollup(child.to_str().unwrap(), false), 1);
     }
 }
