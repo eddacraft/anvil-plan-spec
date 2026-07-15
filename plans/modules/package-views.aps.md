@@ -50,11 +50,11 @@ closes that inversion: the default tier gets first-class CLI support.
   filtered/next item in Rust, bash, and PowerShell; untagged bucket asserted
 - **Confidence:** medium
 - **Dependencies:** ORCH-001 (parser reuse)
-- **Status:** In Progress
+- **Status:** Merged — PR #107, 2026-07-16
 - **Notes:** D-039 parity applies wherever the command exists — verified: the
   PowerShell CLI does not carry `next` (lint/scaffold only), so PKG-001 is a
   Rust + bash surface.
-- **Results (pending merge):** `--package <name>` filter and `--by-package`
+- **Results:** `--package <name>` filter and `--by-package`
   grouping land in bash (`lib/orchestrate.sh` cmd_next + package helpers,
   `get_module_packages` in `lib/rules/common.sh`) and Rust
   (`PlanGraph::candidates`/`item_packages`/`pkg_normalize` in `cli/src/next.rs`,
@@ -115,7 +115,7 @@ closes that inversion: the default tier gets first-class CLI support.
   green
 - **Confidence:** medium
 - **Dependencies:** PKG-001 (shared package-resolution helpers)
-- **Status:** Ready
+- **Status:** In Progress
 - **Notes:** Print-only is the MVP; `--write` can follow. D-039 parity.
 
 ## Execution Strategy
