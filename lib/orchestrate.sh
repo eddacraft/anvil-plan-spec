@@ -1220,6 +1220,7 @@ orch_child_next_ready() {
 
 cmd_rollup() {
   local plan_root="" strict=false
+  local by_package=false
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -1242,10 +1243,16 @@ status. The root index stays hand-authored — copy this table into the parent's
 ## Roll-up section at session end to keep it current.
 
 Options:
-  --plans DIR  Plan root directory (default: plans)
-  --help       Show this help
+  --plans DIR   Plan root directory (default: plans)
+  --by-package  Print modules grouped by Packages: tag instead (tagged
+                monorepo tier; untagged modules appear under (untagged))
+  --help        Show this help
 EOF
         return 0
+        ;;
+      --by-package)
+        by_package=true
+        shift
         ;;
       -*)
         error "Unknown option: $1"
@@ -1273,6 +1280,58 @@ EOF
     error "No modules directory found: $plan_root/modules"
     return 1
   }
+
+  # PKG-003: grouped module view for the tagged tier — the generated form of
+  # docs/monorepo.md's "Modules by Package" section. Headings sort lexically;
+  # (untagged) comes last. Works on plain single roots and federations alike.
+  if [[ "$by_package" == true ]]; then
+    local -A pgroups=()
+    local proot pfile pid pst ppkgs pentry pname prow pchild
+    while IFS= read -r proot; do
+      [[ -d "$proot/modules" ]] || continue
+      pchild=$(orch_child_name "$proot")
+      while IFS= read -r pfile; do
+        pid=$(get_module_id "$pfile")
+        [[ -n "$pid" ]] || pid=$(basename "$pfile" .aps.md | tr '[:lower:]' '[:upper:]')
+        [[ -n "$pchild" ]] && pid="$pchild:$pid"
+        pst=$(orch_normalize_status "$(get_status "$pfile")" "Draft")
+        prow="| $pid | $pst |"$'\n'
+        ppkgs=$(get_module_packages "$pfile")
+        if [[ -z "$ppkgs" ]]; then
+          pgroups["(untagged)"]+="$prow"
+          continue
+        fi
+        local pentries
+        IFS=',' read -ra pentries <<< "$ppkgs"
+        for pentry in "${pentries[@]}"; do
+          pname=$(orch_pkg_normalize "$pentry")
+          [[ -n "$pname" ]] || continue
+          pgroups["$pname"]+="$prow"
+        done
+      done < <(find "$proot/modules" -type f -name "*.aps.md" ! -name ".*" 2>/dev/null | sort)
+    done < <(orch_plan_roots "$plan_root")
+
+    local pfirst=true
+    while IFS= read -r pname; do
+      [[ -n "$pname" && "$pname" != "(untagged)" ]] || continue
+      [[ "$pfirst" == true ]] || echo ""
+      pfirst=false
+      echo "### $pname"
+      echo ""
+      echo "| Module | Status |"
+      echo "| ------ | ------ |"
+      printf '%s' "${pgroups[$pname]}"
+    done < <(printf '%s\n' "${!pgroups[@]}" | sort)
+    if [[ -n "${pgroups[(untagged)]:-}" ]]; then
+      [[ "$pfirst" == true ]] || echo ""
+      echo "### (untagged)"
+      echo ""
+      echo "| Module | Status |"
+      echo "| ------ | ------ |"
+      printf '%s' "${pgroups[(untagged)]}"
+    fi
+    return 0
+  fi
 
   echo "| Child | Modules (complete/total) | Next ready item | Status |"
   echo "| ----- | ------------------------ | --------------- | ------ |"

@@ -116,7 +116,14 @@ closes that inversion: the default tier gets first-class CLI support.
 - **Confidence:** medium
 - **Dependencies:** PKG-001 (shared package-resolution helpers)
 - **Status:** In Progress
-- **Notes:** Print-only is the MVP; `--write` can follow. D-039 parity.
+- **Notes:** Print-only is the MVP; `--write` can follow. D-039 parity —
+  like `next`, `rollup` exists in Rust + bash only.
+- **Results (pending merge):** `rollup --by-package` renders `### <package>`
+  sections with `| Module | Status |` tables from module metadata, `(untagged)`
+  last, child-prefixed module IDs in federations; byte-identical bash↔Rust on
+  the pkgnext and monorepo fixtures, default rollup unchanged. Suite 59/59
+  (Test 56), cargo 148, clippy/fmt clean; docs + CHANGELOG updated. `--write`
+  deliberately deferred.
 
 ## Execution Strategy
 

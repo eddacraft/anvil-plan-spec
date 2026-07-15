@@ -137,7 +137,9 @@ ignored.
 With tags in place, `aps next` understands them: `aps next --package core`
 answers "what's next in the package I'm standing in", and `aps next
 --by-package` renders the whole ready queue grouped by package (untagged items
-surface under `(untagged)`).
+surface under `(untagged)`). `aps rollup --by-package` renders the "Modules by
+Package" view from live metadata as markdown, ready to paste into the index —
+generated views cannot drift.
 
 The orchestration commands work the same in a monorepo as anywhere else:
 
