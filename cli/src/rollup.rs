@@ -84,7 +84,7 @@ fn rollup_by_package(root: &Path) -> i32 {
     }
 
     let mut first = true;
-    let mut emit = |name: &str, rows: &[String], first: &mut bool| {
+    let emit = |name: &str, rows: &[String], first: &mut bool| {
         if !*first {
             println!();
         }
