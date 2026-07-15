@@ -1,7 +1,7 @@
 <!-- markdownlint-disable MD041 -->
 
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.5.0-green.svg)](https://github.com/EddaCraft/anvil-plan-spec/releases/tag/v0.5.0)
+[![Version](https://img.shields.io/badge/version-0.6.0-green.svg)](https://github.com/EddaCraft/anvil-plan-spec/releases/tag/v0.6.0)
 [![Made for AI agents](https://img.shields.io/badge/made%20for-AI%20agents-purple.svg)](docs/ai-agent-guide.md)
 
 <!-- markdownlint-enable MD041 -->
@@ -169,7 +169,7 @@ don't need them.
 
 No plugins. No integrations. No configuration. It's just files.
 
-## What's in v0.5.0
+## What's in v0.6.0
 
 Release candidate prepared **2026-07-11** — publication remains pending.
 

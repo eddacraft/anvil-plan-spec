@@ -392,8 +392,8 @@ carries a vendored bash CLI. It is read-only and prints one line per check:
 $ aps doctor
 aps doctor — migration diagnostics
 
-  [ok  ] global binary: aps 0.5.0 at /home/you/.aps/bin/aps
-  [warn] cli_version: project pins 0.4.0 but this binary is 0.5.0 — install the pinned release or update the pin
+  [ok  ] global binary: aps 0.6.0 at /home/you/.aps/bin/aps
+  [warn] cli_version: project pins 0.5.0 but this binary is 0.6.0 — install the pinned release or update the pin
   [warn] vendored CLI: leftover vendored CLI under /repo: bin/aps, lib — run `aps migrate` to back up and remove
   [ok  ] global runtime: /home/you/.aps/lib is complete
   [warn] direnv: /repo/.envrc still adds ./bin to PATH — drop it once you run on the global binary

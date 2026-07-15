@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-07-16
+
+**Release narrative:** [plans/releases/v0.6.0.md](./plans/releases/v0.6.0.md)
+for theme, success criteria, and risks.
+
 ### Added
 
 - **`aps rollup --by-package`** (PKG-003) — the generated form of the tagged
@@ -29,6 +34,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   or `apps/` directory, so single-package projects never pay for it.
   Implemented in all three CLIs (D-039) with shared fixtures wired into the
   cross-CLI parity harness.
+
+### Changed
+
+- **Version bumped to 0.6.0** across the Rust crate, project contract, private
+  package metadata, installers, scaffold stamps, and current-version examples.
 
 ## [0.5.0] - 2026-07-13
 

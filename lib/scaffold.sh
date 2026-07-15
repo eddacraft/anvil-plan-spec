@@ -9,7 +9,7 @@ APS_BASE_URL="https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/$APS_V
 # Semver of the bash CLI release, stamped into .aps/config.yml as the project
 # contract's cli_version (INSTALL-014). The native binary stamps its own crate
 # version; this is the bash-fallback equivalent.
-APS_CLI_VERSION="${APS_CLI_VERSION:-0.5.0}"
+APS_CLI_VERSION="${APS_CLI_VERSION:-0.6.0}"
 
 # --- v2 file lists (.aps/ layout) ---
 
@@ -312,7 +312,7 @@ write_config() {
     echo "tooling_root: .aps/"
     echo ""
     echo "aps:"
-    echo "  version: \"0.5.0\""
+    echo "  version: \"0.6.0\""
     echo "  config_schema: 1"
     echo "  installed: \"$today\""
     echo "  updated: \"$today\""
@@ -363,7 +363,7 @@ v2_install_plans() {
   local plans_dir="$target/plans"
 
   mkdir -p "$plans_dir/modules" "$plans_dir/execution" "$plans_dir/decisions" "$plans_dir/designs"
-  echo "0.5.0" > "$plans_dir/.aps-version"
+  echo "0.6.0" > "$plans_dir/.aps-version"
 
   for f in "${V2_PLAN_FILES[@]}"; do
     local rel="${f#scaffold/plans/}"
@@ -1304,8 +1304,8 @@ cmd_migrate() {
   fi
   download "scaffold/plans/aps-rules-v2.md" "$target/plans/aps-rules.md"
   info "Updated plans/aps-rules.md to v2"
-  echo "0.5.0" > "$target/plans/.aps-version"
-  info "Updated plans/.aps-version to 0.5.0"
+  echo "0.6.0" > "$target/plans/.aps-version"
+  info "Updated plans/.aps-version to 0.6.0"
 
   # Infer config.yml
   local inferred_tools=()

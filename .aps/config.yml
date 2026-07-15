@@ -2,7 +2,7 @@
 #
 # The toolchain pin and runtime path defaults the global `aps` binary
 # discovers by walking up from cwd. Explicit flags (--plans, ...) override.
-cli_version: 0.5.0
+cli_version: 0.6.0
 profile: solo
 plans_dir: plans/
 docs_dir: docs/
