@@ -134,6 +134,11 @@ ignored.
 
 ## Driving Monorepo Work with the CLI
 
+With tags in place, `aps next` understands them: `aps next --package core`
+answers "what's next in the package I'm standing in", and `aps next
+--by-package` renders the whole ready queue grouped by package (untagged items
+surface under `(untagged)`).
+
 The orchestration commands work the same in a monorepo as anywhere else:
 
 ```bash

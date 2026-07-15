@@ -717,5 +717,22 @@ echo "$output" | grep -q "W022" && fail "W022 fired without monorepo markers"
 echo "$output" | grep -q "no issues" || fail "nomarker fixture did not lint cleanly (got: $output)"
 pass
 
+# Test 55: PKG-001 — aps next --package / --by-package (bash, canonical).
+# Rust behaviour is asserted by cargo tests over the same shared fixture;
+# byte parity was verified by diffing both CLIs across all modes.
+echo -n "Test: next --package filters and --by-package groups... "
+output=$($APS next --plans "$SCRIPT_DIR/fixtures/pkgnext/plans" --package api 2>&1) || fail "next --package api failed"
+echo "$output" | grep -q "HND-001" || fail "--package api did not resolve HND-001 (item-level apps/api tag)"
+output=$($APS next --plans "$SCRIPT_DIR/fixtures/pkgnext/plans" --package core 2>&1) || fail "next --package core failed"
+echo "$output" | grep -q "AUTH-001" || fail "--package core did not resolve AUTH-001 (inherited module tag)"
+if $APS next --plans "$SCRIPT_DIR/fixtures/pkgnext/plans" --package ghost >/dev/null 2>&1; then
+  fail "--package ghost should exit non-zero"
+fi
+output=$($APS next --plans "$SCRIPT_DIR/fixtures/pkgnext/plans" --by-package 2>&1) || fail "next --by-package failed"
+echo "$output" | grep -q "^core:$" || fail "--by-package missing core group"
+echo "$output" | grep -q "^(untagged):$" || fail "--by-package missing (untagged) bucket"
+echo "$output" | tail -1 | grep -q "MISC-001" || fail "(untagged) bucket must come last"
+pass
+
 echo ""
 echo -e "${GREEN}All tests passed!${NC}"

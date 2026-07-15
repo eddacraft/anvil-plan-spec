@@ -51,9 +51,21 @@ closes that inversion: the default tier gets first-class CLI support.
 - **Confidence:** medium
 - **Dependencies:** ORCH-001 (parser reuse)
 - **Status:** In Progress
-- **Notes:** D-039 three-way parity applies (orchestration surface) —
-  wherever the command exists per the D-039 wording; verify whether the
-  PowerShell CLI carries `next` before scoping its port.
+- **Notes:** D-039 parity applies wherever the command exists — verified: the
+  PowerShell CLI does not carry `next` (lint/scaffold only), so PKG-001 is a
+  Rust + bash surface.
+- **Results (pending merge):** `--package <name>` filter and `--by-package`
+  grouping land in bash (`lib/orchestrate.sh` cmd_next + package helpers,
+  `get_module_packages` in `lib/rules/common.sh`) and Rust
+  (`PlanGraph::candidates`/`item_packages`/`pkg_normalize` in `cli/src/next.rs`,
+  `parser::module_packages`, clap args). Effective tags = item field else
+  module column; case-insensitive, `packages/x` ≡ `x`; untagged items fill a
+  final `(untagged)` bucket and match no filter; composed not-found warning.
+  Shared fixture `test/fixtures/pkgnext/`; byte-identical bash↔Rust across
+  seven modes (plain, both filters, path-qualified case-insensitive filter,
+  ghost filter exit 1, grouped, grouped+filtered). cargo 148, suite 58/58
+  (Test 55), clippy/fmt/shellcheck/markdownlint/self-lint clean; docs
+  (`usage.md`, `monorepo.md`) and CHANGELOG updated.
 
 ### PKG-002: Lint `Packages:` values (typo guard)
 
