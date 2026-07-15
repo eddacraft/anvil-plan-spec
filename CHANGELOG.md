@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **W022 — `Packages:` tag validation** (PKG-002) — the tagged monorepo tier's
+  first lint support: a `Packages:` scope tag (metadata-table column or
+  work-item field) that resolves to no workspace directory warns as a likely
+  typo. Resolution tries the entry as given plus `packages/<entry>` and
+  `apps/<entry>`; the check is silent unless the workspace has a `packages/`
+  or `apps/` directory, so single-package projects never pay for it.
+  Implemented in all three CLIs (D-039) with shared fixtures wired into the
+  cross-CLI parity harness.
+
 ## [0.5.0] - 2026-07-13
 
 **Release narrative:** [plans/releases/v0.5.0.md](./plans/releases/v0.5.0.md)

@@ -120,6 +120,76 @@ check_w002_conductor_refs() {
   return 0
 }
 
+# W022: a `Packages:` scope tag (metadata-table column or work-item field)
+# that resolves to no directory in the workspace — most likely a typo
+# (PKG-002, the tagged-monorepo analogue of W002/W006). Resolution tries the
+# entry as given plus the conventional packages/<entry> and apps/<entry>
+# roots. Silent when the workspace has no packages/ or apps/ directory, so
+# single-package projects never pay for the check. Mirrors the Rust
+# check_w022_packages.
+check_w022_packages() {
+  local file="$1"
+
+  # Workspace root: the path prefix before the last /plans/ component.
+  local root
+  case "$file" in
+    */plans/*) root="${file%/plans/*}" ;;
+    plans/*)   root="." ;;
+    *)         return 0 ;;
+  esac
+  [[ -d "$root/packages" || -d "$root/apps" ]] || return 0
+
+  local line_num value raw entry
+  while IFS=: read -r line_num value; do
+    [[ -z "$value" ]] && continue
+    local entries
+    IFS=',' read -ra entries <<< "$value"
+    for raw in "${entries[@]}"; do
+      # Trim whitespace and backticks; skip prose placeholders like
+      # `_(monorepo only)_` (anything outside [A-Za-z0-9@._/-]).
+      # shellcheck disable=SC2016 # the backtick is a literal in the sed class
+      entry=$(printf '%s' "$raw" | sed -E 's/^[[:space:]`]+//; s/[[:space:]`]+$//')
+      [[ -n "$entry" ]] || continue
+      [[ "$entry" =~ ^[A-Za-z0-9@._/-]+$ ]] || continue
+      if [[ ! -d "$root/$entry" && ! -d "$root/packages/$entry" && ! -d "$root/apps/$entry" ]]; then
+        add_result "$file" "warning" "W022" "Packages entry '$entry' does not resolve to a workspace directory" "$line_num"
+      fi
+    done
+  done < <(awk -F'|' '
+    # Metadata table: first data row of the Packages column is authoritative
+    # (mirrors get_module_type). Repeated headers and separators are skipped.
+    !hdr && /^\|/ {
+      c1 = $2; gsub(/^[[:space:]]+|[[:space:]]+$/, "", c1)
+      if (c1 == "ID") {
+        for (i = 1; i <= NF; i++) {
+          c = $i; gsub(/^[[:space:]]+|[[:space:]]+$/, "", c)
+          if (c == "Packages") pc = i
+        }
+        hdr = 1
+      }
+      next
+    }
+    hdr && !done && /^\|/ {
+      if ($0 ~ /^[|: -]+$/) next
+      c1 = $2; gsub(/^[[:space:]]+|[[:space:]]+$/, "", c1)
+      if (c1 == "ID") next
+      if (pc) {
+        v = $pc; gsub(/^[[:space:]]+|[[:space:]]+$/, "", v)
+        if (v != "") print NR ":" v
+      }
+      done = 1
+      next
+    }
+    # Work-item fields: every `- **Packages:** ...` line.
+    /^[[:space:]]*- \*\*Packages:\*\*/ {
+      line = $0
+      sub(/^[[:space:]]*- \*\*Packages:\*\*[[:space:]]*/, "", line)
+      if (line != "") print NR ":" line
+    }
+  ' "$file")
+  return 0
+}
+
 # W005: Status=Ready but no work items
 check_w005_ready_no_items() {
   local file="$1"
@@ -146,10 +216,12 @@ lint_module() {
 
   check_w004_empty_sections_module "$file"
   check_w005_ready_no_items "$file"
-  # W017 then W002 — mirror the Rust lint_module call order so byte-level diffs
-  # of lint output stay identical across all three CLIs (D-038/D-039).
+  # W017 then W002 then W022 — mirror the Rust lint_module call order so
+  # byte-level diffs of lint output stay identical across all three CLIs
+  # (D-038/D-039).
   check_w017_last_reviewed "$file"
   check_w002_conductor_refs "$file"
+  check_w022_packages "$file"
 
   # Check work items if the section exists
   if has_section "$file" "## Work Items"; then

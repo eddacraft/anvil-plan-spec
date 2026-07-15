@@ -125,6 +125,13 @@ Key points:
 - `Packages` per work item = can be subset of module's packages
 - Validation commands use workspace flags (`-w packages/core`, `--filter=@myorg/core`)
 
+`aps lint` validates the tags (**W022**): an entry that resolves to no
+workspace directory — checked as given, then under `packages/` and `apps/` —
+warns as a likely typo. The check only runs when the workspace actually has a
+`packages/` or `apps/` directory, so single-package projects never see it.
+Entries with characters outside `[A-Za-z0-9@._/-]` (placeholder prose) are
+ignored.
+
 ## Driving Monorepo Work with the CLI
 
 The orchestration commands work the same in a monorepo as anywhere else:
