@@ -288,6 +288,8 @@ for the full lifecycle.
 ## Learn more
 
 - [Getting started](docs/getting-started.md) — first plan, end-to-end
+- [Team rollout](docs/team-rollout.md) — ownership, plan-change review, version pinning, CI enforcement
+- [Integrations](docs/integrations.md) — GitHub Action, `aps export --json`
 - [Workflow guide](docs/workflow.md) — Plan / Execute / Validate / Learn
 - [CLI reference](docs/usage.md) — every command, every flag, JSON output
 - [Release planning](docs/release-planning.md) — release narratives, status flow, tooling hand-off
