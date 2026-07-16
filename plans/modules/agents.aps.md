@@ -262,7 +262,7 @@ mode agents (users invoke them deliberately, not as the default primary agent).
   Manual end-to-end tests documented in docs/plans/2026-03-15-agent-cross-harness-test-plan.md — require
   respective tool installs. Claude Code agents validated live.
 
-### AGENT-007: Retire Gemini scaffolding, add Grok (D-040) — Ready
+### AGENT-007: Retire Gemini scaffolding, add Grok (D-040) — In Progress
 
 - **Intent:** Land the D-040 harness-set revision in the shipped tooling:
   Gemini out of init/setup/wizard/installers in all three CLIs; Grok in,

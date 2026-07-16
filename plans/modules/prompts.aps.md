@@ -2,7 +2,7 @@
 
 | ID      | Owner  | Priority | Status |
 | ------- | ------ | -------- | ------ |
-| PROMPTS | @aneki | medium   | Ready  |
+| PROMPTS | @aneki | medium   | In Progress |
 
 **Last reviewed:** 2026-07-16
 

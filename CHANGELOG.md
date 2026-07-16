@@ -6,6 +6,50 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+**Release narrative:** [plans/releases/v0.7.0.md](./plans/releases/v0.7.0.md).
+
+### Added
+
+- **`aps export --json`** (INTEGRATIONS-001/002) — a compact, deterministic
+  JSON snapshot of the plan tree (schema `aps-export/v1`): modules in file
+  order, work items in document order, with statuses, dependency tokens,
+  children, and effective `Packages:` tags. Implemented in the Rust binary
+  and bash CLI with byte-identical output, pinned by a new export leg in
+  `test/cli-parity.sh`. Shape documented in `docs/integrations.md`.
+- **Composite GitHub Action for `aps lint`** (INTEGRATIONS-003, completing
+  D-007) — `uses: eddacraft/anvil-plan-spec@<tag>` lints a repo's plans with
+  the action ref pinning the CLI version; opt-in `rollup-comment` maintains
+  a sticky PR comment with the federated rollup or the `next --by-package`
+  ready queue. Dogfooded by this repo's own CI.
+- **Prompt entry points for every harness** (PROMPTS-002/003) —
+  `docs/ai/prompting/README.md` states the variant-vs-stub policy and
+  coverage; one-screen stubs for Copilot, Codex, and Grok close the D-006
+  gap.
+- **Team rollout guide + multi-owner example** (EXAMPLES-002) —
+  `docs/team-rollout.md` (ownership, plan-change review, merge-conflict
+  conventions, version pinning, Windows/PowerShell story) and
+  `examples/team-payments/`, a lint-clean three-owner plan mid-execution
+  with a conductor module.
+
+### Changed
+
+- **Harness set revision** (D-040, AGENT-007) — Gemini is retired from
+  init/setup/wizard and the installers in all three CLIs (`gemini` as a
+  tool value now errors with a D-040 pointer; existing installs untouched,
+  `GEMINI.md` stays on the migrate protected list). Grok Build joins the
+  set, riding the Codex-shared `.agents/skills/` payload and the
+  `AGENTS.md` family with no bespoke assets. Supported harnesses: Claude
+  Code, Copilot, Codex, OpenCode, Grok.
+
+### Fixed
+
+- **Fence-aware shared parser helpers** (ISS-001, VAL-002) — work-item
+  headers, `Dependencies:` fields, and heading terminators inside fenced
+  code blocks are treated as documentation examples in all three CLIs: no
+  more false E005s, phantom `next`/`graph` entries, or early item-content
+  truncation. Pinned by a shared parity fixture; the new fixture caught a
+  real bash/PowerShell divergence during development.
+
 ## [0.6.0] - 2026-07-16
 
 **Release narrative:** [plans/releases/v0.6.0.md](./plans/releases/v0.6.0.md)

@@ -82,9 +82,9 @@ release narratives live in [`plans/releases/`](./releases/).
 | --------------------------------------------- | --------------------------------------------------------- | -------- |
 | [spec](./modules/spec.aps.md)                 | Canonical vocabulary + schema (status reconciliation)     | Complete |
 | [tasks](./modules/tasks.aps.md)               | Claude Code Tasks integration                             | Complete |
-| [examples](./modules/examples.aps.md)         | Additional worked examples                                | Ready    |
-| [prompts](./modules/prompts.aps.md)           | Tool-specific prompt variants                             | Ready    |
-| [integrations](./modules/integrations.aps.md) | JSON export, GitHub Action, lint/rollup CI surface        | Ready    |
+| [examples](./modules/examples.aps.md)         | Additional worked examples                                | In Progress |
+| [prompts](./modules/prompts.aps.md)           | Tool-specific prompt variants                             | In Progress |
+| [integrations](./modules/integrations.aps.md) | JSON export, GitHub Action, lint/rollup CI surface        | In Progress |
 | [monorepo](./modules/monorepo.aps.md)         | Nested index.aps.md plans, federated lint + orchestration | Complete |
 | [package-views](./modules/package-views.aps.md) | CLI tooling for the tagged monorepo tier (`Packages:` lint, next filter, generated views) | Complete |
 | [ci-parity](./modules/ci-parity.aps.md)       | Behavioural pwsh + cross-CLI parity checks in CI          | Complete |

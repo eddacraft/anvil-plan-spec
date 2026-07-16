@@ -1101,9 +1101,7 @@ fn check_w003_dependencies(
         .take_while(|(offset, l)| {
             mask[item_line + offset] || (!l.starts_with("## ") && !l.starts_with("### "))
         })
-        .find(|(offset, l)| {
-            !mask[item_line + offset] && l.starts_with("- **Dependencies:**")
-        })
+        .find(|(offset, l)| !mask[item_line + offset] && l.starts_with("- **Dependencies:**"))
         .map(|(_, l)| l);
     let Some(deps_line) = deps_line else {
         return;
