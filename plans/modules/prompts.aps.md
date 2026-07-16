@@ -47,24 +47,24 @@ harnesses without drifting away from the shared APS lifecycle.
 | generic     | index, module, work-item, actions                          | Full set       |
 | OpenCode    | index, module, work-item, actions                          | Full variant   |
 | Claude Code | agent-assignment, sync-status, tasks-from-module, wave-planning | Orchestration deltas |
-| Copilot     | —                                                          | Uncovered      |
-| Codex       | —                                                          | Uncovered      |
-| Grok        | —                                                          | Uncovered      |
+| Copilot     | README stub → generic prompts                              | Stub           |
+| Codex       | README stub → generic prompts                              | Stub           |
+| Grok        | README stub → generic prompts                              | Stub           |
 
 The five harnesses APS targets are Claude Code, Copilot, OpenCode, Codex, and
-Grok (D-013/D-019 as amended by D-040 — Gemini dropped, Grok added). Three have
-no prompt entry point today, which is the gap D-006 calls out.
+Grok (D-013/D-019 as amended by D-040 — Gemini dropped, Grok added). Every
+harness now has a prompt entry point (D-006 closed by PROMPTS-003).
 
 ## Decisions
 
 - **D-006:** Tool-specific prompt variants — _decided: yes; each harness needs
   either a variant or a stub pointing at the generic prompts + `AGENTS.md`._
   (Roadmap D-006.) This module implements that decision.
-- **D-001 (module):** Variant vs stub per harness — **proposed.** A harness gets
-  a full variant only when its workflow diverges from the generic lifecycle
-  (OpenCode flow control, Claude Code orchestration/Tasks). Otherwise it gets a
-  one-screen stub that links to the generic prompt and `AGENTS.md`. Resolved by
-  PROMPTS-002.
+- **D-001 (module):** Variant vs stub per harness — **decided 2026-07-16.** A
+  harness gets a full variant only when its workflow diverges from the generic
+  lifecycle (OpenCode flow control, Claude Code orchestration/Tasks). Otherwise
+  it gets a one-screen stub that links to the generic prompt and `AGENTS.md`.
+  Written into `docs/ai/prompting/README.md` by PROMPTS-002.
 
 ## Work Items
 
@@ -83,7 +83,7 @@ no prompt entry point today, which is the gap D-006 calls out.
 - **Dependencies:** None
 - **Files:** docs/ai/prompting/opencode/, docs/ai/prompting/claudecode/
 
-### PROMPTS-002: Document variant-vs-stub policy — Ready
+### PROMPTS-002: Document variant-vs-stub policy — In Progress
 
 - **Intent:** Make the 4th In-Scope rule concrete so future harnesses have a
   rule for whether to ship a full variant or a stub (resolves D-038).
@@ -98,7 +98,7 @@ no prompt entry point today, which is the gap D-006 calls out.
 - **Files:** docs/ai/prompting/README.md, plans/modules/prompts.aps.md,
   plans/index.aps.md
 
-### PROMPTS-003: Add stub prompts for uncovered harnesses — Ready
+### PROMPTS-003: Add stub prompts for uncovered harnesses — In Progress
 
 - **Intent:** Close the D-006 gap for Copilot, Codex, and Grok, which have no
   prompt entry point today.
@@ -120,7 +120,7 @@ no prompt entry point today, which is the gap D-006 calls out.
 - [x] Purpose and scope are clear
 - [x] Dependencies identified (AGENT, SPEC)
 - [x] Work items defined with validation
-- [ ] D-001 (module) resolved (variant-vs-stub policy — lands with PROMPTS-002)
+- [x] D-001 (module) resolved (variant-vs-stub policy — landed with PROMPTS-002)
 
 ## Notes
 
