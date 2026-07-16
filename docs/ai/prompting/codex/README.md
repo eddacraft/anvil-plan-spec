@@ -18,8 +18,7 @@ Codex-specific wiring:
 - **Instructions:** Codex reads [`AGENTS.md`](../../../../AGENTS.md) at the
   repo root.
 - **Agents:** roles install to `.codex/agents/*.toml` (select `codex` in
-  `aps init`, or run `aps setup codex`); merge the generated
-  `codex-config-snippet.toml` into `.codex/config.toml`, then spawn with
-  `/agent spawn aps-planner`.
+  `aps init`, or run `aps setup codex`) and are discovered automatically. Ask
+  Codex to delegate to a named role; use `/agent` to inspect its thread.
 - **Skills:** the planning skill installs to `.agents/skills/aps-planning/`;
   register it with `codex skills install .agents/skills/aps-planning`.

@@ -159,14 +159,28 @@ echo -n "Test: conductor agents install... "
 [[ -f "$PROJECT_ROOT/scaffold/agents/copilot/aps-conductor.md" ]] || fail "generated copilot conductor missing"
 [[ -f "$PROJECT_ROOT/scaffold/agents/codex/aps-conductor.toml" ]] || fail "generated codex conductor missing"
 [[ -f "$PROJECT_ROOT/scaffold/agents/opencode/aps-conductor.md" ]] || fail "generated opencode conductor missing"
+for codex_agent in "$PROJECT_ROOT"/scaffold/agents/codex/*.toml; do
+  grep -Eq '^name = "[^"]+"$' "$codex_agent" || fail "$(basename "$codex_agent") missing Codex name"
+  grep -Eq '^description = "[^"]+"$' "$codex_agent" || fail "$(basename "$codex_agent") missing Codex description"
+  grep -q '^developer_instructions = """$' "$codex_agent" || fail "$(basename "$codex_agent") missing Codex instructions"
+done
 AGENT_DIR=$(mktemp -d)
+mkdir -p "$AGENT_DIR/.codex/agents"
+: > "$AGENT_DIR/.codex/agents/codex-config-snippet.toml"
 APS_LOCAL="$PROJECT_ROOT" $APS init "$AGENT_DIR" --profile agent --scope small --tools claude-code,copilot,codex,opencode,grok > /dev/null 2>&1 || fail "agent init failed"
 [[ -f "$AGENT_DIR/.claude/agents/aps-conductor.md" ]] || fail "claude conductor missing"
 [[ -f "$AGENT_DIR/.github/agents/aps-conductor.md" ]] || fail "copilot conductor missing"
 [[ -f "$AGENT_DIR/.codex/agents/aps-conductor.toml" ]] || fail "codex conductor missing"
 [[ -f "$AGENT_DIR/.opencode/agents/aps-conductor.md" ]] || fail "opencode conductor missing"
 [[ -f "$AGENT_DIR/.agents/skills/aps-planning/SKILL.md" ]] || fail "grok/codex shared skill missing"
-grep -qF 'aps-conductor' "$AGENT_DIR/.codex/agents/codex-config-snippet.toml" || fail "codex conductor config missing"
+if find "$AGENT_DIR/.codex" -name 'codex-config-snippet.toml' -print -quit | grep -q .; then
+  fail "obsolete Codex config snippet installed"
+fi
+for codex_agent in "$AGENT_DIR"/.codex/agents/*.toml; do
+  grep -Eq '^name = "[^"]+"$' "$codex_agent" || fail "installed $(basename "$codex_agent") missing Codex name"
+  grep -Eq '^description = "[^"]+"$' "$codex_agent" || fail "installed $(basename "$codex_agent") missing Codex description"
+  grep -q '^developer_instructions = """$' "$codex_agent" || fail "installed $(basename "$codex_agent") missing Codex instructions"
+done
 rm -rf "$AGENT_DIR"
 pass
 

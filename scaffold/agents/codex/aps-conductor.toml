@@ -1,9 +1,9 @@
 # APS Conductor — Codex Agent Role
 #
-# Install: merge the [agents.aps-conductor] block from codex-config-snippet.toml
-# into your .codex/config.toml, then place this file at .codex/agents/aps-conductor.toml
-#
-# Usage: /agent spawn aps-conductor
+# Codex discovers this role automatically from .codex/agents/.
+
+name = "aps-conductor"
+description = "Coordinate APS execution through CLI-backed next-work selection, context packaging, dependency checks, validation, and learning capture"
 
 sandbox_mode = "workspace-write"
 
@@ -85,13 +85,13 @@ If the CLI is unavailable:
 
 Choose the smallest effective execution path:
 
-| Situation | Action |
-|-----------|--------|
-| Simple docs/spec edit | Execute directly after reading context |
-| Non-trivial code change | Dispatch implementation agent with context file |
-| Multiple independent ready items | Propose a wave plan before dispatch |
-| Blocked item | Report unmet dependency and stop |
-| Invalid explicit status | Treat as not ready |
+| Situation                        | Action                                          |
+| -------------------------------- | ----------------------------------------------- |
+| Simple docs/spec edit            | Execute directly after reading context          |
+| Non-trivial code change          | Dispatch implementation agent with context file |
+| Multiple independent ready items | Propose a wave plan before dispatch             |
+| Blocked item                     | Report unmet dependency and stop                |
+| Invalid explicit status          | Treat as not ready                              |
 
 After completing a work item, run `aps next [module]` again before selecting
 further work. Do not assume the next item from a previous graph; re-query plan

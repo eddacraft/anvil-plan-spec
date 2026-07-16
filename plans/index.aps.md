@@ -135,7 +135,7 @@ These are explicitly out of scope:
 - **D-016:** Agent scope split — _decided: Planner = planning + execution + status + waves; Librarian = archiving + cross-refs + orphans_
 - **D-017:** Agent path references — _decided: agents reference `plans/` and `.aps/scripts/`, not `.aps/config.yml`_
 - **D-018:** Shared core vs per-tool rewrite — _decided: shared core prompt, tool-specific frontmatter/packaging_
-- **D-019:** Agent format per tool — _decided: 4/5 tools have native agent mechanisms (Claude Code `.claude/agents/`, Copilot `.github/agents/`, OpenCode `.opencode/agents/`, Codex `.codex/config.toml` + TOML overlays); Gemini is skill-only. Port to each tool's native format, not just skills. Harness set amended by D-040 (Gemini out, Grok in; Grok consumes the Codex-shared `.agents/skills/` assets)_
+- **D-019:** Agent format per tool — _decided: 4/5 tools have native agent mechanisms (Claude Code `.claude/agents/`, Copilot `.github/agents/`, OpenCode `.opencode/agents/`, Codex standalone `.codex/agents/*.toml` roles); Gemini was skill-only. Port to each tool's native format, not just skills. Harness set amended by D-040 (Gemini out, Grok in; Grok consumes the Codex-shared `.agents/skills/` assets). Codex registration snippets were retired by AGENT-008 after standalone role auto-discovery became canonical._
 - **D-022:** External planning repo reversed — _decided: plans move back to main repo_
 - **D-023:** Commands fully dropped — _decided: yes, skills only, no `.claude/commands/` shipped_
 - **D-024:** aps-rules.md split — _decided: `aps-rules.md` (APS-managed) + `project-context.md` (user-owned)_
