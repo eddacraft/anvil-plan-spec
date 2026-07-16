@@ -196,6 +196,20 @@ echo "$graph_out" | grep -q "FENCE-001" || fail "real item missing from graph"
 rm -rf "$FENCE_DIR"
 pass
 
+# Test 18d: aps export emits deterministic aps-export/v1 JSON
+echo -n "Test: export emits deterministic JSON... "
+exp1=$($APS export --plans "$SCRIPT_DIR/fixtures/valid" 2>&1) || fail "export failed"
+[[ "$exp1" == '{"schema":"aps-export/v1"'* ]] || fail "unexpected schema header"
+exp2=$($APS export --plans "$SCRIPT_DIR/fixtures/valid" 2>&1) || fail "second export failed"
+[[ "$exp1" == "$exp2" ]] || fail "export not deterministic"
+if command -v python3 >/dev/null 2>&1; then
+  printf '%s' "$exp1" | python3 -m json.tool > /dev/null || fail "export is not valid JSON"
+fi
+if echo "$exp1" | grep -q "FAKE-999"; then
+  fail "fenced example leaked into export"
+fi
+pass
+
 # Test 19: Curl install/update scripts include CLI runtime libraries
 echo -n "Test: curl installers include orchestration lib... "
 grep -qF 'lib/orchestrate.sh' "$PROJECT_ROOT/scaffold/install" || fail "install omits lib/orchestrate.sh"

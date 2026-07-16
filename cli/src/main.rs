@@ -10,6 +10,7 @@ mod audit;
 mod config;
 mod date;
 mod doctor;
+mod export;
 mod lint;
 mod migrate;
 mod next;
@@ -209,6 +210,15 @@ enum Command {
         #[arg(long, value_name = "NAME")]
         child: Option<String>,
     },
+    /// Emit a machine-readable JSON snapshot of the plan tree (aps-export/v1)
+    Export {
+        /// Plan root directory (default: plans)
+        #[arg(long, value_name = "DIR")]
+        plans: Option<String>,
+        /// Accepted for clarity; JSON is the only output format
+        #[arg(long)]
+        json: bool,
+    },
     /// Diagnose migration state (global binary, cli_version, leftover CLI)
     Doctor,
 }
@@ -369,6 +379,10 @@ fn main() {
         Some(Command::Rollup { plans, by_package }) => {
             let resolved = resolve_plans(plans, cli.strict, "aps rollup");
             std::process::exit(rollup::cmd_rollup(&resolved, by_package));
+        }
+        Some(Command::Export { plans, json: _ }) => {
+            let resolved = resolve_plans(plans, cli.strict, "aps export");
+            std::process::exit(export::cmd_export(&resolved));
         }
         Some(Command::Audit {
             module,

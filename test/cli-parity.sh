@@ -145,6 +145,25 @@ for fx in "${FIXTURES[@]}"; do
 done
 
 echo ""
+
+# Export parity (INTEGRATIONS-002): `aps export` must be byte-identical
+# between bash and Rust — exit code included. (No PowerShell surface,
+# matching the next/rollup precedent.)
+EXPORT_FIXTURES=("valid" "monorepo/plans" "pkgnext/plans" "orchestrate/plans")
+for fx in "${EXPORT_FIXTURES[@]}"; do
+  target="$SCRIPT_DIR/fixtures/$fx"
+  b=$("$BASH_APS" export --plans "$target" 2>&1); brc=$?
+  r=$("$RUST_APS" export --plans "$target" 2>&1); rrc=$?
+  if [[ "$b" == "$r" && $brc -eq $rrc ]]; then
+    echo -e "${GREEN}OK${NC} export $fx (rc=$brc)"
+  else
+    echo -e "${RED}DIVERGE${NC} export bash vs Rust on $fx (rc $brc vs $rrc):"
+    diff <(printf '%s\n' "$b") <(printf '%s\n' "$r") | sed 's/^/    /' | head -10
+    fail=1
+  fi
+done
+
+echo ""
 if [[ $fail -ne 0 ]]; then
   echo -e "${RED}Cross-CLI parity FAILED — the linters diverged (see above).${NC}"
   exit 1
