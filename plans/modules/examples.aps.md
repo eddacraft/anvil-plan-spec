@@ -2,7 +2,7 @@
 
 | ID       | Owner  | Priority | Status |
 | -------- | ------ | -------- | ------ |
-| EXAMPLES | @aneki | medium   | Ready  |
+| EXAMPLES | @aneki | medium   | In Progress |
 
 **Last reviewed:** 2026-07-16
 
@@ -44,7 +44,7 @@ execution plans, decisions, and design documents.
 - **Files:** examples/, test/fixtures/valid/
 - **Confidence:** medium
 
-### EXAMPLES-002: Team rollout guide + multi-owner example — Ready
+### EXAMPLES-002: Team rollout guide + multi-owner example — In Progress
 
 - **Intent:** Give a team adopting APS the conventions the format alone
   doesn't answer: who owns the index, how plan changes are reviewed, how

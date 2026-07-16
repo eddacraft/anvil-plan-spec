@@ -164,7 +164,9 @@ pub fn post_install_note(tool: AiTool) -> Option<&'static str> {
             Some("Codex: merge .codex/codex-config-snippet.toml into ~/.codex/config.toml")
         }
         AiTool::OpenCode => Some("OpenCode: agents installed under .opencode/agent"),
-        AiTool::Grok => Some("Grok: Grok Build discovers AGENTS.md and installed skills automatically"),
+        AiTool::Grok => {
+            Some("Grok: Grok Build discovers AGENTS.md and installed skills automatically")
+        }
         AiTool::Generic => None,
     }
 }

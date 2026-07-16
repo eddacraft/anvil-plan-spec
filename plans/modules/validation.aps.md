@@ -45,7 +45,7 @@ development and CI.
 - **Files:** bin/, lib/, test/fixtures/
 - **Confidence:** high
 
-### VAL-002: Fence-aware shared parser helpers — Ready
+### VAL-002: Fence-aware shared parser helpers — In Progress
 
 - **Intent:** Close ISS-001 — work-item headers inside fenced code blocks are
   parsed as real items by the shared helpers (`get_work_items` and friends),

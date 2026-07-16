@@ -2,7 +2,7 @@
 
 | ID           | Owner  | Priority | Status |
 | ------------ | ------ | -------- | ------ |
-| INTEGRATIONS | @aneki | medium   | Ready  |
+| INTEGRATIONS | @aneki | medium   | In Progress |
 
 **Last reviewed:** 2026-07-16
 
@@ -39,7 +39,7 @@ without making external systems the source of truth.
 
 ## Work Items
 
-### INTEGRATIONS-001: Define JSON export shape — Ready
+### INTEGRATIONS-001: Define JSON export shape — In Progress
 
 - **Intent:** Let external tools consume APS without owning APS state
 - **Expected Outcome:** Documented JSON shape for index, modules, work items,
@@ -50,7 +50,7 @@ without making external systems the source of truth.
 - **Files:** docs/integrations.md
 - **Confidence:** medium
 
-### INTEGRATIONS-002: Implement `aps export --json` — Ready
+### INTEGRATIONS-002: Implement `aps export --json` — In Progress
 
 - **Intent:** Give non-CLI stakeholders and CI a machine-readable view of a
   plan tree (the substrate for dashboards, PR comments, and sync experiments).
@@ -66,7 +66,7 @@ without making external systems the source of truth.
 - **Files:** cli/src/export.rs, cli/src/main.rs, bin/aps, lib/export.sh
 - **Confidence:** medium
 
-### INTEGRATIONS-003: GitHub Action for lint + rollup — Ready
+### INTEGRATIONS-003: GitHub Action for lint + rollup — In Progress
 
 - **Intent:** One-line CI adoption for teams: lint plans on every PR and
   optionally post the rollup as a sticky PR comment (completes the second half
