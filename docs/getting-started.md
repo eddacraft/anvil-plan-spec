@@ -248,8 +248,8 @@ APS includes prompts for AI tools:
 OpenCode/Claude users: see `docs/ai/prompting/opencode/` for optimised variants.
 
 APS ships first-class agent definitions for Claude Code, Codex, GitHub Copilot,
-OpenCode, and Gemini — `aps init` lets you select which tools to install agents
-for. See [docs/agents.md](./agents.md) for details on each port and the
+and OpenCode, plus Grok Build support via auto-discovered `.agents/skills/` —
+`aps init` lets you select which tools to install agents for. See [docs/agents.md](./agents.md) for details on each port and the
 APS-aware agents (planner, librarian, conductor).
 
 When you scaffold APS, it includes `aps-rules.md` — point your AI agent at this

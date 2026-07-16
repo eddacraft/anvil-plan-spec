@@ -4,7 +4,8 @@
 #
 # Usage: ./scaffold/agents/build.sh
 #
-# Generates: Claude Code, Copilot, OpenCode, Codex, Gemini
+# Generates: Claude Code, Copilot, OpenCode, Codex
+# (Grok Build consumes the Codex-shared .agents/skills/ + AGENTS.md — D-040)
 
 set -euo pipefail
 
@@ -170,18 +171,6 @@ model = "o4-mini"  # OpenAI model — Codex runs on OpenAI infrastructure
 config_file = ".codex/agents/aps-conductor.toml"
 SNIPPET
 info "wrote $CX_DIR/codex-config-snippet.toml"
-
-# --- Gemini (.gemini/skills/) ---
-# Gemini skills are handwritten (not core+frontmatter) since the SKILL.md
-# format is structurally different. The build script just verifies they exist.
-GM_DIR="$SCRIPT_DIR/gemini"
-for agent in aps-planner aps-librarian aps-conductor; do
-  if [ ! -f "$GM_DIR/$agent/SKILL.md" ]; then
-    echo "error: missing $GM_DIR/$agent/SKILL.md" >&2
-    exit 1
-  fi
-  info "verified $GM_DIR/$agent/SKILL.md"
-done
 
 echo ""
 info "all agent variants generated"

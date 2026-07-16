@@ -56,7 +56,7 @@ enum Command {
         /// Project shape: single or monorepo
         #[arg(long)]
         shape: Option<String>,
-        /// AI tools (comma-separated): claude-code, copilot, codex, opencode, gemini, generic
+        /// AI tools (comma-separated): claude-code, copilot, codex, opencode, grok, generic
         #[arg(long, value_delimiter = ',')]
         tools: Vec<String>,
         /// Plan templates (comma-separated): quickstart, module, index, monorepo-index, index-nested
@@ -91,7 +91,7 @@ enum Command {
     /// Add optional APS pieces: picker without arguments, shortcuts otherwise
     Setup {
         /// What to set up: cli, init, agent, hooks, upgrade, all, or a tool
-        /// name (claude-code, copilot, codex, opencode, gemini, generic)
+        /// name (claude-code, copilot, codex, opencode, grok, generic)
         target: Option<String>,
         /// Skip confirmation for bulky/destructive flows (all, upgrade)
         #[arg(long, short = 'y')]

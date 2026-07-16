@@ -196,7 +196,8 @@ Use these prompts to generate APS documents:
   status sync)
 
 **First-class agent definitions** ship for Claude Code, Codex, GitHub Copilot,
-OpenCode, and Gemini. `aps init` installs them for the tools you select. See
+and OpenCode; Grok Build auto-discovers the shared `.agents/skills/` payload.
+`aps init` installs them for the tools you select. See
 [docs/agents.md](agents.md) for installation, invocation, and model defaults
 for each port, plus the APS-aware agents (planner, conductor, librarian).
 

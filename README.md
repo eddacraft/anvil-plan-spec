@@ -13,7 +13,7 @@
 
 APS is the planning layer that lives in your repo, travels with your code, and
 works with every AI tool you use — Claude Code, Cursor, Copilot, Codex, OpenCode,
-Gemini, ChatGPT, and whatever comes next.
+Grok, ChatGPT, and whatever comes next.
 
 ## Install
 
@@ -131,7 +131,7 @@ Context package: .aps/context/AUTH-003.md.
 Implement it, run the validation step, and report back.
 ```
 
-That prompt works in Claude Code, Cursor, Copilot, Codex, OpenCode, Gemini,
+That prompt works in Claude Code, Cursor, Copilot, Codex, OpenCode, Grok,
 or pasted into ChatGPT. Same spec, same outcome, no integration code.
 
 ## The mental model
@@ -162,7 +162,7 @@ don't need them.
 | **Cursor / Copilot**       | Keep specs in your repo, reference in prompts       |
 | **Claude Code / aider**    | Point the agent at your spec files                  |
 | **Codex / OpenCode**       | First-class agent definitions ship in `agents/`     |
-| **Gemini CLI**             | First-class agent definitions ship in `agents/`     |
+| **Grok Build**             | Reads `AGENTS.md`, auto-discovers `.agents/skills/`  |
 | **Jira / Linear / Notion** | Link to specs in git, or embed the markdown         |
 | **Code review**            | Review spec changes in PRs before implementation    |
 | **Team planning**          | Specs are human-readable — discuss them in meetings |
@@ -257,7 +257,7 @@ that travels with your specs. Point your agent at it and APS conventions are
 followed by default.
 
 - [AI Agent Implementation Guide](docs/ai-agent-guide.md) — Full guide for LLMs
-- [Agent definitions](docs/agents.md) — Claude Code, Codex, Copilot, OpenCode, Gemini
+- [Agent definitions](docs/agents.md) — Claude Code, Codex, Copilot, OpenCode, Grok
 - [Prompts](docs/ai/prompting/) — Tool-agnostic prompts
 - [AGENTS.md](AGENTS.md) — Collaboration rules for this repo
 

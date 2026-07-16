@@ -160,14 +160,23 @@ echo -n "Test: conductor agents install... "
 [[ -f "$PROJECT_ROOT/scaffold/agents/codex/aps-conductor.toml" ]] || fail "generated codex conductor missing"
 [[ -f "$PROJECT_ROOT/scaffold/agents/opencode/aps-conductor.md" ]] || fail "generated opencode conductor missing"
 AGENT_DIR=$(mktemp -d)
-APS_LOCAL="$PROJECT_ROOT" $APS init "$AGENT_DIR" --profile agent --scope small --tools claude-code,copilot,codex,opencode,gemini > /dev/null 2>&1 || fail "agent init failed"
+APS_LOCAL="$PROJECT_ROOT" $APS init "$AGENT_DIR" --profile agent --scope small --tools claude-code,copilot,codex,opencode,grok > /dev/null 2>&1 || fail "agent init failed"
 [[ -f "$AGENT_DIR/.claude/agents/aps-conductor.md" ]] || fail "claude conductor missing"
 [[ -f "$AGENT_DIR/.github/agents/aps-conductor.md" ]] || fail "copilot conductor missing"
 [[ -f "$AGENT_DIR/.codex/agents/aps-conductor.toml" ]] || fail "codex conductor missing"
 [[ -f "$AGENT_DIR/.opencode/agents/aps-conductor.md" ]] || fail "opencode conductor missing"
-[[ -f "$AGENT_DIR/.gemini/skills/aps-conductor/SKILL.md" ]] || fail "gemini conductor missing"
+[[ -f "$AGENT_DIR/.agents/skills/aps-planning/SKILL.md" ]] || fail "grok/codex shared skill missing"
 grep -qF 'aps-conductor' "$AGENT_DIR/.codex/agents/codex-config-snippet.toml" || fail "codex conductor config missing"
 rm -rf "$AGENT_DIR"
+pass
+
+# Test 18b: Retired gemini tool is rejected with a D-040 pointer
+echo -n "Test: gemini tool rejected (D-040)... "
+GEMINI_DIR=$(mktemp -d)
+if APS_LOCAL="$PROJECT_ROOT" $APS init "$GEMINI_DIR" --profile agent --scope small --tools gemini > /dev/null 2>&1; then
+  fail "gemini should be rejected (D-040)"
+fi
+rm -rf "$GEMINI_DIR"
 pass
 
 # Test 19: Curl install/update scripts include CLI runtime libraries

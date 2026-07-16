@@ -67,7 +67,12 @@ pub fn tool_from_key(key: &str) -> Result<AiTool, String> {
         "copilot" => Ok(AiTool::Copilot),
         "codex" => Ok(AiTool::Codex),
         "opencode" => Ok(AiTool::OpenCode),
-        "gemini" => Ok(AiTool::Gemini),
+        "grok" => Ok(AiTool::Grok),
+        "gemini" => Err(
+            "'gemini' was retired in v0.7 (D-040); supported tools: \
+             claude-code, copilot, codex, opencode, grok, generic"
+                .to_string(),
+        ),
         "generic" => Ok(AiTool::Generic),
         other => Err(format!("unknown tool '{other}'")),
     }

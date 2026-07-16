@@ -12,7 +12,8 @@ Build distributable APS agents for each AI tool harness. The core agent
 logic (planning lifecycle, repo hygiene) is the same across tools — what
 changes is the packaging format. Claude Code, Copilot, and OpenCode use agent
 markdown files with frontmatter. Codex uses a multi-agent system with TOML
-configuration. Gemini is skill-only (no agent mechanism).
+configuration. Grok Build ships no bespoke files — it auto-discovers the
+Codex-shared `.agents/skills/` and the `AGENTS.md` family (D-040).
 
 ## Background
 
@@ -35,7 +36,7 @@ These need to be:
 | **Claude Code** | `.claude/agents/<name>.md`            | Frontmatter (name, description, model, tools) + system prompt                                                                      |
 | **Codex**       | Multi-agent TOML + skills             | `[agents.<name>]` in `.codex/config.toml` with `config_file` overlay; also `.agents/skills/` for passive guidance                  |
 | **Copilot**     | `.github/agents/<name>.md`            | Frontmatter (name, description) + system prompt — very similar to Claude Code format                                               |
-| **Gemini**      | `.gemini/skills/<name>/SKILL.md`      | SKILL.md activated via `activate_skill` tool                                                                                       |
+| **Grok**        | none (auto-discovery)                 | Reads `AGENTS.md` family; discovers `.agents/skills/<name>/SKILL.md` and `.claude/` assets natively (D-040)                        |
 | **OpenCode**    | `.opencode/agents/<name>.md` + skills | Frontmatter (description, mode, model, tools, permission) + system prompt; also skills at `.opencode/skills/` or `.claude/skills/` |
 
 The agent _content_ (system prompt, decision tree, APS knowledge) is largely
@@ -111,7 +112,7 @@ mode agents (users invoke them deliberately, not as the default primary agent).
 - Codex agent roles (`.codex/config.toml` + `.codex/agents/*.toml`)
 - Copilot custom agents (`.github/agents/` format)
 - OpenCode agents (`.opencode/agents/` format)
-- Gemini skill equivalents (skills only — no agent mechanism)
+- Grok Build coverage via the Codex-shared `.agents/skills/` payload (D-040)
 - Shared core prompt that all harness variants derive from
 - Documentation on when/how to use each agent per tool
 - Testing in fresh projects
@@ -139,8 +140,8 @@ mode agents (users invoke them deliberately, not as the default primary agent).
 - `scaffold/agents/copilot/aps-librarian.md` — Copilot custom agent
 - `scaffold/agents/opencode/aps-planner.md` — OpenCode agent
 - `scaffold/agents/opencode/aps-librarian.md` — OpenCode agent
-- `scaffold/agents/gemini/aps-planner/SKILL.md` — Gemini skill (no agent mechanism)
-- `scaffold/agents/gemini/aps-librarian/SKILL.md` — Gemini skill
+- `scaffold/aps-planning/` — shared skill payload installed to
+  `.agents/skills/aps-planning/` (Codex + Grok, D-040)
 
 ## Decisions
 
