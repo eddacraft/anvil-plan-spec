@@ -62,9 +62,10 @@ APS needs continued development to:
      normal feature module and lives under v0.4 above. `aps lint` enforces the
      Type marker on entries in this section (W006). -->
 
-| Module                                                | Purpose                                                     | Status   |
-| ----------------------------------------------------- | ----------------------------------------------------------- | -------- |
-| [release-planning](./modules/release-planning.aps.md) | Release plan template, scaffold, `aps lint` rules, and docs | In Progress |
+| Module                                                                  | Purpose                                                     | Status      |
+| ----------------------------------------------------------------------- | ----------------------------------------------------------- | ----------- |
+| [release-planning](./modules/release-planning.aps.md)                   | Release plan template, scaffold, `aps lint` rules, and docs | In Progress |
+| [continuous-improvement](./modules/continuous-improvement-backlog.aps.md) | Standing intake for small cross-module correctness fixes    | In Progress |
 
 ### Compound-Engineering (Complete)
 

@@ -43,6 +43,7 @@ source "$LIB_DIR/lint.sh"
 source "$LIB_DIR/scaffold.sh"
 source "$LIB_DIR/orchestrate.sh"
 source "$LIB_DIR/audit.sh"
+source "$LIB_DIR/export.sh"
 
 show_help() {
   cat <<EOF
@@ -62,6 +63,7 @@ Usage:
   aps graph [module]    Show work item dependency graph
   aps rollup            Print a roll-up table for a federated (nested) parent
   aps audit [module]    Audit plan state (overstated/understated/stale)
+  aps export [--json]   Emit a JSON snapshot of the plan tree (aps-export/v1)
   aps --help            Show this help
 
 Options:
@@ -142,6 +144,10 @@ main() {
     audit)
       shift
       cmd_audit "$@"
+      ;;
+    export)
+      shift
+      cmd_export "$@"
       ;;
     --help|-h|help|"")
       show_help

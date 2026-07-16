@@ -116,6 +116,7 @@ install_cli() {
     "lib/lint.sh"
     "lib/orchestrate.sh"
     "lib/audit.sh"
+    "lib/export.sh"
     "lib/scaffold.sh"
     "lib/rules/common.sh"
     "lib/rules/issues.sh"

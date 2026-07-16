@@ -57,6 +57,74 @@ disclosure in shared CI logs.
 
 ---
 
+### ISS-003: Plan-status behaviour is split across deprecated and current surfaces
+
+| Field      | Value      |
+| ---------- | ---------- |
+| Status     | Open       |
+| Severity   | Medium     |
+| Discovered | 2026-07-16 |
+| Module     | CIB        |
+| Work Item  | CIB-001    |
+
+**Context:** APS decisions D-015 and D-023 say `/plan-status` behaviour belongs
+inside the APS planning skill and active command files are no longer shipped.
+The planner agent contains the standard report, but the installed planning
+skill does not explicitly own the natural-language query, while the Rust setup
+path still writes deprecated Claude command files.
+
+**Impact:** Different installation and agent surfaces can answer the same status
+request differently, and duplicated instructions can drift.
+
+**Tracking:** [CIB-001](./modules/continuous-improvement-backlog.aps.md)
+
+---
+
+### ISS-004: Public curl installation does not enter the native TUI
+
+| Field      | Value      |
+| ---------- | ---------- |
+| Status     | Open       |
+| Severity   | Medium     |
+| Discovered | 2026-07-16 |
+| Module     | CIB        |
+| Work Item  | CIB-002    |
+
+**Context:** In the observed first-run journey, the no-argument public
+`curl | bash` entrypoint presents the shell mode picker. The richer native TUI
+appears only after installation when the user separately runs `aps init`, even
+though installer decision D-029 calls for handing off to the same choice model.
+
+**Impact:** First-time users see two different setup experiences and must infer
+that a second command is required to reach the intended initializer.
+
+**Tracking:** [CIB-002](./modules/continuous-improvement-backlog.aps.md)
+
+---
+
+### ISS-005: Monorepo init can produce the single-project root index
+
+| Field      | Value      |
+| ---------- | ---------- |
+| Status     | Open       |
+| Severity   | Medium     |
+| Discovered | 2026-07-16 |
+| Module     | CIB        |
+| Work Item  | CIB-003    |
+
+**Context:** In the observed native init journey, selecting Monorepo installs
+the monorepo template asset but the generated `plans/index.aps.md` uses the old
+single-project index. Source-level scaffold tests already assert the intended
+monorepo content, so the mismatch may be in the released binary, wizard state,
+or the end-to-end selection path rather than the pure scaffold planner.
+
+**Impact:** The generated plan contradicts the reviewed setup choice and starts
+a monorepo with the wrong planning structure.
+
+**Tracking:** [CIB-003](./modules/continuous-improvement-backlog.aps.md)
+
+---
+
 ## Questions
 
 _None yet._

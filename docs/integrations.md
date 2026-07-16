@@ -72,8 +72,10 @@ aps export --json --plans docs/plans
 ```
 
 Implemented in the Rust binary and the bash CLI with byte-identical output
-(D-039). Ordering is deterministic: modules in file order, work items in
-document order — running it twice on the same tree byte-matches.
+(D-039), pinned by the export leg of `test/cli-parity.sh`. Ordering is
+deterministic: modules in file order, work items in document order — running
+it twice on the same tree byte-matches. Output is compact single-line JSON;
+pipe through `jq .` for readability (the example below is pretty-printed).
 
 ### Shape (schema `aps-export/v1`)
 
@@ -85,6 +87,7 @@ document order — running it twice on the same tree byte-matches.
   "modules": [
     {
       "id": "AUTH",
+      "child": null,
       "file": "plans/modules/auth.aps.md",
       "status": "In Progress",
       "type": null,
@@ -114,7 +117,11 @@ Field notes:
 - `dependencies` — tokens as written, including cross-tree `child:ID` refs.
 - `packages` — the effective `Packages:` tags (item field, else module
   column), `null` when untagged.
+- `child` — the child-plan name in a federated tree, `null` in a
+  single-root plan.
 - Absent values are `null`, never omitted — consumers can rely on the keys.
+- Modules appear when they define work items; an empty module (no `###`
+  items yet) is not exported.
 
 Validation commands and richer tree metadata land with future iterations;
 GitHub issue/project sync experiments build on this export rather than on

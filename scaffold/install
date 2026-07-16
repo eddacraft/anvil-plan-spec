@@ -290,7 +290,7 @@ install_global() {
     echo "       Re-run without --binary to use the bash CLI fallback." >&2
     exit 1
   else
-    for f in bin/aps lib/output.sh lib/lint.sh lib/orchestrate.sh lib/audit.sh lib/scaffold.sh lib/rules/common.sh lib/rules/module.sh lib/rules/index.sh lib/rules/workitem.sh lib/rules/issues.sh lib/rules/design.sh; do
+    for f in bin/aps lib/output.sh lib/lint.sh lib/orchestrate.sh lib/audit.sh lib/export.sh lib/scaffold.sh lib/rules/common.sh lib/rules/module.sh lib/rules/index.sh lib/rules/workitem.sh lib/rules/issues.sh lib/rules/design.sh; do
       download_root "$f" "$aps_home/$f"
     done
     chmod +x "$aps_home/bin/aps"
@@ -508,7 +508,7 @@ if [[ "$USE_LOCAL_CLI" == true ]]; then
   if [[ "$USE_BINARY" == true ]] && install_binary "$TARGET/.aps/bin"; then
     : # native binary installed
   else
-    for f in bin/aps lib/output.sh lib/lint.sh lib/orchestrate.sh lib/audit.sh lib/scaffold.sh lib/rules/common.sh lib/rules/module.sh lib/rules/index.sh lib/rules/workitem.sh lib/rules/issues.sh lib/rules/design.sh; do
+    for f in bin/aps lib/output.sh lib/lint.sh lib/orchestrate.sh lib/audit.sh lib/export.sh lib/scaffold.sh lib/rules/common.sh lib/rules/module.sh lib/rules/index.sh lib/rules/workitem.sh lib/rules/issues.sh lib/rules/design.sh; do
       download_root "$f" "$TARGET/.aps/$f"
     done
     chmod +x "$TARGET/.aps/bin/aps"
