@@ -49,6 +49,19 @@ jobs:
         working-directory: cli
         run: cargo check --locked --target x86_64-pc-windows-gnu
 
+  # Dogfood the composite action (action.yml) — the same one-liner a
+  # consuming team adds. Guards both this repo's plans and the action itself.
+  aps-lint:
+    name: APS plan lint (dogfood action)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Lint plans via local action
+        uses: ./
+        with:
+          plans-dir: plans
+
   shell:
     name: Shell script syntax
     runs-on: ubuntu-latest

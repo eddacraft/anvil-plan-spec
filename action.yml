@@ -1,0 +1,103 @@
+name: APS Lint
+author: EddaCraft
+description: >-
+  Lint Anvil Plan Spec (APS) plans in CI, and optionally post the plan status
+  (rollup or ready queue) as a sticky PR comment. The CLI version is pinned by
+  the action ref — `uses: eddacraft/anvil-plan-spec@<tag>` runs that tag's
+  vendored bash CLI, no downloads.
+
+branding:
+  icon: check-square
+  color: purple
+
+inputs:
+  plans-dir:
+    description: Plans directory to lint, relative to the workspace.
+    required: false
+    default: plans
+  strict:
+    description: >-
+      Also fail when the project's `.aps/config.yml` cli_version pin does not
+      match this action's CLI (sets APS_STRICT=1).
+    required: false
+    default: "false"
+  rollup-comment:
+    description: >-
+      Post (and keep updated) one sticky PR comment with the plan status:
+      `aps rollup` for federated trees, the `aps next --by-package` ready
+      queue otherwise. Requires `pull-requests: write` permission and a
+      pull_request event; silently skipped elsewhere.
+    required: false
+    default: "false"
+  github-token:
+    description: Token used to post the PR comment.
+    required: false
+    default: ${{ github.token }}
+
+runs:
+  using: composite
+  steps:
+    - name: Lint APS plans
+      shell: bash
+      env:
+        PLANS_DIR: ${{ inputs.plans-dir }}
+        STRICT: ${{ inputs.strict }}
+      run: |
+        set -o pipefail
+        APS="$GITHUB_ACTION_PATH/bin/aps"
+        [[ "$STRICT" == "true" ]] && export APS_STRICT=1
+        rc=0
+        "$APS" lint "$PLANS_DIR" 2>&1 | tee "$RUNNER_TEMP/aps-lint.out" || rc=$?
+        {
+          echo "## APS lint (\`$PLANS_DIR\`)"
+          echo ""
+          echo '```text'
+          tail -40 "$RUNNER_TEMP/aps-lint.out"
+          echo '```'
+        } >> "$GITHUB_STEP_SUMMARY"
+        exit "$rc"
+
+    - name: Post plan status comment
+      if: ${{ always() && inputs.rollup-comment == 'true' && github.event_name == 'pull_request' }}
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        PLANS_DIR: ${{ inputs.plans-dir }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+      run: |
+        set -euo pipefail
+        APS="$GITHUB_ACTION_PATH/bin/aps"
+        marker='<!-- aps-plan-status -->'
+        body="$RUNNER_TEMP/aps-plan-status.md"
+
+        {
+          echo "$marker"
+          echo "### APS plan status (\`$PLANS_DIR\`)"
+          echo ""
+          if [[ -s "$RUNNER_TEMP/aps-lint.out" ]]; then
+            tail -1 "$RUNNER_TEMP/aps-lint.out" | sed 's/^/> lint: /'
+            echo ""
+          fi
+          # No pipe on the aps process — grep -q exits early and its SIGPIPE
+          # would fail the condition under pipefail.
+          rollup_out=$("$APS" rollup --plans "$PLANS_DIR" 2>&1 || true)
+          if grep -q "No child plans" <<< "$rollup_out"; then
+            echo '**Ready queue** (`aps next --by-package`):'
+            echo ""
+            echo '```text'
+            "$APS" next --by-package --plans "$PLANS_DIR" 2>/dev/null || true
+            echo '```'
+          else
+            "$APS" rollup --plans "$PLANS_DIR" 2>/dev/null || true
+          fi
+        } > "$body"
+
+        comment_id=$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/comments" \
+          --paginate --jq ".[] | select(.body | startswith(\"$marker\")) | .id" | head -1)
+        if [[ -n "$comment_id" ]]; then
+          gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$comment_id" \
+            -F body=@"$body" > /dev/null
+        else
+          gh api -X POST "repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/comments" \
+            -F body=@"$body" > /dev/null
+        fi
