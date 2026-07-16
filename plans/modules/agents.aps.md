@@ -2,7 +2,9 @@
 
 | ID    | Owner  | Priority | Status   |
 | ----- | ------ | -------- | -------- |
-| AGENT | @aneki | high     | Complete |
+| AGENT | @aneki | high     | In Progress |
+
+**Last reviewed:** 2026-07-16
 
 ## Purpose
 
@@ -258,6 +260,28 @@ mode agents (users invoke them deliberately, not as the default primary agent).
   (→ claude-opus-4-6 / claude-sonnet-4-6) and added Codex vendor comments.
   Manual end-to-end tests documented in docs/plans/2026-03-15-agent-cross-harness-test-plan.md — require
   respective tool installs. Claude Code agents validated live.
+
+### AGENT-007: Retire Gemini scaffolding, add Grok (D-040) — Ready
+
+- **Intent:** Land the D-040 harness-set revision in the shipped tooling:
+  Gemini out of init/setup/wizard/installers in all three CLIs; Grok in,
+  riding the Codex-shared `.agents/skills/` assets (Grok Build discovers
+  `.agents/skills/` and the `AGENTS.md` family natively — no bespoke files).
+- **Expected Outcome:** `--tools` accepts `grok` and rejects `gemini`
+  everywhere a tool list is parsed (Rust `config.rs`/`wizard.rs`/`setup.rs`/
+  `scaffold.rs`, bash `lib/scaffold.sh`, `scaffold/install.ps1`); Grok install
+  path reuses the Codex `.agents/skills/` payload with a Grok post-install
+  note; `scaffold/agents/gemini/` handwritten skills and `build.sh` Gemini
+  section removed; `GEMINI.md` remains on the migrate "protected" list; docs
+  (README, getting-started, installation, agents, ai-agent-guide) name the
+  new set.
+- **Validation:** `test/run.sh` agent-init case covers
+  `--tools claude-code,copilot,codex,opencode,grok`; `gemini` as a tool value
+  errors with a pointer to D-040; cargo test green.
+- **Confidence:** high
+- **Dependencies:** D-040
+- **Files:** cli/src/, lib/scaffold.sh, scaffold/agents/, scaffold/install.ps1,
+  test/run.sh, docs/
 
 ## Execution Strategy
 
