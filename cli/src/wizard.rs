@@ -1458,10 +1458,13 @@ impl AiTool {
 
     fn default_model(self) -> ModelPreference {
         match self {
+            // Anthropic-native tools: prefer Opus for planner/conductor work.
             Self::ClaudeCode | Self::OpenCode => ModelPreference::Opus,
-            Self::Codex => ModelPreference::Sonnet,
-            Self::Copilot | Self::Grok => ModelPreference::Default,
-            Self::Generic => ModelPreference::Default,
+            // Codex runs on OpenAI (scaffold agents use o4-mini). Opus/Sonnet
+            // are not Codex models — leave "default" so the tool's own model wins.
+            Self::Codex => ModelPreference::Default,
+            // Copilot/Grok/Generic do not expose an APS-driven model choice.
+            Self::Copilot | Self::Grok | Self::Generic => ModelPreference::Default,
         }
     }
 }
@@ -1679,6 +1682,18 @@ mod tests {
                 },
             ]
         );
+    }
+
+    #[test]
+    fn tool_model_defaults_match_vendor() {
+        // Claude Code / OpenCode ship Anthropic model IDs in agent frontmatter.
+        assert_eq!(AiTool::ClaudeCode.default_model(), ModelPreference::Opus);
+        assert_eq!(AiTool::OpenCode.default_model(), ModelPreference::Opus);
+        // Codex is OpenAI (o4-mini in scaffold agents) — not sonnet/opus.
+        assert_eq!(AiTool::Codex.default_model(), ModelPreference::Default);
+        assert_eq!(AiTool::Copilot.default_model(), ModelPreference::Default);
+        assert_eq!(AiTool::Grok.default_model(), ModelPreference::Default);
+        assert_eq!(AiTool::Generic.default_model(), ModelPreference::Default);
     }
 
     #[test]
