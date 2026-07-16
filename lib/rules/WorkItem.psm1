@@ -58,7 +58,11 @@ function Test-W003Dependencies {
     param([string]$File, [int]$ItemLine, [string[]]$AllIds, [string[]]$TreeIds = @(), [hashtable]$ChildIds = @{})
     $content = Get-ApsWorkItemContent -FilePath $File -StartLine $ItemLine
 
+    # Fence-aware (ISS-001): a fenced Dependencies lookalike is an example.
+    $fence = $false
     foreach ($line in $content) {
+        if ($line -match '^(```|~~~)') { $fence = -not $fence; continue }
+        if ($fence) { continue }
         if ($line -match '^- \*\*Dependencies:\*\*') {
             # Keep any cross-tree `<name>:` prefix alongside bare IDs.
             $tokens = [regex]::Matches($line, '([a-z0-9][a-z0-9-]*:)?[A-Z]+-[0-9]{3}')
@@ -132,11 +136,15 @@ function Invoke-ApsWorkItemLint {
     param([string]$File, [string[]]$TreeIds = @(), [hashtable]$ChildIds = @{})
     $hasErrors = $false
 
-    # Collect all work item IDs for dependency checking
+    # Collect all work item IDs for dependency checking.
+    # Fence-aware (ISS-001), matching Get-ApsWorkItems.
     $lines = Get-Content -LiteralPath $File -ErrorAction SilentlyContinue
     $allIds = @()
     if ($lines) {
+        $fence = $false
         foreach ($line in $lines) {
+            if ($line -match '^(```|~~~)') { $fence = -not $fence; continue }
+            if ($fence) { continue }
             if ($line -match '^### ([A-Z]+-[0-9]+):') {
                 $allIds += $Matches[1]
             }

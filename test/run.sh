@@ -179,6 +179,23 @@ fi
 rm -rf "$GEMINI_DIR"
 pass
 
+# Test 18c: ISS-001 — fenced example items are inert in lint and orchestration
+echo -n "Test: fenced example items are inert (ISS-001)... "
+lint_out=$($APS lint "$SCRIPT_DIR/fixtures/valid/fenced-examples.aps.md" 2>&1) || fail "lint errored on fenced fixture"
+if echo "$lint_out" | grep -qE "E005|W003|FAKE-999|TILDE-777"; then
+  fail "fenced example leaked into lint findings"
+fi
+FENCE_DIR=$(mktemp -d)
+mkdir -p "$FENCE_DIR/modules"
+cp "$SCRIPT_DIR/fixtures/valid/fenced-examples.aps.md" "$FENCE_DIR/modules/"
+graph_out=$($APS graph --plans "$FENCE_DIR" 2>&1) || fail "graph errored on fenced fixture"
+if echo "$graph_out" | grep -qE "FAKE-999|TILDE-777"; then
+  fail "fenced example leaked into graph"
+fi
+echo "$graph_out" | grep -q "FENCE-001" || fail "real item missing from graph"
+rm -rf "$FENCE_DIR"
+pass
+
 # Test 19: Curl install/update scripts include CLI runtime libraries
 echo -n "Test: curl installers include orchestration lib... "
 grep -qF 'lib/orchestrate.sh' "$PROJECT_ROOT/scaffold/install" || fail "install omits lib/orchestrate.sh"

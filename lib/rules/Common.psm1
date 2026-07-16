@@ -59,7 +59,12 @@ function Get-ApsWorkItems {
     $lines = Get-Content -LiteralPath $FilePath -ErrorAction SilentlyContinue
     if (-not $lines) { return @() }
     $results = [System.Collections.ArrayList]::new()
+    # Fence-aware (ISS-001): headers inside ``` / ~~~ blocks are examples,
+    # not real work items.
+    $fence = $false
     for ($i = 0; $i -lt $lines.Count; $i++) {
+        if ($lines[$i] -match '^(```|~~~)') { $fence = -not $fence; continue }
+        if ($fence) { continue }
         if ($lines[$i] -match '^### [A-Za-z]+-[0-9]+:') {
             $null = $results.Add([PSCustomObject]@{
                 LineNumber = $i + 1
@@ -169,7 +174,16 @@ function Get-ApsWorkItemContent {
     $lines = Get-Content -LiteralPath $FilePath -ErrorAction SilentlyContinue
     if (-not $lines) { return @() }
     $content = [System.Collections.ArrayList]::new()
+    # Fence-aware (ISS-001): a heading-lookalike inside a ``` / ~~~ block is
+    # content, not a terminator.
+    $fence = $false
     for ($i = $StartLine; $i -lt $lines.Count; $i++) {
+        if ($lines[$i] -match '^(```|~~~)') {
+            $fence = -not $fence
+            $null = $content.Add($lines[$i])
+            continue
+        }
+        if ($fence) { $null = $content.Add($lines[$i]); continue }
         if ($lines[$i] -match '^###? ') { break }
         $null = $content.Add($lines[$i])
     }

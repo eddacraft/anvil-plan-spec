@@ -113,10 +113,16 @@ section_has_content() {
 }
 
 # Extract all work item headers (### PREFIX-NNN: ...)
+# Fence-aware (ISS-001): headers inside ``` / ~~~ blocks are examples,
+# not real work items.
 # Usage: get_work_items "file"
 get_work_items() {
   local file="$1"
-  grep -nE '^### [A-Za-z]+-[0-9]+:' "$file" 2>/dev/null || true
+  awk '
+    /^(```|~~~)/ { fence = !fence; next }
+    fence { next }
+    /^### [A-Za-z]+-[0-9]+:/ { print NR ":" $0 }
+  ' "$file" 2>/dev/null || true
 }
 
 # Extract module ID from metadata table
