@@ -346,7 +346,7 @@ impl SetupState {
         AiTool::Copilot,
         AiTool::Codex,
         AiTool::OpenCode,
-        AiTool::Gemini,
+        AiTool::Grok,
         AiTool::Generic,
     ];
 

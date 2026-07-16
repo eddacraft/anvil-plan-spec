@@ -2,7 +2,7 @@
 
 APS provides three distributable agents that automate planning, execution, and
 repository hygiene. Agent definitions are ported across Claude Code, Codex,
-GitHub Copilot, OpenCode, and Gemini — pick the variant for your tool below.
+GitHub Copilot, OpenCode, and Grok — pick the variant for your tool below.
 
 ## Agents Overview
 
@@ -202,34 +202,29 @@ Agent threads run concurrently and can be managed with `/agent route` and
 `/agent close`. Codex uses `o4-mini` by default; change the `model` field in
 `.codex/config.toml` if needed.
 
-### Gemini
+### Grok
 
 **Install:**
 
-```bash
-mkdir -p .gemini/skills
-cp -r scaffold/agents/gemini/aps-planner .gemini/skills/
-cp -r scaffold/agents/gemini/aps-conductor .gemini/skills/
-cp -r scaffold/agents/gemini/aps-librarian .gemini/skills/
-gemini skills link . --scope workspace
-```
-
-**Important:** Gemini skills are not auto-discovered — the `gemini skills link`
-step is required. Without it, the copied files won't be available.
+Grok Build needs no bespoke install: it reads the `AGENTS.md` instruction-file
+family and auto-discovers Agent Skills from `.agents/skills/` — the same
+payload the Codex install places — and from `.claude/` when present (D-040).
+Selecting `grok` in `aps init` (or running `aps setup grok`) installs the
+shared `.agents/skills/aps-planning/` skill.
 
 **Usage:**
 
-Gemini has no agent mechanism — the planner and librarian are skills, not
-agents. They activate when you ask about planning or repo hygiene:
+The planning skill activates when you ask about planning or repo hygiene:
 
 ```
 Plan the authentication module using APS
 Scan the repo for broken cross-references
 ```
 
-The skill provides guidance but doesn't have the same dispatch model as
-agents in other tools. For active orchestration, consider using Claude Code
-or Codex.
+For custom foreground subagents, Grok Build supports `subAgents` entries in
+its own config; APS ships no Grok-specific agent files — the shared core
+prompts under `scaffold/agents/core/` are the source of truth if you want to
+wire some up.
 
 ## Model Cost
 
@@ -251,5 +246,5 @@ bash scaffold/agents/build.sh
 ```
 
 This regenerates all tool variants (Claude Code, Copilot, OpenCode, Codex)
-from `scaffold/agents/core/`. Gemini skills are handwritten since the SKILL.md
-format differs structurally — the build script verifies they exist.
+from `scaffold/agents/core/`. Grok Build consumes the Codex-shared
+`.agents/skills/` payload directly, so it has no generated variant.

@@ -146,20 +146,9 @@ fn agent_files(tool: AiTool) -> &'static [(&'static str, &'static str)] {
                 include_str!("../scaffold/agents/opencode/aps-planner.md"),
             ),
         ],
-        AiTool::Gemini => &[
-            (
-                ".gemini/skills/aps-conductor/SKILL.md",
-                include_str!("../scaffold/agents/gemini/aps-conductor/SKILL.md"),
-            ),
-            (
-                ".gemini/skills/aps-librarian/SKILL.md",
-                include_str!("../scaffold/agents/gemini/aps-librarian/SKILL.md"),
-            ),
-            (
-                ".gemini/skills/aps-planner/SKILL.md",
-                include_str!("../scaffold/agents/gemini/aps-planner/SKILL.md"),
-            ),
-        ],
+        // Grok Build ships no bespoke agent files — it discovers the
+        // Codex-shared .agents/skills/ and the AGENTS.md family (D-040).
+        AiTool::Grok => &[],
         AiTool::Generic => &[],
     }
 }
@@ -175,7 +164,7 @@ pub fn post_install_note(tool: AiTool) -> Option<&'static str> {
             Some("Codex: merge .codex/codex-config-snippet.toml into ~/.codex/config.toml")
         }
         AiTool::OpenCode => Some("OpenCode: agents installed under .opencode/agent"),
-        AiTool::Gemini => Some("Gemini: skills installed under .gemini/skills"),
+        AiTool::Grok => Some("Grok: Grok Build discovers AGENTS.md and installed skills automatically"),
         AiTool::Generic => None,
     }
 }
@@ -626,7 +615,7 @@ pub fn tool_key(tool: AiTool) -> &'static str {
         AiTool::Copilot => "copilot",
         AiTool::Codex => "codex",
         AiTool::OpenCode => "opencode",
-        AiTool::Gemini => "gemini",
+        AiTool::Grok => "grok",
         AiTool::Generic => "generic",
     }
 }

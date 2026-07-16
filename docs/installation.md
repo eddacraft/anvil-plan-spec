@@ -171,7 +171,7 @@ aps setup all --yes       # full footprint (CLI + hooks + Claude Code)
 ```
 
 Tool names accepted by `aps setup <tool>`: `claude-code`, `copilot`,
-`codex`, `opencode`, `gemini`, `generic`. The `all` flow installs a bulky
+`codex`, `opencode`, `grok`, `generic`. The `all` flow installs a bulky
 footprint and asks for confirmation first (skip it with `--yes`). Every
 other shortcut writes only the component you name. The native `aps` binary
 ships a Ratatui picker for the same flows; the bash CLI uses a numbered
@@ -383,7 +383,7 @@ Everything else is **opt-in** — a default `aps init` writes none of it:
                            #   (air-gapped or pinned toolchains)
 .aps/scripts/              # Hook scripts — only with --hooks
 .claude/skills/, .claude/agents/, .github/agents/, .opencode/agents/,
-.codex/config.toml, .gemini/ …   # Tool integrations — via `aps setup <tool>`
+.codex/config.toml, .agents/ …   # Tool integrations — via `aps setup <tool>`
 ```
 
 Add any of these after init with `aps setup` (see

@@ -40,7 +40,7 @@ pub enum AiTool {
     Copilot,
     Codex,
     OpenCode,
-    Gemini,
+    Grok,
     Generic,
 }
 
@@ -200,7 +200,7 @@ impl WizardState {
         AiTool::Copilot,
         AiTool::Codex,
         AiTool::OpenCode,
-        AiTool::Gemini,
+        AiTool::Grok,
         AiTool::Generic,
     ];
     const TEMPLATES: [Template; 5] = [
@@ -1434,7 +1434,7 @@ impl AiTool {
             Self::Copilot => "Copilot",
             Self::Codex => "Codex",
             Self::OpenCode => "OpenCode",
-            Self::Gemini => "Gemini",
+            Self::Grok => "Grok",
             Self::Generic => "Generic",
         }
     }
@@ -1445,20 +1445,22 @@ impl AiTool {
             Self::Copilot => "repo instructions and custom agents",
             Self::Codex => "skills plus agent role config",
             Self::OpenCode => "skills and subagents",
-            Self::Gemini => "workspace-linked skills",
+            Self::Grok => "AGENTS.md + auto-discovered skills",
             Self::Generic => "plain APS files only",
         }
     }
 
     fn supports_agents(self) -> bool {
-        !matches!(self, Self::Generic)
+        // Grok Build ships no bespoke agent files — it discovers the
+        // Codex-shared .agents/skills/ and the AGENTS.md family (D-040).
+        !matches!(self, Self::Generic | Self::Grok)
     }
 
     fn default_model(self) -> ModelPreference {
         match self {
             Self::ClaudeCode | Self::OpenCode => ModelPreference::Opus,
             Self::Codex => ModelPreference::Sonnet,
-            Self::Copilot | Self::Gemini => ModelPreference::Default,
+            Self::Copilot | Self::Grok => ModelPreference::Default,
             Self::Generic => ModelPreference::Default,
         }
     }

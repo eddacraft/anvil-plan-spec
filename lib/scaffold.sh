@@ -108,8 +108,8 @@ CLI_FILES=(
 )
 
 # Canonical tool identifiers
-TOOL_NAMES=("claude-code" "copilot" "codex" "opencode" "gemini" "generic")
-TOOL_LABELS=("Claude Code" "GitHub Copilot" "Codex" "OpenCode" "Gemini" "None / manual only")
+TOOL_NAMES=("claude-code" "copilot" "codex" "opencode" "grok" "generic")
+TOOL_LABELS=("Claude Code" "GitHub Copilot" "Codex" "OpenCode" "Grok" "None / manual only")
 
 # --- Utility functions ---
 
@@ -345,9 +345,9 @@ write_config() {
         opencode)
           echo "    skill: .claude/skills/aps-planning"
           ;;
-        gemini)
+        grok)
           echo "    skill: .agents/skills/aps-planning"
-          echo "    instruction_file: GEMINI.md"
+          echo "    instruction_file: AGENTS.md"
           ;;
         generic)
           echo "    # No tool integration"
@@ -499,11 +499,11 @@ v2_install_codex() {
   download "scaffold/agents/codex/aps-conductor.toml" "$agents_dir/aps-conductor.toml"
   download "scaffold/agents/codex/codex-config-snippet.toml" "$agents_dir/codex-config-snippet.toml"
 
-  # Skill at .agents/skills/ (shared with Gemini)
+  # Skill at .agents/skills/ (shared with Grok)
   v2_install_agents_skill "$target"
 }
 
-# Install skill to .agents/skills/aps-planning/ (for Codex/Gemini)
+# Install skill to .agents/skills/aps-planning/ (for Codex/Grok)
 v2_install_agents_skill() {
   local target="$1"
   local skill_dir="$target/.agents/skills/aps-planning"
@@ -513,19 +513,6 @@ v2_install_agents_skill() {
     local rel="${f#scaffold/aps-planning/}"
     download "$f" "$skill_dir/$rel"
   done
-}
-
-# Install Gemini skills to .gemini/skills/
-v2_install_gemini() {
-  local target="$1"
-
-  mkdir -p "$target/.gemini/skills/aps-planner" "$target/.gemini/skills/aps-librarian" "$target/.gemini/skills/aps-conductor"
-  download "scaffold/agents/gemini/aps-planner/SKILL.md" "$target/.gemini/skills/aps-planner/SKILL.md"
-  download "scaffold/agents/gemini/aps-librarian/SKILL.md" "$target/.gemini/skills/aps-librarian/SKILL.md"
-  download "scaffold/agents/gemini/aps-conductor/SKILL.md" "$target/.gemini/skills/aps-conductor/SKILL.md"
-
-  # Also place skill at .agents/skills/ (shared path)
-  v2_install_agents_skill "$target"
 }
 
 # Set up PATH for .aps/bin
@@ -595,11 +582,10 @@ v2_install_tools() {
         post_install_msgs+=("Codex: merge .codex/agents/codex-config-snippet.toml into .codex/config.toml")
         post_install_msgs+=("  then run: codex skills install .agents/skills/aps-planning")
         ;;
-      gemini)
-        v2_install_gemini "$target"
-        info ".gemini/skills/ (planner, librarian, conductor)"
-        info ".agents/skills/aps-planning/ (skill)"
-        post_install_msgs+=("Gemini: run: gemini skills link . --scope workspace")
+      grok)
+        # Grok Build discovers .agents/skills/ and the AGENTS.md family natively (D-040)
+        v2_install_agents_skill "$target"
+        info ".agents/skills/aps-planning/ (skill — Grok Build auto-discovers)"
         ;;
       generic)
         info "No tool integration (plans/ and CLI only)"
@@ -800,6 +786,17 @@ cmd_init() {
   local selected_tools=()
   if [[ -n "$opt_tools" ]]; then
     IFS=',' read -ra selected_tools <<< "$opt_tools"
+    local t
+    for t in "${selected_tools[@]}"; do
+      if [[ "$t" == "gemini" ]]; then
+        error "'gemini' was retired in v0.7 (D-040); supported tools: ${TOOL_NAMES[*]}"
+        exit 1
+      fi
+      if ! is_tool_key "$t"; then
+        error "unknown tool '$t'; supported tools: ${TOOL_NAMES[*]}"
+        exit 1
+      fi
+    done
   elif $non_interactive || ! [[ -t 0 ]]; then
     selected_tools=("generic")
   else
@@ -941,7 +938,7 @@ later with 'aps setup'. Non-interactive mode available via flags.
 Options:
   --profile PROFILE     solo | team | agent
   --scope SCOPE         small | module | multi | monorepo | nested
-  --tools TOOLS         Comma-separated: claude-code,copilot,codex,opencode,gemini,generic
+  --tools TOOLS         Comma-separated: claude-code,copilot,codex,opencode,grok,generic
   --local-cli, --bash   Also vendor the bash CLI into .aps/bin + .aps/lib
                         (for air-gapped or pinned-toolchain projects)
   --hooks               Also install hook scripts into .aps/scripts
@@ -1029,7 +1026,7 @@ cmd_update_v2() {
           v2_install_opencode_agents "$target"
           ;;
         codex) v2_install_codex "$target" ;;
-        gemini) v2_install_gemini "$target" ;;
+        grok) v2_install_agents_skill "$target" ;;
       esac
     done <<< "$tools"
     info "Tool-specific files refreshed per config.yml"
