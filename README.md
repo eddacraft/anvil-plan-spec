@@ -171,17 +171,18 @@ No plugins. No integrations. No configuration. It's just files.
 
 ## What's in v0.6.0
 
-Release candidate prepared **2026-07-11** — publication remains pending.
+Released **2026-07-16** — the tagged monorepo tier gets first-class tooling.
 
-- **Federated nested plans** — independently owned package plans can be linked
-  from a parent, linted and orchestrated as one tree, or used standalone.
-- **Cross-tree orchestration** — `next`, `start`, `complete`, `graph`, `audit`,
-  and the new `rollup` command understand child plans and `--child` scoping.
-- **Nested scaffolding** — bootstrap a federation with `aps init --scope nested`
-  or `aps init --templates index-nested`; a complete worked example ships in
-  `examples/monorepo-nested/`.
-- **Full native lifecycle** — the Rust binary now implements `start`,
-  `complete`, `graph`, and `audit`, closing the v0.4 bash-only gap.
+- **`Packages:` tag validation (W022)** — a scope tag that resolves to no
+  workspace directory warns as a likely typo; silent in single-package
+  projects. All three CLIs.
+- **`aps next --package <name>` / `--by-package`** — the next ready item
+  within one package's scope (tags inherit from the module column), or the
+  whole ready queue grouped by package with an explicit `(untagged)` bucket.
+- **`aps rollup --by-package`** — the "Modules by Package" index view
+  generated from live metadata; generated views cannot drift.
+- See [docs/monorepo.md](docs/monorepo.md) for the tagged-tier guide, and
+  v0.5.0's federated nested plans for the multi-owner tier.
 - **Safer upgrades** — `aps update` reconciles the generated footprint and
   `aps migrate` moves projects off vendored CLI files with a dry run and backup.
 - **Three-CLI parity** — Rust, bash, and PowerShell lint behavior is checked

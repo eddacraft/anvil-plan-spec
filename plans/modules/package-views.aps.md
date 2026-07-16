@@ -2,7 +2,7 @@
 
 | ID  | Owner  | Priority | Status |
 | --- | ------ | -------- | ------ |
-| PKG | @aneki | high     | Merged |
+| PKG | @aneki | high     | Complete |
 
 **Last reviewed:** 2026-07-13
 
@@ -50,7 +50,7 @@ closes that inversion: the default tier gets first-class CLI support.
   filtered/next item in Rust, bash, and PowerShell; untagged bucket asserted
 - **Confidence:** medium
 - **Dependencies:** ORCH-001 (parser reuse)
-- **Status:** Merged — PR #107, 2026-07-16
+- **Status:** Complete — released in v0.6.0 (2026-07-16)
 - **Notes:** D-039 parity applies wherever the command exists — verified: the
   PowerShell CLI does not carry `next` (lint/scaffold only), so PKG-001 is a
   Rust + bash surface.
@@ -82,7 +82,7 @@ closes that inversion: the default tier gets first-class CLI support.
   `test/cli-parity.sh`
 - **Confidence:** medium
 - **Dependencies:** none
-- **Status:** Merged — PR #106 (`5010fdf`), 2026-07-15
+- **Status:** Complete — released in v0.6.0 (2026-07-16)
 - **Notes:** D-039 parity; wire fixtures into the cross-CLI corpus so the
   CIP-002 harness covers the new code from day one. Code assigned: **W022**
   (next free after MONO-008's W021).
@@ -115,7 +115,7 @@ closes that inversion: the default tier gets first-class CLI support.
   green
 - **Confidence:** medium
 - **Dependencies:** PKG-001 (shared package-resolution helpers)
-- **Status:** Merged — PR #108, 2026-07-16
+- **Status:** Complete — released in v0.6.0 (2026-07-16)
 - **Notes:** Print-only is the MVP; `--write` can follow. D-039 parity —
   like `next`, `rollup` exists in Rust + bash only.
 - **Results:** `rollup --by-package` renders `### <package>`
