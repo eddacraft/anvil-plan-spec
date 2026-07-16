@@ -4,7 +4,7 @@
 | ------- | ------ | -------- | ------ |
 | PROMPTS | @aneki | medium   | Ready  |
 
-**Last reviewed:** 2026-06-27
+**Last reviewed:** 2026-07-16
 
 ## Purpose
 
@@ -49,11 +49,11 @@ harnesses without drifting away from the shared APS lifecycle.
 | Claude Code | agent-assignment, sync-status, tasks-from-module, wave-planning | Orchestration deltas |
 | Copilot     | —                                                          | Uncovered      |
 | Codex       | —                                                          | Uncovered      |
-| Gemini      | —                                                          | Uncovered      |
+| Grok        | —                                                          | Uncovered      |
 
-The five harnesses APS targets are fixed by D-013/D-019 (Claude Code, Copilot,
-OpenCode, Codex, Gemini). Three have no prompt entry point today, which is the
-gap D-006 calls out.
+The five harnesses APS targets are Claude Code, Copilot, OpenCode, Codex, and
+Grok (D-013/D-019 as amended by D-040 — Gemini dropped, Grok added). Three have
+no prompt entry point today, which is the gap D-006 calls out.
 
 ## Decisions
 
@@ -100,19 +100,20 @@ gap D-006 calls out.
 
 ### PROMPTS-003: Add stub prompts for uncovered harnesses — Ready
 
-- **Intent:** Close the D-006 gap for Copilot, Codex, and Gemini, which have no
+- **Intent:** Close the D-006 gap for Copilot, Codex, and Grok, which have no
   prompt entry point today.
 - **Expected Outcome:** A stub prompt per uncovered harness (e.g.
-  `docs/ai/prompting/{copilot,codex,gemini}/README.md`) that points at the
-  generic prompts and the harness's instruction file (per D-019: `.github/agents`
-  for Copilot, `.codex/config.toml` for Codex, `GEMINI.md` for Gemini), adding a
-  full variant only where PROMPTS-002's policy says one is warranted.
+  `docs/ai/prompting/{copilot,codex,grok}/README.md`) that points at the
+  generic prompts and the harness's instruction file (per D-019/D-040:
+  `.github/agents` for Copilot, `.codex/config.toml` for Codex, the `AGENTS.md`
+  family + `.agents/skills/` for Grok Build), adding a full variant only where
+  PROMPTS-002's policy says one is warranted.
 - **Validation:** Each targeted harness resolves from prompt entry point →
   generic prompt → `AGENTS.md` with no dead links; markdownlint passes.
 - **Confidence:** medium
-- **Dependencies:** PROMPTS-002, AGENT
+- **Dependencies:** PROMPTS-002, AGENT, D-040
 - **Files:** docs/ai/prompting/copilot/, docs/ai/prompting/codex/,
-  docs/ai/prompting/gemini/
+  docs/ai/prompting/grok/
 
 ## Ready Checklist
 

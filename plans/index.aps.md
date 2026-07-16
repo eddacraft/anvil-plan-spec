@@ -5,7 +5,7 @@
 | Status  | Active     |
 | Owner   | @aneki     |
 | Created | 2025-12-31 |
-| Updated | 2026-07-13 |
+| Updated | 2026-07-16 |
 
 ## Problem
 
@@ -37,14 +37,14 @@ APS needs continued development to:
 | [scaffold](./modules/scaffold.aps.md)     | One-command setup for new projects    | Complete |
 | [templates](./modules/templates.aps.md)   | Reduce friction, mark optional fields | Complete |
 | [docs](./modules/docs.aps.md)             | Workflow guide, improved onboarding   | Complete |
-| [validation](./modules/validation.aps.md) | CLI tool to validate APS documents    | Complete |
+| [validation](./modules/validation.aps.md) | CLI tool to validate APS documents    | In Progress |
 
 ### Shipped (v0.3 — Distribution)
 
 | Module                              | Purpose                                                   | Status                  |
 | ----------------------------------- | --------------------------------------------------------- | ----------------------- |
 | [install](./modules/install.aps.md) | Global binary install, project config contract, migration | Complete |
-| [agents](./modules/agents.aps.md)   | APS Planner + Librarian agents, multi-harness             | Complete                |
+| [agents](./modules/agents.aps.md)   | APS Planner + Librarian agents, multi-harness             | In Progress             |
 
 ### In Progress (v0.4 — Orchestration & UX)
 
@@ -81,9 +81,9 @@ release narratives live in [`plans/releases/`](./releases/).
 | --------------------------------------------- | --------------------------------------------------------- | -------- |
 | [spec](./modules/spec.aps.md)                 | Canonical vocabulary + schema (status reconciliation)     | Complete |
 | [tasks](./modules/tasks.aps.md)               | Claude Code Tasks integration                             | Complete |
-| [examples](./modules/examples.aps.md)         | Additional worked examples                                | Draft    |
+| [examples](./modules/examples.aps.md)         | Additional worked examples                                | Ready    |
 | [prompts](./modules/prompts.aps.md)           | Tool-specific prompt variants                             | Ready    |
-| [integrations](./modules/integrations.aps.md) | JSON export, GitHub sync                                  | Draft    |
+| [integrations](./modules/integrations.aps.md) | JSON export, GitHub Action, lint/rollup CI surface        | Ready    |
 | [monorepo](./modules/monorepo.aps.md)         | Nested index.aps.md plans, federated lint + orchestration | Complete |
 | [package-views](./modules/package-views.aps.md) | CLI tooling for the tagged monorepo tier (`Packages:` lint, next filter, generated views) | Complete |
 | [ci-parity](./modules/ci-parity.aps.md)       | Behavioural pwsh + cross-CLI parity checks in CI          | Complete |
@@ -128,13 +128,13 @@ These are explicitly out of scope:
 - **D-034:** Global binary-first install — _decided: default distribution is the release `aps` binary (Mac/Linux/Windows) via GitHub releases, install script, crates.io, and Scoop; `aps init` scaffolds project content only. See [install.aps.md](./modules/install.aps.md) INSTALL-014..018_
 - **D-035:** `.aps/config.yml` project contract — _decided: `cli_version` pins the toolchain; `plans_dir` / `docs_dir` / `tooling_root` are runtime defaults discovered by global `aps`. Explicit flags override_
 - **D-036:** Install-channel semver alignment — _decided: all distribution channels publish the same release version; per-project pin is `cli_version` in `.aps/config.yml`_
-- **D-013:** Skill format per tool — _decided: `.claude/skills/` as cross-tool path (Claude Code + Copilot + OpenCode auto-discover), `.agents/skills/` for Codex + Gemini (both require explicit install/link cmd); instruction files per tool (AGENTS.md, GEMINI.md)_
+- **D-013:** Skill format per tool — _decided: `.claude/skills/` as cross-tool path (Claude Code + Copilot + OpenCode auto-discover), `.agents/skills/` for Codex + Gemini (both require explicit install/link cmd); instruction files per tool (AGENTS.md, GEMINI.md). Harness set amended by D-040 (Gemini out, Grok in; Grok discovers `.agents/skills/` natively)_
 - **D-014:** Agent model defaults — _decided: Planner on Opus, Librarian on Sonnet_
 - **D-015:** Commands deprecated — _decided: yes, fold `/plan` and `/plan-status` into skill_
 - **D-016:** Agent scope split — _decided: Planner = planning + execution + status + waves; Librarian = archiving + cross-refs + orphans_
 - **D-017:** Agent path references — _decided: agents reference `plans/` and `.aps/scripts/`, not `.aps/config.yml`_
 - **D-018:** Shared core vs per-tool rewrite — _decided: shared core prompt, tool-specific frontmatter/packaging_
-- **D-019:** Agent format per tool — _decided: 4/5 tools have native agent mechanisms (Claude Code `.claude/agents/`, Copilot `.github/agents/`, OpenCode `.opencode/agents/`, Codex `.codex/config.toml` + TOML overlays); Gemini is skill-only. Port to each tool's native format, not just skills._
+- **D-019:** Agent format per tool — _decided: 4/5 tools have native agent mechanisms (Claude Code `.claude/agents/`, Copilot `.github/agents/`, OpenCode `.opencode/agents/`, Codex `.codex/config.toml` + TOML overlays); Gemini is skill-only. Port to each tool's native format, not just skills. Harness set amended by D-040 (Gemini out, Grok in; Grok consumes the Codex-shared `.agents/skills/` assets)_
 - **D-022:** External planning repo reversed — _decided: plans move back to main repo_
 - **D-023:** Commands fully dropped — _decided: yes, skills only, no `.claude/commands/` shipped_
 - **D-024:** aps-rules.md split — _decided: `aps-rules.md` (APS-managed) + `project-context.md` (user-owned)_
@@ -147,3 +147,4 @@ These are explicitly out of scope:
 - **D-030:** Deeper monorepo support via nested indexes — _decided: yes, as a new Draft module. Tagged modules (docs/monorepo.md) stay the default tier; nested `index.aps.md` plans are the federated tier for packages with independent owners/lifecycles. See [monorepo.aps.md](./modules/monorepo.aps.md) — its D-001..D-004 (child location, ID namespacing, child autonomy, coexistence) resolved 2026-06-26: co-located child plans, bare per-tree IDs with path-qualified cross-tree refs, standalone children, tags-default coexistence; module promoted to Ready (MONO-001 complete 2026-06-27, module now In Progress)_
 - **D-038:** Promote `prompts` from Draft to Ready — _decided 2026-06-27: yes. Work broken out into PROMPTS-001 (normalize existing variants), PROMPTS-002 (variant-vs-stub policy), PROMPTS-003 (stubs for Copilot/Codex/Gemini, closing the D-006 coverage gap). See [prompts.aps.md](./modules/prompts.aps.md)_
 - **D-039:** CLI three-way lockstep — _decided 2026-07-01: the `aps` CLI has three independent implementations of one command surface — Rust (`cli/src/`, the primary distributed binary), bash (`bin/aps` + `lib/*.sh`, the zero-dependency Unix reference/fallback), and PowerShell (`bin/aps.ps1` + `lib/*.psm1`, the Windows fallback). They do not call each other, so a rule added to one is absent from the others until ported by hand. **Policy:** all three stay in lockstep — a lint/`next`/orchestration change is not `Complete` until it lands in all three and the shared parity suite (`test/fixtures/**`) confirms identical behaviour. This supersedes orchestrate D-006's "bash is feature-frozen after parity" clause (bash is a maintained peer, not frozen) and extends the PowerShell-parity rule to Rust. See tui D-031, orchestrate D-006, and monorepo MONO-007 (the first parity debt this policy retires)._
+- **D-040:** Harness set revision — Gemini out, Grok in — _decided 2026-07-16: the supported harness set becomes **Claude Code, Copilot, Codex, OpenCode, Grok** (amends the five fixed by D-013/D-019). xAI's Grok Build reads the `AGENTS.md` instruction-file family and discovers Agent Skills from `.agents/skills/` (and `.claude/` assets) natively, so it slots into the existing Codex-shared paths with no bespoke assets — no `GROK.md`, no handwritten skill copies. Gemini scaffolding (`.gemini/skills/`, the `gemini` tool option in init/setup/wizard) is removed from all three CLIs and the installers; existing user installs are untouched and `GEMINI.md` stays on the migrate "protected, never removed" list. See [prompts.aps.md](./modules/prompts.aps.md) PROMPTS-003 and [agents.aps.md](./modules/agents.aps.md)._

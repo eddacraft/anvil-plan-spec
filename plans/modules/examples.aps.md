@@ -2,7 +2,9 @@
 
 | ID       | Owner  | Priority | Status |
 | -------- | ------ | -------- | ------ |
-| EXAMPLES | @aneki | medium   | Draft  |
+| EXAMPLES | @aneki | medium   | Ready  |
+
+**Last reviewed:** 2026-07-16
 
 ## Purpose
 
@@ -27,7 +29,9 @@ execution plans, decisions, and design documents.
 
 - `examples/user-auth/`
 - `examples/opencode-companion/`
+- `examples/team-payments/`
 - `test/fixtures/valid/`
+- `docs/team-rollout.md`
 
 ## Work Items
 
@@ -39,3 +43,20 @@ execution plans, decisions, and design documents.
 - **Validation:** `./bin/aps lint examples test/fixtures/valid`
 - **Files:** examples/, test/fixtures/valid/
 - **Confidence:** medium
+
+### EXAMPLES-002: Team rollout guide + multi-owner example — Ready
+
+- **Intent:** Give a team adopting APS the conventions the format alone
+  doesn't answer: who owns the index, how plan changes are reviewed, how
+  concurrent status edits avoid merge conflicts, which gate-policy preset to
+  start on, and pinning `cli_version` so the whole team lints identically.
+- **Expected Outcome:** `docs/team-rollout.md` covers the above with concrete
+  commands, plus a lint-clean multi-owner example under
+  `examples/team-payments/` — one index, 2–3 modules with different owners,
+  a conductor module, and in-flight statuses that show a plan mid-execution
+  (not a finished artifact).
+- **Validation:** `./bin/aps lint examples/team-payments`; markdownlint
+  passes; guide links resolve; a reader can run the rollout steps verbatim.
+- **Dependencies:** None (references INTEGRATIONS-003 Action once it exists)
+- **Files:** docs/team-rollout.md, examples/team-payments/
+- **Confidence:** high
