@@ -1,9 +1,9 @@
 # APS Librarian — Codex Agent Role
 #
-# Install: merge the [agents.aps-librarian] block from codex-config-snippet.toml
-# into your .codex/config.toml, then place this file at .codex/agents/aps-librarian.toml
-#
-# Usage: /agent spawn aps-librarian
+# Codex discovers this role automatically from .codex/agents/.
+
+name = "aps-librarian"
+description = "Repository organizing, cleanup, documentation filing, archiving stale specs, detecting orphaned files, cross-reference maintenance, and general repo hygiene"
 
 sandbox_mode = "workspace-write"
 

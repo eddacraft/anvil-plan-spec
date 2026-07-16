@@ -84,7 +84,7 @@ const CLAUDE_COMMANDS: [(&str, &str); 2] = [
 ];
 
 /// Per-tool agent files as (destination relative path, content).
-fn agent_files(tool: AiTool) -> &'static [(&'static str, &'static str)] {
+pub(crate) fn agent_files(tool: AiTool) -> &'static [(&'static str, &'static str)] {
     match tool {
         AiTool::ClaudeCode => &[
             (
@@ -127,10 +127,6 @@ fn agent_files(tool: AiTool) -> &'static [(&'static str, &'static str)] {
                 ".codex/agents/aps-planner.toml",
                 include_str!("../scaffold/agents/codex/aps-planner.toml"),
             ),
-            (
-                ".codex/codex-config-snippet.toml",
-                include_str!("../scaffold/agents/codex/codex-config-snippet.toml"),
-            ),
         ],
         AiTool::OpenCode => &[
             (
@@ -160,9 +156,7 @@ pub fn post_install_note(tool: AiTool) -> Option<&'static str> {
             Some("Claude Code: run ./aps-planning/scripts/install-hooks.sh to wire hooks")
         }
         AiTool::Copilot => Some("Copilot: commit .github/agents so Copilot picks them up"),
-        AiTool::Codex => {
-            Some("Codex: merge .codex/codex-config-snippet.toml into ~/.codex/config.toml")
-        }
+        AiTool::Codex => None,
         AiTool::OpenCode => Some("OpenCode: agents installed under .opencode/agent"),
         AiTool::Grok => {
             Some("Grok: Grok Build discovers AGENTS.md and installed skills automatically")
@@ -275,6 +269,8 @@ pub enum FileOp {
         path: PathBuf,
         content: &'static str,
     },
+    /// Remove a known obsolete generated file. Missing files are a no-op.
+    RemoveGenerated(PathBuf),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -497,11 +493,21 @@ pub fn agents_step(tools: &[ToolConfig]) -> Option<ScaffoldStep> {
         if !config.install_agents {
             continue;
         }
+        if config.tool == AiTool::Codex {
+            agents.push(FileOp::RemoveGenerated(PathBuf::from(
+                ".codex/agents/codex-config-snippet.toml",
+            )));
+            agents.push(FileOp::RemoveGenerated(PathBuf::from(
+                ".codex/codex-config-snippet.toml",
+            )));
+        }
         for (path, content) in agent_files(config.tool) {
-            agents.push(FileOp::Write {
-                path: PathBuf::from(path),
-                content,
-            });
+            let path = PathBuf::from(path);
+            if config.tool == AiTool::Codex {
+                agents.push(FileOp::Overwrite { path, content });
+            } else {
+                agents.push(FileOp::Write { path, content });
+            }
         }
     }
     (!agents.is_empty()).then(|| ScaffoldStep {
@@ -767,6 +773,14 @@ impl ScaffoldRun {
                 }
                 fs::write(dest, content)
             }
+            FileOp::RemoveGenerated(path) => {
+                let dest = self.root.join(path);
+                if dest.exists() {
+                    fs::remove_file(dest)
+                } else {
+                    Ok(())
+                }
+            }
         }
     }
 
@@ -795,6 +809,7 @@ impl ScaffoldRun {
                     FileOp::CopyUser { to, .. } => to,
                     FileOp::MarkExecutable(_) => continue,
                     FileOp::Overwrite { path, .. } => path,
+                    FileOp::RemoveGenerated(_) => continue,
                 };
                 if !self.root.join(path).exists() {
                     missing.push(path.display().to_string());
@@ -963,6 +978,24 @@ mod tests {
 
         fs::remove_dir_all(&root).unwrap();
         fs::remove_dir_all(&bare).unwrap();
+    }
+
+    #[test]
+    fn codex_agents_are_standalone_discoverable_roles() {
+        let files = agent_files(AiTool::Codex);
+
+        assert_eq!(files.len(), 3);
+        assert!(post_install_note(AiTool::Codex).is_none());
+        for (path, content) in files {
+            assert!(path.starts_with(".codex/agents/"), "unexpected {path}");
+            assert!(content.lines().any(|line| line.starts_with("name = \"")));
+            assert!(
+                content
+                    .lines()
+                    .any(|line| line.starts_with("description = \""))
+            );
+            assert!(content.contains("developer_instructions = \"\"\""));
+        }
     }
 
     #[test]

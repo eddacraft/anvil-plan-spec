@@ -783,8 +783,9 @@ Sequential cleanup:
 - Skills go to `.claude/skills/` (not `.aps/`) because that's the cross-tool
   compatible path (Claude Code, Copilot, OpenCode all check it). Codex users
   get an additional copy at `.agents/skills/`.
-- Agents install to `.claude/agents/` (Claude Code convention). No equivalent
-  exists for Codex/Copilot — their "agents" are skills with more capability.
+- Agents install to each supported native location: `.claude/agents/`,
+  `.github/agents/`, `.opencode/agents/`, or `.codex/agents/`. Codex role TOMLs
+  are standalone and auto-discovered; they do not require config registration.
 - The Planner agent defaults to Opus (deep reasoning for planning); the
   Librarian defaults to Sonnet (fast, cheaper for repo scanning).
 - `config.yml` enables the update script to be non-interactive — it reads
@@ -838,9 +839,9 @@ Sequential cleanup:
     └── aps-librarian.md
 
 .codex/
-├── config.toml                         # Agent entries merged (Codex)
-└── agents/
+└── agents/                             # Auto-discovered Codex roles
     ├── aps-planner.toml
+    ├── aps-conductor.toml
     └── aps-librarian.toml
 
 .agents/

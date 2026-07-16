@@ -166,41 +166,25 @@ cp scaffold/agents/codex/aps-conductor.toml .codex/agents/
 cp scaffold/agents/codex/aps-librarian.toml .codex/agents/
 ```
 
-Then merge `scaffold/agents/codex/codex-config-snippet.toml` into your
-`.codex/config.toml`:
+Codex discovers project roles automatically from `.codex/agents/`. Each file
+is a complete standalone role definition; no `.codex/config.toml` registration
+is required. Model and reasoning settings inherit from the parent session
+unless you set them directly in a role file.
 
-```toml
-[agents.aps-planner]
-model = "o4-mini"
-config_file = ".codex/agents/aps-planner.toml"
-
-[agents.aps-conductor]
-model = "o4-mini"
-config_file = ".codex/agents/aps-conductor.toml"
-
-[agents.aps-librarian]
-model = "o4-mini"
-config_file = ".codex/agents/aps-librarian.toml"
-```
+For an existing APS project, run `aps update` or `aps setup codex` to refresh
+the standalone roles and remove the obsolete registration snippet.
 
 **Usage:**
 
-Spawn agent threads with the `/agent` command:
+Ask Codex to delegate a task to the role you want:
 
 ```
-/agent spawn aps-planner
-> Plan the user authentication module
-
-/agent spawn aps-conductor
-> Execute the next ready work item
-
-/agent spawn aps-librarian
-> Audit the repo for orphaned files
+Use the aps-planner agent to plan the user authentication module.
+Use the aps-conductor agent to execute the next ready work item.
+Use the aps-librarian agent to audit the repo for orphaned files.
 ```
 
-Agent threads run concurrently and can be managed with `/agent route` and
-`/agent close`. Codex uses `o4-mini` by default; change the `model` field in
-`.codex/config.toml` if needed.
+Use `/agent` in the Codex CLI to inspect and switch between agent threads.
 
 ### Grok
 

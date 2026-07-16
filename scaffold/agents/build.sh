@@ -119,7 +119,7 @@ CX_DIR="$SCRIPT_DIR/codex"
 mkdir -p "$CX_DIR"
 
 generate_codex() {
-  local name="$1" comment="$2" core_file="$3"
+  local name="$1" comment="$2" description="$3" core_file="$4"
   local output="$CX_DIR/$name.toml"
   local core_content
   core_content=$(cat "$core_file")
@@ -127,10 +127,10 @@ generate_codex() {
   {
     echo "# APS ${comment} — Codex Agent Role"
     echo "#"
-    echo "# Install: merge the [agents.$name] block from codex-config-snippet.toml"
-    echo "# into your .codex/config.toml, then place this file at .codex/agents/$name.toml"
-    echo "#"
-    echo "# Usage: /agent spawn $name"
+    echo "# Codex discovers this role automatically from .codex/agents/."
+    echo ""
+    echo "name = \"$name\""
+    echo "description = \"$description\""
     echo ""
     echo 'sandbox_mode = "workspace-write"'
     echo ""
@@ -141,36 +141,16 @@ generate_codex() {
   info "wrote $output"
 }
 
-generate_codex "aps-planner" "Planner" "$CORE_DIR/planner-core.md"
-generate_codex "aps-librarian" "Librarian" "$CORE_DIR/librarian-core.md"
-generate_codex "aps-conductor" "Conductor" "$CORE_DIR/conductor-core.md"
+generate_codex "aps-planner" "Planner" "$PLANNER_DESC" \
+  "$CORE_DIR/planner-core.md"
+generate_codex "aps-librarian" "Librarian" "$LIBRARIAN_DESC" \
+  "$CORE_DIR/librarian-core.md"
+generate_codex "aps-conductor" "Conductor" "$CONDUCTOR_DESC" \
+  "$CORE_DIR/conductor-core.md"
 
-# Codex config snippet (static, not generated from core)
-cat > "$CX_DIR/codex-config-snippet.toml" << 'SNIPPET'
-# APS Agent Roles for Codex
-#
-# Merge these blocks into your .codex/config.toml to register the APS agents.
-# Then place aps-planner.toml, aps-librarian.toml, and aps-conductor.toml in
-# .codex/agents/.
-#
-# Usage:
-#   /agent spawn aps-planner
-#   /agent spawn aps-librarian
-#   /agent spawn aps-conductor
-
-[agents.aps-planner]
-model = "o4-mini"  # OpenAI model — Codex runs on OpenAI infrastructure
-config_file = ".codex/agents/aps-planner.toml"
-
-[agents.aps-librarian]
-model = "o4-mini"  # OpenAI model — Codex runs on OpenAI infrastructure
-config_file = ".codex/agents/aps-librarian.toml"
-
-[agents.aps-conductor]
-model = "o4-mini"  # OpenAI model — Codex runs on OpenAI infrastructure
-config_file = ".codex/agents/aps-conductor.toml"
-SNIPPET
-info "wrote $CX_DIR/codex-config-snippet.toml"
+# Older builds placed a registration snippet beside the standalone roles.
+# Modern Codex auto-discovers every TOML file in this directory as one role.
+rm -f "$CX_DIR/codex-config-snippet.toml"
 
 echo ""
 info "all agent variants generated"
