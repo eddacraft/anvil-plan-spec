@@ -10,12 +10,17 @@ check_e005_required_fields() {
   local item_line="$3"
   local has_errors=false
 
-  # Extract work item content until next ### or ## or EOF
+  # Extract work item content until next ### or ## or EOF. Fence-aware
+  # (ISS-001): a heading-lookalike inside a ``` / ~~~ block is content,
+  # not a terminator.
   local content
   content=$(awk -v start="$item_line" '
     NR == start { found=1; next }
-    found && /^###? / { exit }
-    found { print }
+    !found { next }
+    /^(```|~~~)/ { fence = !fence; print; next }
+    fence { print; next }
+    /^###? / { exit }
+    { print }
   ' "$file")
 
   # Terminal (completed) work items are commonly compacted to Status + a short
@@ -71,11 +76,16 @@ check_w003_dependencies() {
   local item_line="$2"
   local all_ids="$3"
 
-  # Extract Dependencies field content
+  # Extract Dependencies field content. Fence-aware (ISS-001): a fenced
+  # Dependencies lookalike is an example, and a fenced heading is not a
+  # terminator.
   local deps_line
   deps_line=$(awk -v start="$item_line" '
-    NR > start && /^\- \*\*Dependencies:\*\*/ { print; exit }
-    NR > start && /^###? / { exit }
+    NR <= start { next }
+    /^(```|~~~)/ { fence = !fence; next }
+    fence { next }
+    /^\- \*\*Dependencies:\*\*/ { print; exit }
+    /^###? / { exit }
   ' "$file")
 
   if [[ -n "$deps_line" ]]; then
@@ -129,12 +139,17 @@ check_w018_terminal_validation() {
     return 0
   fi
 
-  # Extract work item content until next ### or ## or EOF
+  # Extract work item content until next ### or ## or EOF. Fence-aware
+  # (ISS-001): a heading-lookalike inside a ``` / ~~~ block is content,
+  # not a terminator.
   local content
   content=$(awk -v start="$item_line" '
     NR == start { found=1; next }
-    found && /^###? / { exit }
-    found { print }
+    !found { next }
+    /^(```|~~~)/ { fence = !fence; print; next }
+    fence { print; next }
+    /^###? / { exit }
+    { print }
   ' "$file")
 
   # Terminal status: an explicit Status field is authoritative; the
@@ -160,9 +175,14 @@ lint_work_items() {
   local file="$1"
   local has_errors=false
 
-  # Collect all work item IDs in the file first (for dependency checking)
+  # Collect all work item IDs in the file first (for dependency checking).
+  # Fence-aware (ISS-001), matching get_work_items.
   local all_ids
-  all_ids=$(grep -oE '^### [A-Z]+-[0-9]+:' "$file" | sed 's/^### \([A-Z]*-[0-9]*\):.*/\1/' | tr '\n' ' ')
+  all_ids=$(awk '
+    /^(```|~~~)/ { fence = !fence; next }
+    fence { next }
+    match($0, /^### [A-Z]+-[0-9]+:/) { print substr($0, 5, RLENGTH - 5) }
+  ' "$file" 2>/dev/null | tr '\n' ' ')
 
   # Module status gates W018 (terminal modules are exempt archives)
   local module_status

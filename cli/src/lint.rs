@@ -1091,11 +1091,20 @@ fn check_w003_dependencies(
     tree_ids: &HashSet<String>,
     child_ids: &ChildRegistry,
 ) {
-    // First `- **Dependencies:**` line after the header, before the next heading.
+    // First `- **Dependencies:**` line after the header, before the next
+    // heading. Fence-aware (ISS-001): a fenced Dependencies lookalike is an
+    // example, and a fenced heading is not a terminator.
+    let mask = parser::fence_mask(&plan.lines);
     let deps_line = plan.lines[item_line..]
         .iter()
-        .take_while(|l| !l.starts_with("## ") && !l.starts_with("### "))
-        .find(|l| l.starts_with("- **Dependencies:**"));
+        .enumerate()
+        .take_while(|(offset, l)| {
+            mask[item_line + offset] || (!l.starts_with("## ") && !l.starts_with("### "))
+        })
+        .find(|(offset, l)| {
+            !mask[item_line + offset] && l.starts_with("- **Dependencies:**")
+        })
+        .map(|(_, l)| l);
     let Some(deps_line) = deps_line else {
         return;
     };

@@ -323,11 +323,14 @@ impl PlanFile {
     }
 
     /// All `### PREFIX-NNN:` work item headers (`get_work_items`).
+    /// Fence-aware (ISS-001): headers inside ``` / ~~~ blocks are examples,
+    /// not real work items.
     pub fn work_items(&self) -> Vec<WorkItemHeader> {
+        let mask = fence_mask(&self.lines);
         self.lines
             .iter()
             .enumerate()
-            .filter(|(_, line)| is_work_item_header(line))
+            .filter(|(index, line)| !mask[*index] && is_work_item_header(line))
             .map(|(index, line)| WorkItemHeader {
                 line: index + 1,
                 header: line.trim_start().to_string(),
@@ -354,14 +357,39 @@ impl PlanFile {
     }
 
     /// Lines after a work item header until the next `## `/`### ` heading
-    /// (`orch_item_content` and the E005 extraction).
+    /// (`orch_item_content` and the E005 extraction). Fence-aware (ISS-001):
+    /// a heading-lookalike inside a ``` / ~~~ block is content, not a
+    /// terminator.
     pub fn item_content(&self, header_line: usize) -> Vec<&str> {
+        let mask = fence_mask(&self.lines);
         self.lines[header_line..]
             .iter()
-            .take_while(|line| !line.starts_with("## ") && !line.starts_with("### "))
-            .map(String::as_str)
+            .enumerate()
+            .take_while(|(offset, line)| {
+                mask[header_line + offset]
+                    || (!line.starts_with("## ") && !line.starts_with("### "))
+            })
+            .map(|(_, line)| line.as_str())
             .collect()
     }
+}
+
+/// Per-line fence mask: true when the line is a ``` / ~~~ delimiter or sits
+/// inside an open fence (ISS-001). Matches the shared awk toggle
+/// `/^(```|~~~)/ { fence = !fence; next } fence { next }`.
+pub fn fence_mask(lines: &[String]) -> Vec<bool> {
+    let mut fence = false;
+    lines
+        .iter()
+        .map(|line| {
+            if line.starts_with("```") || line.starts_with("~~~") {
+                fence = !fence;
+                true
+            } else {
+                fence
+            }
+        })
+        .collect()
 }
 
 fn is_id_header_row(line: &str) -> bool {
@@ -799,6 +827,31 @@ mod tests {
 
         let content = plan.item_content(items[0].line);
         assert!(content.contains(&"- **Intent:** allow login"));
+        assert!(!content.iter().any(|line| line.contains("AUTH-002")));
+    }
+
+    #[test]
+    fn work_items_and_content_are_fence_aware() {
+        // ISS-001: fenced headers are examples — invisible to work_items(),
+        // inert as item_content() terminators.
+        let plan = PlanFile::from_text(
+            "x.aps.md",
+            "## Work Items\n\n### AUTH-001: Login\n\n- **Intent:** allow login\n\n```markdown\n### FAKE-999: example only\n```\n\n- **Validation:** after the fence, still AUTH-001 content\n\n~~~text\n### TILDE-777: example only\n~~~\n\n### AUTH-002: Logout\n",
+        );
+
+        let items = plan.work_items();
+        let ids: Vec<&str> = items
+            .iter()
+            .filter_map(|item| parse_work_item_id(&item.header))
+            .collect();
+        assert_eq!(ids, vec!["AUTH-001", "AUTH-002"]);
+
+        let content = plan.item_content(items[0].line);
+        assert!(content.contains(&"### FAKE-999: example only"));
+        assert!(
+            content.contains(&"- **Validation:** after the fence, still AUTH-001 content"),
+            "fenced header must not terminate item content"
+        );
         assert!(!content.iter().any(|line| line.contains("AUTH-002")));
     }
 

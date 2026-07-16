@@ -144,11 +144,16 @@ orch_item_content() {
   local file="$1"
   local start_line="$2"
 
+  # Fence-aware (ISS-001): a heading-lookalike inside a ``` / ~~~ block is
+  # content, not a terminator.
   awk -v start="$start_line" '
     NR == start { found=1; next }
-    found && /^## / { exit }
-    found && /^### / { exit }
-    found { print }
+    !found { next }
+    /^(```|~~~)/ { fence = !fence; print; next }
+    fence { print; next }
+    /^## / { exit }
+    /^### / { exit }
+    { print }
   ' "$file"
 }
 
@@ -778,6 +783,20 @@ orch_rewrite_work_item() {
       }
 
       emit_buffer()
+    }
+
+    # Fence-aware (ISS-001): heading-lookalikes inside ``` / ~~~ blocks are
+    # ordinary content — they neither start nor terminate a target item.
+    /^(```|~~~)/ {
+      fence = !fence
+      if (state == "in") buffer[bcount++] = $0
+      else print
+      next
+    }
+    fence {
+      if (state == "in") buffer[bcount++] = $0
+      else print
+      next
     }
 
     /^### / {
