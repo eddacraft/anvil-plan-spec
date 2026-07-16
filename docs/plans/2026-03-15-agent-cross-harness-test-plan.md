@@ -10,13 +10,13 @@ environment.
 
 ## Test Matrix
 
-| Tool        | Agent Format                    | Test Method                   | Status                  |
-| ----------- | ------------------------------- | ----------------------------- | ----------------------- |
-| Claude Code | `.claude/agents/*.md`           | Task dispatch in live project | Validated               |
-| Codex       | `.codex/agents/*.toml` + config | `/agent spawn`                | Manual (needs Codex)    |
-| Copilot     | `.github/agents/*.md`           | Agent discovery               | Manual (needs Copilot)  |
-| OpenCode    | `.opencode/agents/*.md`         | `@mention` invocation         | Manual (needs OpenCode) |
-| Gemini      | `.gemini/skills/*/SKILL.md`     | `gemini skills link`          | Manual (needs Gemini)   |
+| Tool        | Agent Format                  | Test Method                   | Status                  |
+| ----------- | ----------------------------- | ----------------------------- | ----------------------- |
+| Claude Code | `.claude/agents/*.md`         | Task dispatch in live project | Validated               |
+| Codex       | `.codex/agents/*.toml`        | Named delegation + `/agent`   | Manual (needs Codex)    |
+| Copilot     | `.github/agents/*.md`         | Agent discovery               | Manual (needs Copilot)  |
+| OpenCode    | `.opencode/agents/*.md`       | `@mention` invocation         | Manual (needs OpenCode) |
+| Grok        | `.agents/skills/*/SKILL.md`   | Skill auto-discovery          | Manual (needs Grok)     |
 
 ## Automated Validation (Complete)
 
@@ -24,8 +24,8 @@ environment.
 
 - [x] `build.sh` runs without errors
 - [x] `build.sh` is idempotent (running twice produces identical output)
-- [x] All 14 output files generated (2 core + 2 Claude Code + 2 Copilot + 2
-      OpenCode + 3 Codex + 2 Gemini verified)
+- [x] All 12 output files generated (3 each for Claude Code, Copilot, OpenCode,
+      and Codex); Grok consumes shared skills without bespoke agent files
 
 ### Format Validation
 
@@ -53,16 +53,18 @@ environment.
 
 **Codex:**
 
-- [x] TOML format with `sandbox_mode` and `developer_instructions`
-- [x] Config snippet has correct `[agents.*]` blocks
-- [x] `o4-mini` model (OpenAI — commented for clarity)
+- [x] TOML format with non-empty `name`, `description`, and
+      `developer_instructions`
+- [x] No obsolete registration snippet emitted under `.codex/`
+- [x] `aps update` and repeated `aps setup codex` refresh existing roles and
+      remove both historical snippet locations
+- [x] Optional model and sandbox settings inherit from the parent session
 - [x] Developer instructions contain full core prompt
 
-**Gemini:**
+**Grok:**
 
-- [x] Pure markdown (no YAML frontmatter)
-- [x] Self-contained (condensed, not a core prompt copy)
-- [x] Covers key responsibilities in skill-appropriate format
+- [x] Shared `.agents/skills/aps-planning/` payload installed
+- [x] No bespoke Grok agent files generated
 
 ### Content Validation
 
@@ -109,15 +111,11 @@ cp scaffold/agents/claude-code/aps-librarian.md /tmp/test-project/.claude/agents
 # 1. Place agent files
 cp scaffold/agents/codex/aps-planner.toml /tmp/test-project/.codex/agents/
 cp scaffold/agents/codex/aps-librarian.toml /tmp/test-project/.codex/agents/
-# Merge codex-config-snippet.toml into .codex/config.toml
 
-# 2. Spawn planner
-#    /agent spawn aps-planner
-#    Ask: "What's the plan status?"
+# 2. Ask Codex: "Use the aps-planner agent to report the plan status."
+#    Use /agent to inspect or switch to the spawned thread.
 
-# 3. Spawn librarian
-#    /agent spawn aps-librarian
-#    Ask: "Audit the repo"
+# 3. Ask Codex: "Use the aps-librarian agent to audit the repo."
 ```
 
 ### Copilot
@@ -142,25 +140,21 @@ cp scaffold/agents/opencode/aps-librarian.md /tmp/test-project/.opencode/agents/
 # 3. Ask for plan status
 ```
 
-### Gemini
+### Grok
 
 ```bash
-# 1. Place skill files
-cp -r scaffold/agents/gemini/aps-planner /tmp/test-project/.gemini/skills/
-cp -r scaffold/agents/gemini/aps-librarian /tmp/test-project/.gemini/skills/
+# 1. Install the shared planning skill
+APS_LOCAL="$PWD" ./bin/aps init /tmp/test-project --tools grok
 
-# 2. Link skills
-#    gemini skills link . --scope workspace
-
-# 3. Activate skill in conversation
+# 2. Ask Grok to report APS plan status and confirm skill auto-discovery
 ```
 
 ## Issues Found and Fixed
 
 1. **Stale OpenCode model IDs** — Updated from `claude-opus-4-20250514` /
    `claude-sonnet-4-20250514` to `claude-opus-4-6` / `claude-sonnet-4-6`
-2. **Missing vendor comment** — Added inline comment to Codex config snippet
-   clarifying `o4-mini` is an OpenAI model
+2. **Stale Codex role schema** — Added standalone role identity fields and
+   removed the obsolete `.codex/config.toml` registration snippet (AGENT-008)
 
 ## Notes
 
@@ -168,5 +162,4 @@ cp -r scaffold/agents/gemini/aps-librarian /tmp/test-project/.gemini/skills/
   installed. The automated validation covers everything that can be checked
   without the tools: file format, content correctness, build reproducibility.
 - Claude Code agents were validated live (format + content + dispatch readiness).
-- The Gemini planner skill intentionally omits wave-based execution detail —
-  this is appropriate condensation for the skill format.
+- Grok uses the shared planning skill and has no bespoke agent variant.

@@ -34,7 +34,7 @@ These need to be:
 | Tool            | Agent Mechanism                       | Format                                                                                                                             |
 | --------------- | ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
 | **Claude Code** | `.claude/agents/<name>.md`            | Frontmatter (name, description, model, tools) + system prompt                                                                      |
-| **Codex**       | Multi-agent TOML + skills             | `[agents.<name>]` in `.codex/config.toml` with `config_file` overlay; also `.agents/skills/` for passive guidance                  |
+| **Codex**       | Multi-agent TOML + skills             | Standalone `.codex/agents/<name>.toml` roles; also `.agents/skills/` for passive guidance                                       |
 | **Copilot**     | `.github/agents/<name>.md`            | Frontmatter (name, description) + system prompt — very similar to Claude Code format                                               |
 | **Grok**        | none (auto-discovery)                 | Reads `AGENTS.md` family; discovers `.agents/skills/<name>/SKILL.md` and `.claude/` assets natively (D-040)                        |
 | **OpenCode**    | `.opencode/agents/<name>.md` + skills | Frontmatter (description, mode, model, tools, permission) + system prompt; also skills at `.opencode/skills/` or `.claude/skills/` |
@@ -43,31 +43,29 @@ The agent _content_ (system prompt, decision tree, APS knowledge) is largely
 shared. What differs is frontmatter, file location, and tool-specific
 affordances.
 
-**Codex Multi-Agent Detail (Researched 2026-02-19)**
+**Codex Multi-Agent Detail (Updated 2026-07-16)**
 
 Codex has a richer agent mechanism beyond skills. The multi-agent system uses
-TOML configuration in `.codex/config.toml`:
+standalone TOML role files under `.codex/agents/`:
 
 ```toml
-[agents.aps-planner]
-model = "o4-mini"
-config_file = ".codex/agents/aps-planner.toml"
-
-[agents.aps-librarian]
-model = "o4-mini"
-config_file = ".codex/agents/aps-librarian.toml"
+name = "aps-planner"
+description = "Plans and administers APS work."
+developer_instructions = """
+Role instructions here.
+"""
 ```
 
-Each agent role gets a TOML overlay file with `developer_instructions`,
-`sandbox_mode`, and other config. Agent threads run concurrently and are
-managed via `/agent spawn`, `/agent route`, `/agent close` commands. Built-in
-roles include `default`, `worker`, and `explorer`.
+Codex auto-discovers each TOML file as one role. `name`, `description`, and
+`developer_instructions` are required; model, reasoning, sandbox, MCP, and
+skill settings are optional overrides that otherwise inherit from the parent
+session. Users ask Codex to delegate to a role and use `/agent` to inspect or
+switch threads.
 
-For APS, the Codex port should produce BOTH:
+For APS, the Codex port produces both:
 
 1. A skill (`.agents/skills/aps-planning/`) for passive guidance
-2. Agent role configs (`.codex/config.toml` entries + `.codex/agents/*.toml`)
-   for active dispatch
+2. Standalone role configs (`.codex/agents/*.toml`) for active dispatch
 
 **Copilot Custom Agent Detail (Researched 2026-02-19)**
 
@@ -109,7 +107,7 @@ mode agents (users invoke them deliberately, not as the default primary agent).
 
 - APS Planner agent for Claude Code (`.claude/agents/` format)
 - APS Librarian agent for Claude Code
-- Codex agent roles (`.codex/config.toml` + `.codex/agents/*.toml`)
+- Codex standalone agent roles (`.codex/agents/*.toml`)
 - Copilot custom agents (`.github/agents/` format)
 - OpenCode agents (`.opencode/agents/` format)
 - Grok Build coverage via the Codex-shared `.agents/skills/` payload (D-040)
@@ -209,6 +207,8 @@ mode agents (users invoke them deliberately, not as the default primary agent).
   at `.agents/skills/aps-planning/` still works as passive guidance.
 - **Confidence:** medium
 - **Dependencies:** AGENT-001, AGENT-002
+- **Superseded by:** AGENT-008 updates the packaging contract to standalone
+  auto-discovered roles.
 
 ### AGENT-004: Port agents to Copilot, OpenCode, and Gemini formats — Complete 2026-02-21
 
@@ -283,6 +283,33 @@ mode agents (users invoke them deliberately, not as the default primary agent).
 - **Dependencies:** D-040
 - **Files:** cli/src/, lib/scaffold.sh, scaffold/agents/, scaffold/install.ps1,
   test/run.sh, docs/
+
+### AGENT-008: Update Codex agents to standalone role discovery — Complete 2026-07-16
+
+- **Intent:** Stop the APS scaffold from emitting malformed Codex agent roles
+  or obsolete registration snippets.
+- **Expected Outcome:** Every generated and installed `.codex/agents/*.toml`
+  file defines non-empty `name`, `description`, and
+  `developer_instructions`; Codex discovers the three roles without a config
+  merge; generators, bash and Rust scaffold paths, and user docs emit no
+  `codex-config-snippet.toml`.
+- **Validation:** `bash scaffold/agents/build.sh` is idempotent;
+  `./test/run.sh`, `cargo test --manifest-path cli/Cargo.toml`,
+  `./bin/aps lint plans`, and markdownlint pass; a fresh Codex scaffold has
+  exactly three valid role TOMLs and no registration snippet.
+- **Identified From:** Codex 0.144.5 warnings against an APS-generated project
+  after the standalone role schema made `name`, `description`, and
+  `developer_instructions` mandatory.
+- **Confidence:** high
+- **Dependencies:** AGENT-003
+- **Files:** scaffold/agents/, lib/scaffold.sh, cli/src/scaffold.rs,
+  cli/src/setup.rs, cli/src/update.rs, cli/src/wizard.rs, test/run.sh, docs/agents.md,
+  docs/ai/prompting/codex/README.md
+- **Results:** The shared generator now emits complete standalone Codex roles;
+  bash and native Rust updates refresh installed roles and remove both legacy
+  snippet locations, and fresh scaffolds omit the snippet. End-to-end tests
+  enforce the required schema across canonical and installed files.
+  Documentation and plan decisions now describe automatic discovery.
 
 ## Execution Strategy
 

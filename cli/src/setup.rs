@@ -181,17 +181,31 @@ pub fn tool_integration_steps(tools: &[AiTool]) -> Vec<ScaffoldStep> {
         .iter()
         .map(|tool| ToolConfig::default_for(*tool))
         .collect();
-    let mut steps = vec![skill_step(&configs)];
+    let mut steps = vec![refresh_generated_step(skill_step(&configs))];
     if let Some(step) = agents_step(&configs) {
-        steps.push(step);
+        steps.push(refresh_generated_step(step));
     }
     if configs
         .iter()
         .any(|config| config.hooks != crate::wizard::HookVerbosity::None)
     {
-        steps.push(hooks_step());
+        steps.push(refresh_generated_step(hooks_step()));
     }
     steps
+}
+
+/// Tool-integration assets are generated and may be refreshed by an explicit
+/// `aps setup <tool>` rerun. User-authored files never enter these steps.
+fn refresh_generated_step(mut step: ScaffoldStep) -> ScaffoldStep {
+    step.ops = step
+        .ops
+        .into_iter()
+        .map(|op| match op {
+            FileOp::Write { path, content } => FileOp::Overwrite { path, content },
+            other => other,
+        })
+        .collect();
+    step
 }
 
 /// Generated files an upgrade may refresh, with current content.
@@ -877,6 +891,38 @@ mod tests {
         assert!(root.join("aps-planning/SKILL.md").exists());
         assert!(!root.join(".github/agents").exists());
         assert!(!root.join(".codex").exists());
+
+        fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
+    fn codex_tool_shortcut_refreshes_roles_and_removes_legacy_snippets() {
+        let root = temp_root("codex-refresh");
+        run_shortcut(&root, "codex", false).unwrap();
+
+        fs::write(
+            root.join(".codex/agents/aps-planner.toml"),
+            "developer_instructions = \"\"\"stale\"\"\"\n",
+        )
+        .unwrap();
+        fs::write(
+            root.join(".codex/agents/codex-config-snippet.toml"),
+            "legacy\n",
+        )
+        .unwrap();
+        fs::write(root.join(".codex/codex-config-snippet.toml"), "legacy\n").unwrap();
+
+        run_shortcut(&root, "codex", false).unwrap();
+
+        let planner = fs::read_to_string(root.join(".codex/agents/aps-planner.toml")).unwrap();
+        assert!(planner.contains("name = \"aps-planner\""));
+        assert!(!planner.contains("stale"));
+        assert!(
+            !root
+                .join(".codex/agents/codex-config-snippet.toml")
+                .exists()
+        );
+        assert!(!root.join(".codex/codex-config-snippet.toml").exists());
 
         fs::remove_dir_all(&root).unwrap();
     }

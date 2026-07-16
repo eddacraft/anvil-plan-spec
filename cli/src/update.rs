@@ -12,6 +12,8 @@ use std::fs;
 use std::path::Path;
 
 use crate::config;
+use crate::scaffold::agent_files;
+use crate::wizard::AiTool;
 
 // Core generated files every APS project carries (relative to plans/). These
 // are added when missing and refreshed when present.
@@ -71,8 +73,26 @@ struct Tally {
     added: u32,
     updated: u32,
     unchanged: u32,
+    removed: u32,
     skipped: u32,
     failed: u32,
+}
+
+/// Remove an obsolete generated file without touching neighbouring content.
+fn remove_obsolete(path: &Path, display: &str, tally: &mut Tally) {
+    if !path.exists() {
+        return;
+    }
+    match fs::remove_file(path) {
+        Ok(()) => {
+            println!("  - {display} (removed obsolete generated file)");
+            tally.removed += 1;
+        }
+        Err(err) => {
+            println!("  ! {display} (failed: {err})");
+            tally.failed += 1;
+        }
+    }
 }
 
 /// Write `content` to `path`, reporting the outcome relative to `display`.
@@ -162,11 +182,39 @@ pub fn cmd_update(start: &Path) -> i32 {
         }
     }
 
+    // Codex roles: reconcile only when this optional integration is already
+    // installed. Remove both locations used by historical scaffold versions.
+    let legacy_codex_snippets = [
+        ".codex/agents/codex-config-snippet.toml",
+        ".codex/codex-config-snippet.toml",
+    ];
+    let codex_installed = agent_files(AiTool::Codex)
+        .iter()
+        .any(|(rel, _)| root.join(rel).is_file())
+        || legacy_codex_snippets
+            .iter()
+            .any(|rel| root.join(rel).is_file());
+    println!("\nCodex agents (.codex/agents/):");
+    if codex_installed {
+        for (rel, content) in agent_files(AiTool::Codex) {
+            reconcile(&root.join(rel), rel, content, &mut tally);
+        }
+        for rel in legacy_codex_snippets {
+            remove_obsolete(&root.join(rel), rel, &mut tally);
+        }
+    } else {
+        for (rel, _) in agent_files(AiTool::Codex) {
+            println!("  - {rel} (skipped: Codex agents not installed)");
+            tally.skipped += 1;
+        }
+    }
+
     println!(
-        "\nUpdated: {} added, {} updated, {} unchanged, {} skipped{}",
+        "\nUpdated: {} added, {} updated, {} unchanged, {} removed, {} skipped{}",
         tally.added,
         tally.updated,
         tally.unchanged,
+        tally.removed,
         tally.skipped,
         if tally.failed > 0 {
             format!(", {} failed", tally.failed)
@@ -233,6 +281,59 @@ mod tests {
         assert_eq!(cmd_update(&root), 0);
         assert!(plans.join("designs/.design.template.md").is_file());
         assert!(root.join("aps-planning/SKILL.md").is_file());
+        fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn reconciles_codex_roles_and_removes_legacy_snippets_when_present() {
+        let root = scratch("codex");
+        let plans = root.join("plans");
+        let agents = root.join(".codex/agents");
+        fs::create_dir_all(plans.join("modules")).unwrap();
+        fs::create_dir_all(plans.join("execution")).unwrap();
+        fs::create_dir_all(&agents).unwrap();
+        fs::write(
+            agents.join("aps-planner.toml"),
+            "developer_instructions = \"\"\"stale\"\"\"\n",
+        )
+        .unwrap();
+        fs::write(agents.join("codex-config-snippet.toml"), "legacy\n").unwrap();
+        fs::write(root.join(".codex/codex-config-snippet.toml"), "legacy\n").unwrap();
+
+        assert_eq!(cmd_update(&root), 0);
+
+        let planner = fs::read_to_string(agents.join("aps-planner.toml")).unwrap();
+        assert!(planner.contains("name = \"aps-planner\""));
+        assert!(!planner.contains("stale"));
+        assert!(agents.join("aps-librarian.toml").is_file());
+        assert!(agents.join("aps-conductor.toml").is_file());
+        assert!(!agents.join("codex-config-snippet.toml").exists());
+        assert!(!root.join(".codex/codex-config-snippet.toml").exists());
+
+        fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn leaves_unrelated_codex_agents_untouched() {
+        let root = scratch("unrelated-codex");
+        let plans = root.join("plans");
+        let agents = root.join(".codex/agents");
+        fs::create_dir_all(plans.join("modules")).unwrap();
+        fs::create_dir_all(plans.join("execution")).unwrap();
+        fs::create_dir_all(&agents).unwrap();
+        fs::write(
+            agents.join("reviewer.toml"),
+            "name = \"reviewer\"\ndeveloper_instructions = \"review\"\n",
+        )
+        .unwrap();
+
+        assert_eq!(cmd_update(&root), 0);
+
+        assert!(agents.join("reviewer.toml").is_file());
+        assert!(!agents.join("aps-planner.toml").exists());
+        assert!(!agents.join("aps-librarian.toml").exists());
+        assert!(!agents.join("aps-conductor.toml").exists());
+
         fs::remove_dir_all(&root).ok();
     }
 

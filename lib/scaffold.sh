@@ -499,7 +499,7 @@ v2_install_codex() {
   download "scaffold/agents/codex/aps-planner.toml" "$agents_dir/aps-planner.toml"
   download "scaffold/agents/codex/aps-librarian.toml" "$agents_dir/aps-librarian.toml"
   download "scaffold/agents/codex/aps-conductor.toml" "$agents_dir/aps-conductor.toml"
-  download "scaffold/agents/codex/codex-config-snippet.toml" "$agents_dir/codex-config-snippet.toml"
+  rm -f "$agents_dir/codex-config-snippet.toml"
 
   # Skill at .agents/skills/ (shared with Grok)
   v2_install_agents_skill "$target"
@@ -581,8 +581,7 @@ v2_install_tools() {
         v2_install_codex "$target"
         info ".codex/agents/ (planner, librarian, conductor TOML configs)"
         info ".agents/skills/aps-planning/ (skill)"
-        post_install_msgs+=("Codex: merge .codex/agents/codex-config-snippet.toml into .codex/config.toml")
-        post_install_msgs+=("  then run: codex skills install .agents/skills/aps-planning")
+        post_install_msgs+=("Codex: run codex skills install .agents/skills/aps-planning")
         ;;
       grok)
         # Grok Build discovers .agents/skills/ and the AGENTS.md family natively (D-040)
