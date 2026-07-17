@@ -40,46 +40,54 @@ const CHILD_MODULE_TEMPLATE: &str = include_str!("../templates/module.template.m
 /// work-item prefix so bare IDs stay unique across trees (W020-clean).
 const NESTED_CHILDREN: &[(&str, &str)] = &[("core", "CORE"), ("api", "API")];
 
-const SKILL_MD: &str = include_str!("../scaffold/aps-planning/SKILL.md");
-const SKILL_REFERENCE: &str = include_str!("../scaffold/aps-planning/reference.md");
-const SKILL_EXAMPLES: &str = include_str!("../scaffold/aps-planning/examples.md");
-const SKILL_HOOKS: &str = include_str!("../scaffold/aps-planning/hooks.md");
-
-const HOOK_SCRIPTS: [(&str, &str); 6] = [
+// v2 skill: three files (hooks.md is v1-only), installed under the
+// per-tool skill roots — never at the repo root (that's the v1 layout
+// `aps migrate` removes).
+pub const SKILL_FILES: [(&str, &str); 3] = [
     (
-        "aps-planning/scripts/install-hooks.sh",
-        include_str!("../scaffold/aps-planning/scripts/install-hooks.sh"),
+        "SKILL.md",
+        include_str!("../scaffold/aps-planning/SKILL.md"),
     ),
     (
-        "aps-planning/scripts/init-session.sh",
-        include_str!("../scaffold/aps-planning/scripts/init-session.sh"),
+        "reference.md",
+        include_str!("../scaffold/aps-planning/reference.md"),
     ),
     (
-        "aps-planning/scripts/check-complete.sh",
-        include_str!("../scaffold/aps-planning/scripts/check-complete.sh"),
-    ),
-    (
-        "aps-planning/scripts/pre-tool-check.sh",
-        include_str!("../scaffold/aps-planning/scripts/pre-tool-check.sh"),
-    ),
-    (
-        "aps-planning/scripts/post-tool-nudge.sh",
-        include_str!("../scaffold/aps-planning/scripts/post-tool-nudge.sh"),
-    ),
-    (
-        "aps-planning/scripts/enforce-plan-update.sh",
-        include_str!("../scaffold/aps-planning/scripts/enforce-plan-update.sh"),
+        "examples.md",
+        include_str!("../scaffold/aps-planning/examples.md"),
     ),
 ];
 
-const CLAUDE_COMMANDS: [(&str, &str); 2] = [
+/// Skill root read by Claude Code, Copilot, and OpenCode.
+pub const CLAUDE_SKILL_DIR: &str = ".claude/skills/aps-planning";
+/// Skill root discovered by Codex (`codex skills install`) and Grok Build.
+pub const AGENTS_SKILL_DIR: &str = ".agents/skills/aps-planning";
+
+/// Hook scripts live under `.aps/scripts/` (v2), not `aps-planning/scripts/`.
+pub const HOOK_SCRIPTS: [(&str, &str); 6] = [
     (
-        ".claude/commands/plan.md",
-        include_str!("../scaffold/commands/plan.md"),
+        ".aps/scripts/install-hooks.sh",
+        include_str!("../scaffold/aps-planning/scripts/install-hooks.sh"),
     ),
     (
-        ".claude/commands/plan-status.md",
-        include_str!("../scaffold/commands/plan-status.md"),
+        ".aps/scripts/init-session.sh",
+        include_str!("../scaffold/aps-planning/scripts/init-session.sh"),
+    ),
+    (
+        ".aps/scripts/check-complete.sh",
+        include_str!("../scaffold/aps-planning/scripts/check-complete.sh"),
+    ),
+    (
+        ".aps/scripts/pre-tool-check.sh",
+        include_str!("../scaffold/aps-planning/scripts/pre-tool-check.sh"),
+    ),
+    (
+        ".aps/scripts/post-tool-nudge.sh",
+        include_str!("../scaffold/aps-planning/scripts/post-tool-nudge.sh"),
+    ),
+    (
+        ".aps/scripts/enforce-plan-update.sh",
+        include_str!("../scaffold/aps-planning/scripts/enforce-plan-update.sh"),
     ),
 ];
 
@@ -332,10 +340,10 @@ pub fn agent_paths(tool: AiTool) -> Vec<&'static str> {
 pub fn post_install_note(tool: AiTool) -> Option<&'static str> {
     match tool {
         AiTool::ClaudeCode => {
-            Some("Claude Code: run ./aps-planning/scripts/install-hooks.sh to wire hooks")
+            Some("Claude Code: run ./.aps/scripts/install-hooks.sh to wire hooks")
         }
         AiTool::Copilot => Some("Copilot: commit .github/agents so Copilot picks them up"),
-        AiTool::Codex => None,
+        AiTool::Codex => Some("Codex: run codex skills install .agents/skills/aps-planning"),
         AiTool::OpenCode => Some("OpenCode: agents installed under .opencode/agent"),
         AiTool::Grok => {
             Some("Grok: Grok Build discovers AGENTS.md and installed skills automatically")
@@ -609,8 +617,10 @@ pub fn plan_steps(selections: &Selections) -> Vec<ScaffoldStep> {
     }
 
     // Planning skill + per-tool agents.
-    if !selections.tools.is_empty() {
-        steps.push(skill_step(&selections.tools));
+    if !selections.tools.is_empty()
+        && let Some(step) = skill_step(&selections.tools)
+    {
+        steps.push(step);
     }
 
     if selections.agents_requested()
@@ -636,38 +646,42 @@ pub fn plan_steps(selections: &Selections) -> Vec<ScaffoldStep> {
     steps
 }
 
-/// Planning skill files, plus Claude commands when Claude Code is selected.
-pub fn skill_step(tools: &[ToolConfig]) -> ScaffoldStep {
-    let mut skill = vec![
-        FileOp::Write {
-            path: PathBuf::from("aps-planning/SKILL.md"),
-            content: SKILL_MD,
-        },
-        FileOp::Write {
-            path: PathBuf::from("aps-planning/reference.md"),
-            content: SKILL_REFERENCE,
-        },
-        FileOp::Write {
-            path: PathBuf::from("aps-planning/examples.md"),
-            content: SKILL_EXAMPLES,
-        },
-        FileOp::Write {
-            path: PathBuf::from("aps-planning/hooks.md"),
-            content: SKILL_HOOKS,
-        },
-    ];
-    if tools.iter().any(|c| c.tool == AiTool::ClaudeCode) {
-        for (path, content) in CLAUDE_COMMANDS {
-            skill.push(FileOp::Write {
-                path: PathBuf::from(path),
+/// Planning skill files under the v2 per-tool skill roots. Claude Code,
+/// Copilot, and OpenCode all read `.claude/skills/`; Codex and Grok discover
+/// `.agents/skills/`. With no tools given (the tool-agnostic `setup all`
+/// flow), the shared `.claude/skills/` root is used. Generic-only selections
+/// install no skill, matching the bash scaffold — hence `None`.
+pub fn skill_step(tools: &[ToolConfig]) -> Option<ScaffoldStep> {
+    let claude_root = tools.is_empty()
+        || tools.iter().any(|c| {
+            matches!(
+                c.tool,
+                AiTool::ClaudeCode | AiTool::Copilot | AiTool::OpenCode
+            )
+        });
+    let agents_root = tools
+        .iter()
+        .any(|c| matches!(c.tool, AiTool::Codex | AiTool::Grok));
+
+    let mut ops = Vec::new();
+    for (dir, wanted) in [
+        (CLAUDE_SKILL_DIR, claude_root),
+        (AGENTS_SKILL_DIR, agents_root),
+    ] {
+        if !wanted {
+            continue;
+        }
+        for (name, content) in SKILL_FILES {
+            ops.push(FileOp::Write {
+                path: PathBuf::from(dir).join(name),
                 content,
             });
         }
     }
-    ScaffoldStep {
+    (!ops.is_empty()).then(|| ScaffoldStep {
         label: "Install planning skill".to_string(),
-        ops: skill,
-    }
+        ops,
+    })
 }
 
 /// Agent files for every tool with agents enabled; None when nothing to do.
@@ -702,7 +716,7 @@ pub fn agents_step(tools: &[ToolConfig]) -> Option<ScaffoldStep> {
     })
 }
 
-/// Hook scripts under aps-planning/scripts/, marked executable.
+/// Hook scripts under .aps/scripts/, marked executable.
 pub fn hooks_step() -> ScaffoldStep {
     let mut hooks = Vec::new();
     for (path, content) in HOOK_SCRIPTS {
@@ -1017,7 +1031,7 @@ impl ScaffoldRun {
 }
 
 #[cfg(unix)]
-fn mark_executable(path: &Path) -> io::Result<()> {
+pub(crate) fn mark_executable(path: &Path) -> io::Result<()> {
     use std::os::unix::fs::PermissionsExt;
     let mut perms = fs::metadata(path)?.permissions();
     perms.set_mode(perms.mode() | 0o755);
@@ -1025,7 +1039,7 @@ fn mark_executable(path: &Path) -> io::Result<()> {
 }
 
 #[cfg(not(unix))]
-fn mark_executable(_path: &Path) -> io::Result<()> {
+pub(crate) fn mark_executable(_path: &Path) -> io::Result<()> {
     Ok(())
 }
 
@@ -1174,7 +1188,12 @@ mod tests {
         let files = agent_files(AiTool::Codex, ModelPreference::Default);
 
         assert_eq!(files.len(), 3);
-        assert!(post_install_note(AiTool::Codex).is_none());
+        // Roles are auto-discovered, but the skill still needs a one-time
+        // `codex skills install` — surfaced as the post-install note.
+        assert!(
+            post_install_note(AiTool::Codex)
+                .is_some_and(|note| note.contains(".agents/skills/aps-planning"))
+        );
         for (path, content) in &files {
             assert!(path.starts_with(".codex/agents/"), "unexpected {path}");
             assert!(content.lines().any(|line| line.starts_with("name = \"")));
@@ -1310,15 +1329,19 @@ mod tests {
             "plans/designs/.design.template.md",
             "plans/releases/README.md",
             "plans/releases/.release.template.md",
-            "aps-planning/SKILL.md",
-            ".claude/commands/plan.md",
+            ".claude/skills/aps-planning/SKILL.md",
             ".claude/agents/aps-conductor.md",
-            "aps-planning/scripts/install-hooks.sh",
+            ".aps/scripts/install-hooks.sh",
             ".aps/config.yml",
         ] {
             assert!(root.join(path).exists(), "missing {path}");
         }
         assert!(root.join("plans/decisions").is_dir());
+        // The v1 footprint must not come back (root skill, Claude commands).
+        assert!(!root.join("aps-planning").exists());
+        assert!(!root.join(".claude/commands").exists());
+        // Claude Code alone does not install the Codex/Grok skill root.
+        assert!(!root.join(".agents").exists());
 
         fs::remove_dir_all(&root).unwrap();
     }
@@ -1338,9 +1361,44 @@ mod tests {
         assert!(!root.join("plans/designs").exists());
         assert!(!root.join("plans/releases").exists());
         assert!(!root.join("aps-planning").exists());
+        assert!(!root.join(".claude").exists());
         assert!(root.join("plans/index.aps.md").exists());
 
         fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
+    fn skill_step_targets_v2_roots_per_tool() {
+        fn roots(step: &ScaffoldStep) -> (bool, bool) {
+            let has = |dir: &str| {
+                step.ops
+                    .iter()
+                    .any(|op| matches!(op, FileOp::Write { path, .. } if path.starts_with(dir)))
+            };
+            (has(CLAUDE_SKILL_DIR), has(AGENTS_SKILL_DIR))
+        }
+        let cfg = ToolConfig::default_for;
+
+        // Claude Code, Copilot, and OpenCode share .claude/skills/.
+        for tool in [AiTool::ClaudeCode, AiTool::Copilot, AiTool::OpenCode] {
+            let step = skill_step(&[cfg(tool)]).expect("skill installed");
+            assert_eq!(roots(&step), (true, false), "{tool:?}");
+        }
+        // Codex and Grok discover .agents/skills/.
+        for tool in [AiTool::Codex, AiTool::Grok] {
+            let step = skill_step(&[cfg(tool)]).expect("skill installed");
+            assert_eq!(roots(&step), (false, true), "{tool:?}");
+        }
+        // Mixed selection installs both roots.
+        let step = skill_step(&[cfg(AiTool::OpenCode), cfg(AiTool::Codex)]).unwrap();
+        assert_eq!(roots(&step), (true, true));
+        // Generic-only means no tool integration — no skill.
+        assert!(skill_step(&[cfg(AiTool::Generic)]).is_none());
+        // Tool-agnostic (setup all) defaults to the shared .claude/skills root.
+        let step = skill_step(&[]).unwrap();
+        assert_eq!(roots(&step), (true, false));
+        // hooks.md is v1-only; the v2 skill is exactly three files per root.
+        assert_eq!(step.ops.len(), SKILL_FILES.len());
     }
 
     #[test]

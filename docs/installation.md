@@ -199,9 +199,11 @@ vendored CLI to refresh):
 - The vendored CLI (`.aps/bin/aps` + `.aps/lib/`) **only if** you installed it
   with `--local-cli`; otherwise the global `aps` binary is updated separately
   (see [Global Install](#global-install))
-- `aps-planning/` skill + scripts, and agent definitions for any AI tools you
-  added (`.claude/agents/`, `.github/agents/`, `.opencode/agents/`, etc.) —
-  only when present
+- The planning skill (`.claude/skills/aps-planning/` and/or
+  `.agents/skills/aps-planning/`; a legacy root `aps-planning/` is refreshed in
+  place until you `aps migrate`), hook scripts (`.aps/scripts/`), and agent
+  definitions for any AI tools you added (`.claude/agents/`, `.github/agents/`,
+  `.opencode/agents/`, etc.) — only when present
 
 **Preserved:** your `plans/index.aps.md`, module specs, `plans/project-context.md`,
 `plans/issues.md`, action plans, and anything under `plans/decisions/` or
