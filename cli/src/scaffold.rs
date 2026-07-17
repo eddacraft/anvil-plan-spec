@@ -83,70 +83,249 @@ const CLAUDE_COMMANDS: [(&str, &str); 2] = [
     ),
 ];
 
-/// Per-tool agent files as (destination relative path, content).
-pub(crate) fn agent_files(tool: AiTool) -> &'static [(&'static str, &'static str)] {
-    match tool {
-        AiTool::ClaudeCode => &[
-            (
-                ".claude/agents/aps-conductor.md",
-                include_str!("../scaffold/agents/claude-code/aps-conductor.md"),
-            ),
-            (
-                ".claude/agents/aps-librarian.md",
-                include_str!("../scaffold/agents/claude-code/aps-librarian.md"),
-            ),
-            (
-                ".claude/agents/aps-planner.md",
-                include_str!("../scaffold/agents/claude-code/aps-planner.md"),
-            ),
-        ],
-        AiTool::Copilot => &[
-            (
-                ".github/agents/aps-conductor.md",
-                include_str!("../scaffold/agents/copilot/aps-conductor.md"),
-            ),
-            (
-                ".github/agents/aps-librarian.md",
-                include_str!("../scaffold/agents/copilot/aps-librarian.md"),
-            ),
-            (
-                ".github/agents/aps-planner.md",
-                include_str!("../scaffold/agents/copilot/aps-planner.md"),
-            ),
-        ],
-        AiTool::Codex => &[
-            (
-                ".codex/agents/aps-conductor.toml",
-                include_str!("../scaffold/agents/codex/aps-conductor.toml"),
-            ),
-            (
-                ".codex/agents/aps-librarian.toml",
-                include_str!("../scaffold/agents/codex/aps-librarian.toml"),
-            ),
-            (
-                ".codex/agents/aps-planner.toml",
-                include_str!("../scaffold/agents/codex/aps-planner.toml"),
-            ),
-        ],
-        AiTool::OpenCode => &[
-            (
-                ".opencode/agent/aps-conductor.md",
-                include_str!("../scaffold/agents/opencode/aps-conductor.md"),
-            ),
-            (
-                ".opencode/agent/aps-librarian.md",
-                include_str!("../scaffold/agents/opencode/aps-librarian.md"),
-            ),
-            (
-                ".opencode/agent/aps-planner.md",
-                include_str!("../scaffold/agents/opencode/aps-planner.md"),
-            ),
-        ],
-        // Grok Build ships no bespoke agent files — it discovers the
-        // Codex-shared .agents/skills/ and the AGENTS.md family (D-040).
-        AiTool::Grok => &[],
-        AiTool::Generic => &[],
+// --- Agent generation (install-time envelope + shared cores) -----------------
+
+const PLANNER_CORE: &str = include_str!("../scaffold/agents/core/planner-core.md");
+const LIBRARIAN_CORE: &str = include_str!("../scaffold/agents/core/librarian-core.md");
+const CONDUCTOR_CORE: &str = include_str!("../scaffold/agents/core/conductor-core.md");
+
+const PLANNER_DESC: &str = "Create, manage, execute, and review plans following the Anvil Plan Spec (APS) format, including initializing projects, modules, work items, action plans, validation, status tracking, and wave-based parallel execution";
+const LIBRARIAN_DESC: &str = "Repository organizing, cleanup, documentation filing, archiving stale specs, detecting orphaned files, cross-reference maintenance, and general repo hygiene";
+const CONDUCTOR_DESC: &str = "Coordinate APS execution through CLI-backed next-work selection, context packaging, dependency checks, validation, and learning capture";
+
+/// APS agent roles installed for tools that support agents.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AgentRole {
+    Planner,
+    Librarian,
+    Conductor,
+}
+
+impl AgentRole {
+    const ALL: [AgentRole; 3] = [
+        AgentRole::Planner,
+        AgentRole::Librarian,
+        AgentRole::Conductor,
+    ];
+
+    fn name(self) -> &'static str {
+        match self {
+            Self::Planner => "aps-planner",
+            Self::Librarian => "aps-librarian",
+            Self::Conductor => "aps-conductor",
+        }
     }
+
+    fn description(self) -> &'static str {
+        match self {
+            Self::Planner => PLANNER_DESC,
+            Self::Librarian => LIBRARIAN_DESC,
+            Self::Conductor => CONDUCTOR_DESC,
+        }
+    }
+
+    fn core(self) -> &'static str {
+        match self {
+            Self::Planner => PLANNER_CORE,
+            Self::Librarian => LIBRARIAN_CORE,
+            Self::Conductor => CONDUCTOR_CORE,
+        }
+    }
+
+    /// Heavy roles get the premium tier under `ModelPreference::Default`.
+    fn is_heavy(self) -> bool {
+        matches!(self, Self::Planner | Self::Conductor)
+    }
+}
+
+/// Resolve the concrete model ID for a tool/role/preference triple.
+///
+/// Preference keys stay `default` / `opus` / `sonnet` in config for stability;
+/// they act as tiers:
+/// - `default` — role-weighted map per vendor
+/// - `opus` — premium tier for every role
+/// - `sonnet` — balanced tier for every role
+///
+/// Returns `None` when the tool does not expose a model field (Copilot).
+pub fn resolve_model(
+    tool: AiTool,
+    role: AgentRole,
+    preference: ModelPreference,
+) -> Option<&'static str> {
+    match tool {
+        AiTool::ClaudeCode => Some(match preference {
+            ModelPreference::Default if role.is_heavy() => "opus",
+            ModelPreference::Default => "sonnet",
+            ModelPreference::Opus => "opus",
+            ModelPreference::Sonnet => "sonnet",
+        }),
+        // OpenCode is multi-provider: `default` omits `model` so each user's
+        // configured provider/model wins. Explicit opus/sonnet pin OpenAI
+        // (Codex-family) IDs — not Anthropic — when a fallback is requested.
+        AiTool::OpenCode => match preference {
+            ModelPreference::Default => None,
+            ModelPreference::Opus => Some("openai/gpt-5.6-sol"),
+            ModelPreference::Sonnet => Some("openai/gpt-5.6-terra"),
+        },
+        AiTool::Codex => Some(match preference {
+            // OpenAI GPT-5.6 family (API ids).
+            ModelPreference::Default if role.is_heavy() => "gpt-5.6-sol",
+            ModelPreference::Default => "gpt-5.6-terra",
+            ModelPreference::Opus => "gpt-5.6-sol",
+            ModelPreference::Sonnet => "gpt-5.6-terra",
+        }),
+        AiTool::Copilot | AiTool::Grok | AiTool::Generic => None,
+    }
+}
+
+fn render_claude_code(role: AgentRole, model: &str) -> String {
+    let tools = match role {
+        AgentRole::Librarian => ["Read", "Write", "Edit", "Glob", "Grep", "Bash"].as_slice(),
+        AgentRole::Planner | AgentRole::Conductor => {
+            ["Read", "Write", "Edit", "Glob", "Grep", "Bash", "Task"].as_slice()
+        }
+    };
+    let mut out = String::new();
+    out.push_str("---\n");
+    let _ = writeln!(out, "name: {}", role.name());
+    let _ = writeln!(out, "description: {}", role.description());
+    let _ = writeln!(out, "model: {model}");
+    out.push_str("tools:\n");
+    for tool in tools {
+        let _ = writeln!(out, "  - {tool}");
+    }
+    out.push_str("---\n\n");
+    out.push_str(role.core());
+    out
+}
+
+fn render_copilot(role: AgentRole) -> String {
+    let mut out = String::new();
+    out.push_str("---\n");
+    let _ = writeln!(out, "name: {}", role.name());
+    let _ = writeln!(out, "description: {}", role.description());
+    out.push_str("---\n\n");
+    out.push_str(role.core());
+    out
+}
+
+fn render_opencode(role: AgentRole, model: Option<&str>) -> String {
+    let steps = match role {
+        AgentRole::Librarian => 30,
+        AgentRole::Planner | AgentRole::Conductor => 50,
+    };
+    let mut out = String::new();
+    out.push_str("---\n");
+    let _ = writeln!(out, "description: {}", role.description());
+    out.push_str("mode: subagent\n");
+    if let Some(model) = model {
+        let _ = writeln!(out, "model: {model}");
+    }
+    let _ = writeln!(out, "steps: {steps}");
+    out.push_str("tools:\n");
+    out.push_str("  read: true\n");
+    out.push_str("  write: true\n");
+    out.push_str("  edit: true\n");
+    out.push_str("  glob: true\n");
+    out.push_str("  grep: true\n");
+    out.push_str("  bash: true\n");
+    out.push_str("permission:\n");
+    out.push_str("  edit: \"ask\"\n");
+    out.push_str("  write: \"ask\"\n");
+    out.push_str("  bash: \"ask\"\n");
+    out.push_str("---\n\n");
+    out.push_str(role.core());
+    out
+}
+
+fn render_codex(role: AgentRole, model: &str) -> String {
+    let comment = match role {
+        AgentRole::Planner => "Planner",
+        AgentRole::Librarian => "Librarian",
+        AgentRole::Conductor => "Conductor",
+    };
+    let mut out = String::new();
+    let _ = writeln!(out, "# APS {comment} — Codex Agent Role");
+    out.push_str("#\n");
+    out.push_str("# Codex discovers this role automatically from .codex/agents/.\n");
+    out.push('\n');
+    let _ = writeln!(out, "name = \"{}\"", role.name());
+    let _ = writeln!(out, "description = \"{}\"", role.description());
+    out.push('\n');
+    let _ = writeln!(out, "model = \"{model}\"  # OpenAI model");
+    out.push('\n');
+    out.push_str("sandbox_mode = \"workspace-write\"\n");
+    out.push('\n');
+    out.push_str("developer_instructions = \"\"\"\n");
+    out.push_str(role.core());
+    if !role.core().ends_with('\n') {
+        out.push('\n');
+    }
+    out.push_str("\"\"\"\n");
+    out
+}
+
+fn agent_dest(tool: AiTool, role: AgentRole) -> Option<&'static str> {
+    match (tool, role) {
+        (AiTool::ClaudeCode, AgentRole::Planner) => Some(".claude/agents/aps-planner.md"),
+        (AiTool::ClaudeCode, AgentRole::Librarian) => Some(".claude/agents/aps-librarian.md"),
+        (AiTool::ClaudeCode, AgentRole::Conductor) => Some(".claude/agents/aps-conductor.md"),
+        (AiTool::Copilot, AgentRole::Planner) => Some(".github/agents/aps-planner.md"),
+        (AiTool::Copilot, AgentRole::Librarian) => Some(".github/agents/aps-librarian.md"),
+        (AiTool::Copilot, AgentRole::Conductor) => Some(".github/agents/aps-conductor.md"),
+        (AiTool::Codex, AgentRole::Planner) => Some(".codex/agents/aps-planner.toml"),
+        (AiTool::Codex, AgentRole::Librarian) => Some(".codex/agents/aps-librarian.toml"),
+        (AiTool::Codex, AgentRole::Conductor) => Some(".codex/agents/aps-conductor.toml"),
+        (AiTool::OpenCode, AgentRole::Planner) => Some(".opencode/agent/aps-planner.md"),
+        (AiTool::OpenCode, AgentRole::Librarian) => Some(".opencode/agent/aps-librarian.md"),
+        (AiTool::OpenCode, AgentRole::Conductor) => Some(".opencode/agent/aps-conductor.md"),
+        (AiTool::Grok | AiTool::Generic, _) => None,
+    }
+}
+
+fn render_agent(tool: AiTool, role: AgentRole, preference: ModelPreference) -> Option<String> {
+    match tool {
+        AiTool::ClaudeCode => {
+            let model = resolve_model(tool, role, preference)?;
+            Some(render_claude_code(role, model))
+        }
+        AiTool::OpenCode => {
+            let model = resolve_model(tool, role, preference);
+            Some(render_opencode(role, model))
+        }
+        AiTool::Codex => {
+            let model = resolve_model(tool, role, preference)?;
+            Some(render_codex(role, model))
+        }
+        AiTool::Copilot => Some(render_copilot(role)),
+        AiTool::Grok | AiTool::Generic => None,
+    }
+}
+
+/// Generated agent files for a tool as (destination relative path, content).
+///
+/// Content is produced at call time from shared cores + the model preference,
+/// so install/update never depend on pre-baked model IDs in scaffold trees.
+pub fn agent_files(tool: AiTool, preference: ModelPreference) -> Vec<(String, String)> {
+    let mut files = Vec::new();
+    for role in AgentRole::ALL {
+        let Some(path) = agent_dest(tool, role) else {
+            continue;
+        };
+        let Some(content) = render_agent(tool, role, preference) else {
+            continue;
+        };
+        files.push((path.to_string(), content));
+    }
+    files
+}
+
+/// Paths of agent files a tool would install (for presence checks).
+pub fn agent_paths(tool: AiTool) -> Vec<&'static str> {
+    AgentRole::ALL
+        .iter()
+        .filter_map(|role| agent_dest(tool, *role))
+        .collect()
 }
 
 /// Post-install instruction shown on the summary screen for a tool.
@@ -268,6 +447,11 @@ pub enum FileOp {
     Overwrite {
         path: PathBuf,
         content: &'static str,
+    },
+    /// Refresh owned (generated-at-install) content in place.
+    OverwriteOwned {
+        path: PathBuf,
+        content: String,
     },
     /// Remove a known obsolete generated file. Missing files are a no-op.
     RemoveGenerated(PathBuf),
@@ -501,12 +685,14 @@ pub fn agents_step(tools: &[ToolConfig]) -> Option<ScaffoldStep> {
                 ".codex/codex-config-snippet.toml",
             )));
         }
-        for (path, content) in agent_files(config.tool) {
+        for (path, content) in agent_files(config.tool, config.model) {
             let path = PathBuf::from(path);
+            // Generated content is owned; Codex always refreshes so legacy
+            // role files pick up model + core updates.
             if config.tool == AiTool::Codex {
-                agents.push(FileOp::Overwrite { path, content });
+                agents.push(FileOp::OverwriteOwned { path, content });
             } else {
-                agents.push(FileOp::Write { path, content });
+                agents.push(FileOp::WriteOwned { path, content });
             }
         }
     }
@@ -766,13 +952,8 @@ impl ScaffoldRun {
                 fs::copy(from, dest).map(|_| ())
             }
             FileOp::MarkExecutable(path) => mark_executable(&self.root.join(path)),
-            FileOp::Overwrite { path, content } => {
-                let dest = self.root.join(path);
-                if let Some(parent) = dest.parent() {
-                    fs::create_dir_all(parent)?;
-                }
-                fs::write(dest, content)
-            }
+            FileOp::Overwrite { path, content } => self.overwrite(path, content),
+            FileOp::OverwriteOwned { path, content } => self.overwrite(path, content),
             FileOp::RemoveGenerated(path) => {
                 let dest = self.root.join(path);
                 if dest.exists() {
@@ -798,6 +979,14 @@ impl ScaffoldRun {
         fs::write(dest, content)
     }
 
+    fn overwrite(&self, path: &Path, content: &str) -> io::Result<()> {
+        let dest = self.root.join(path);
+        if let Some(parent) = dest.parent() {
+            fs::create_dir_all(parent)?;
+        }
+        fs::write(dest, content)
+    }
+
     /// Structural verification standing in for native lint until TUI-009.
     fn verify(&self) -> io::Result<()> {
         let mut missing = Vec::new();
@@ -808,7 +997,7 @@ impl ScaffoldRun {
                     FileOp::Write { path, .. } | FileOp::WriteOwned { path, .. } => path,
                     FileOp::CopyUser { to, .. } => to,
                     FileOp::MarkExecutable(_) => continue,
-                    FileOp::Overwrite { path, .. } => path,
+                    FileOp::Overwrite { path, .. } | FileOp::OverwriteOwned { path, .. } => path,
                     FileOp::RemoveGenerated(_) => continue,
                 };
                 if !self.root.join(path).exists() {
@@ -982,11 +1171,11 @@ mod tests {
 
     #[test]
     fn codex_agents_are_standalone_discoverable_roles() {
-        let files = agent_files(AiTool::Codex);
+        let files = agent_files(AiTool::Codex, ModelPreference::Default);
 
         assert_eq!(files.len(), 3);
         assert!(post_install_note(AiTool::Codex).is_none());
-        for (path, content) in files {
+        for (path, content) in &files {
             assert!(path.starts_with(".codex/agents/"), "unexpected {path}");
             assert!(content.lines().any(|line| line.starts_with("name = \"")));
             assert!(
@@ -995,7 +1184,65 @@ mod tests {
                     .any(|line| line.starts_with("description = \""))
             );
             assert!(content.contains("developer_instructions = \"\"\""));
+            assert!(content.contains("model = \"gpt-5.6-"));
         }
+        let planner = files
+            .iter()
+            .find(|(p, _)| p.ends_with("aps-planner.toml"))
+            .map(|(_, c)| c.as_str())
+            .unwrap();
+        assert!(planner.contains("model = \"gpt-5.6-sol\""));
+        let librarian = files
+            .iter()
+            .find(|(p, _)| p.ends_with("aps-librarian.toml"))
+            .map(|(_, c)| c.as_str())
+            .unwrap();
+        assert!(librarian.contains("model = \"gpt-5.6-terra\""));
+    }
+
+    #[test]
+    fn model_preference_rewrites_claude_and_opencode_envelopes() {
+        let claude_default = agent_files(AiTool::ClaudeCode, ModelPreference::Default);
+        let planner = claude_default
+            .iter()
+            .find(|(p, _)| p.ends_with("aps-planner.md"))
+            .unwrap();
+        let librarian = claude_default
+            .iter()
+            .find(|(p, _)| p.ends_with("aps-librarian.md"))
+            .unwrap();
+        assert!(planner.1.contains("model: opus"));
+        assert!(librarian.1.contains("model: sonnet"));
+        assert!(planner.1.contains("# APS Planner") || planner.1.contains("APS Planner"));
+
+        let all_sonnet = agent_files(AiTool::ClaudeCode, ModelPreference::Sonnet);
+        for (_, content) in &all_sonnet {
+            assert!(content.contains("model: sonnet"));
+        }
+
+        // OpenCode default: no model pin (user's provider config wins).
+        for (_, content) in agent_files(AiTool::OpenCode, ModelPreference::Default) {
+            assert!(
+                !content.lines().any(|l| l.starts_with("model:")),
+                "OpenCode default should omit model field:\n{content}"
+            );
+        }
+        let oc = agent_files(AiTool::OpenCode, ModelPreference::Opus);
+        for (_, content) in &oc {
+            assert!(content.contains("model: openai/gpt-5.6-sol"));
+        }
+        let oc_bal = agent_files(AiTool::OpenCode, ModelPreference::Sonnet);
+        for (_, content) in &oc_bal {
+            assert!(content.contains("model: openai/gpt-5.6-terra"));
+        }
+
+        // Copilot has no model field.
+        for (_, content) in agent_files(AiTool::Copilot, ModelPreference::Opus) {
+            assert!(!content.contains("model:"));
+        }
+
+        assert!(resolve_model(AiTool::Grok, AgentRole::Planner, ModelPreference::Default).is_none());
+        assert!(agent_files(AiTool::Grok, ModelPreference::Default).is_empty());
     }
 
     #[test]

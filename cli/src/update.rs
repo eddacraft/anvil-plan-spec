@@ -11,9 +11,9 @@
 use std::fs;
 use std::path::Path;
 
-use crate::config;
-use crate::scaffold::agent_files;
-use crate::wizard::AiTool;
+use crate::config::{self, parse_config};
+use crate::scaffold::{agent_files, agent_paths};
+use crate::wizard::{AiTool, ModelPreference};
 
 // Core generated files every APS project carries (relative to plans/). These
 // are added when missing and refreshed when present.
@@ -182,30 +182,57 @@ pub fn cmd_update(start: &Path) -> i32 {
         }
     }
 
-    // Codex roles: reconcile only when this optional integration is already
-    // installed. Remove both locations used by historical scaffold versions.
+    // Agents: regenerate from cores + model preference when already installed.
+    // Prefer the project's config.yml model for each tool; fall back to Default
+    // (role-weighted map). Codex also drops obsolete registration snippets.
     let legacy_codex_snippets = [
         ".codex/agents/codex-config-snippet.toml",
         ".codex/codex-config-snippet.toml",
     ];
-    let codex_installed = agent_files(AiTool::Codex)
-        .iter()
-        .any(|(rel, _)| root.join(rel).is_file())
-        || legacy_codex_snippets
+    // Prefer each tool's model preference from `.aps/config.yml` when present.
+    let config_models: Vec<(AiTool, ModelPreference)> = fs::read_to_string(root.join(".aps/config.yml"))
+        .ok()
+        .and_then(|text| parse_config(&text).ok())
+        .map(|s| s.tools.into_iter().map(|c| (c.tool, c.model)).collect())
+        .unwrap_or_default();
+    let model_for = |tool: AiTool| -> ModelPreference {
+        config_models
             .iter()
-            .any(|rel| root.join(rel).is_file());
-    println!("\nCodex agents (.codex/agents/):");
-    if codex_installed {
-        for (rel, content) in agent_files(AiTool::Codex) {
-            reconcile(&root.join(rel), rel, content, &mut tally);
-        }
-        for rel in legacy_codex_snippets {
-            remove_obsolete(&root.join(rel), rel, &mut tally);
-        }
-    } else {
-        for (rel, _) in agent_files(AiTool::Codex) {
-            println!("  - {rel} (skipped: Codex agents not installed)");
-            tally.skipped += 1;
+            .find(|(t, _)| *t == tool)
+            .map(|(_, m)| *m)
+            .unwrap_or(ModelPreference::Default)
+    };
+
+    for tool in [AiTool::ClaudeCode, AiTool::Copilot, AiTool::Codex, AiTool::OpenCode] {
+        let label = match tool {
+            AiTool::ClaudeCode => "Claude Code agents (.claude/agents/)",
+            AiTool::Copilot => "Copilot agents (.github/agents/)",
+            AiTool::Codex => "Codex agents (.codex/agents/)",
+            AiTool::OpenCode => "OpenCode agents (.opencode/agent/)",
+            _ => "agents",
+        };
+        println!("\n{label}:");
+        let installed = agent_paths(tool)
+            .iter()
+            .any(|rel| root.join(rel).is_file())
+            || (tool == AiTool::Codex
+                && legacy_codex_snippets
+                    .iter()
+                    .any(|rel| root.join(rel).is_file()));
+        if installed {
+            for (rel, content) in agent_files(tool, model_for(tool)) {
+                reconcile(&root.join(&rel), &rel, &content, &mut tally);
+            }
+            if tool == AiTool::Codex {
+                for rel in legacy_codex_snippets {
+                    remove_obsolete(&root.join(rel), rel, &mut tally);
+                }
+            }
+        } else {
+            for rel in agent_paths(tool) {
+                println!("  - {rel} (skipped: not installed)");
+                tally.skipped += 1;
+            }
         }
     }
 

@@ -81,13 +81,17 @@ OC_DIR="$SCRIPT_DIR/opencode"
 mkdir -p "$OC_DIR"
 
 generate_opencode() {
+  # model may be empty — OpenCode default preference omits the field so the
+  # user's configured provider/model wins (multi-provider harness).
   local name="$1" description="$2" model="$3" steps="$4" core_file="$5"
   local output="$OC_DIR/$name.md"
   {
     echo "---"
     echo "description: $description"
     echo "mode: subagent"
-    echo "model: $model"
+    if [[ -n "$model" ]]; then
+      echo "model: $model"
+    fi
     echo "steps: $steps"
     echo "tools:"
     echo "  read: true"
@@ -107,19 +111,20 @@ generate_opencode() {
   info "wrote $output"
 }
 
+# Default goldens: no model pin (matches resolve_model Default for OpenCode).
 generate_opencode "aps-planner" "$PLANNER_DESC" \
-  "anthropic/claude-opus-4-6" 50 "$CORE_DIR/planner-core.md"
+  "" 50 "$CORE_DIR/planner-core.md"
 generate_opencode "aps-librarian" "$LIBRARIAN_DESC" \
-  "anthropic/claude-sonnet-4-6" 30 "$CORE_DIR/librarian-core.md"
+  "" 30 "$CORE_DIR/librarian-core.md"
 generate_opencode "aps-conductor" "$CONDUCTOR_DESC" \
-  "anthropic/claude-opus-4-6" 50 "$CORE_DIR/conductor-core.md"
+  "" 50 "$CORE_DIR/conductor-core.md"
 
 # --- Codex (.codex/agents/) ---
 CX_DIR="$SCRIPT_DIR/codex"
 mkdir -p "$CX_DIR"
 
 generate_codex() {
-  local name="$1" comment="$2" description="$3" core_file="$4"
+  local name="$1" comment="$2" description="$3" model="$4" core_file="$5"
   local output="$CX_DIR/$name.toml"
   local core_content
   core_content=$(cat "$core_file")
@@ -128,9 +133,13 @@ generate_codex() {
     echo "# APS ${comment} — Codex Agent Role"
     echo "#"
     echo "# Codex discovers this role automatically from .codex/agents/."
+    echo "# Note: aps init generates these at install time from core prompts"
+    echo "# with the selected model preference; this tree is a default golden."
     echo ""
     echo "name = \"$name\""
     echo "description = \"$description\""
+    echo ""
+    echo "model = \"$model\"  # OpenAI model"
     echo ""
     echo 'sandbox_mode = "workspace-write"'
     echo ""
@@ -141,12 +150,13 @@ generate_codex() {
   info "wrote $output"
 }
 
+# Role-weighted GPT-5.6 defaults (matches resolve_model Default preference).
 generate_codex "aps-planner" "Planner" "$PLANNER_DESC" \
-  "$CORE_DIR/planner-core.md"
+  "gpt-5.6-sol" "$CORE_DIR/planner-core.md"
 generate_codex "aps-librarian" "Librarian" "$LIBRARIAN_DESC" \
-  "$CORE_DIR/librarian-core.md"
+  "gpt-5.6-terra" "$CORE_DIR/librarian-core.md"
 generate_codex "aps-conductor" "Conductor" "$CONDUCTOR_DESC" \
-  "$CORE_DIR/conductor-core.md"
+  "gpt-5.6-sol" "$CORE_DIR/conductor-core.md"
 
 # Older builds placed a registration snippet beside the standalone roles.
 # Modern Codex auto-discovers every TOML file in this directory as one role.

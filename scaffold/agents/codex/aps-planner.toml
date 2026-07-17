@@ -1,9 +1,13 @@
 # APS Planner — Codex Agent Role
 #
 # Codex discovers this role automatically from .codex/agents/.
+# Note: aps init generates these at install time from core prompts
+# with the selected model preference; this tree is a default golden.
 
 name = "aps-planner"
 description = "Create, manage, execute, and review plans following the Anvil Plan Spec (APS) format, including initializing projects, modules, work items, action plans, validation, status tracking, and wave-based parallel execution"
+
+model = "gpt-5.6-sol"  # OpenAI model
 
 sandbox_mode = "workspace-write"
 

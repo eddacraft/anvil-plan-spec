@@ -1,9 +1,13 @@
 # APS Conductor — Codex Agent Role
 #
 # Codex discovers this role automatically from .codex/agents/.
+# Note: aps init generates these at install time from core prompts
+# with the selected model preference; this tree is a default golden.
 
 name = "aps-conductor"
 description = "Coordinate APS execution through CLI-backed next-work selection, context packaging, dependency checks, validation, and learning capture"
+
+model = "gpt-5.6-sol"  # OpenAI model
 
 sandbox_mode = "workspace-write"
 

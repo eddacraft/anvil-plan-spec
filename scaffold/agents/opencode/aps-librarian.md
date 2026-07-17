@@ -1,7 +1,6 @@
 ---
 description: Repository organizing, cleanup, documentation filing, archiving stale specs, detecting orphaned files, cross-reference maintenance, and general repo hygiene
 mode: subagent
-model: anthropic/claude-sonnet-4-6
 steps: 30
 tools:
   read: true

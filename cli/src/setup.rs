@@ -202,6 +202,7 @@ fn refresh_generated_step(mut step: ScaffoldStep) -> ScaffoldStep {
         .into_iter()
         .map(|op| match op {
             FileOp::Write { path, content } => FileOp::Overwrite { path, content },
+            FileOp::WriteOwned { path, content } => FileOp::OverwriteOwned { path, content },
             other => other,
         })
         .collect();
