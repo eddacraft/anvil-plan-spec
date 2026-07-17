@@ -173,7 +173,10 @@ is promoted back to the relevant module.
   executed the shipped GNU archive, then exposed Windows path separators being
   misclassified by Rust lint. Path classification is now normalised and backed
   by Windows-style index, module, action, release, and template regressions;
-  native CI confirmation remains pending.
+  PowerShell 7 subsequently completed the full native journey. Windows
+  PowerShell 5.1 then exposed an un-BOMed UTF-8 em dash inside an executable
+  installer string; that message is now ASCII-safe. Native 5.1 confirmation
+  remains pending.
 
 ## Status Roll-up
 
