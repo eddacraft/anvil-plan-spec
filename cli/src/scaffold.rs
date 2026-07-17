@@ -64,7 +64,7 @@ pub const CLAUDE_SKILL_DIR: &str = ".claude/skills/aps-planning";
 pub const AGENTS_SKILL_DIR: &str = ".agents/skills/aps-planning";
 
 /// Hook scripts live under `.aps/scripts/` (v2), not `aps-planning/scripts/`.
-pub const HOOK_SCRIPTS: [(&str, &str); 6] = [
+pub const HOOK_SCRIPTS: [(&str, &str); 12] = [
     (
         ".aps/scripts/install-hooks.sh",
         include_str!("../scaffold/aps-planning/scripts/install-hooks.sh"),
@@ -88,6 +88,30 @@ pub const HOOK_SCRIPTS: [(&str, &str); 6] = [
     (
         ".aps/scripts/enforce-plan-update.sh",
         include_str!("../scaffold/aps-planning/scripts/enforce-plan-update.sh"),
+    ),
+    (
+        ".aps/scripts/install-hooks.ps1",
+        include_str!("../scaffold/aps-planning/scripts/install-hooks.ps1"),
+    ),
+    (
+        ".aps/scripts/init-session.ps1",
+        include_str!("../scaffold/aps-planning/scripts/init-session.ps1"),
+    ),
+    (
+        ".aps/scripts/check-complete.ps1",
+        include_str!("../scaffold/aps-planning/scripts/check-complete.ps1"),
+    ),
+    (
+        ".aps/scripts/pre-tool-check.ps1",
+        include_str!("../scaffold/aps-planning/scripts/pre-tool-check.ps1"),
+    ),
+    (
+        ".aps/scripts/post-tool-nudge.ps1",
+        include_str!("../scaffold/aps-planning/scripts/post-tool-nudge.ps1"),
+    ),
+    (
+        ".aps/scripts/enforce-plan-update.ps1",
+        include_str!("../scaffold/aps-planning/scripts/enforce-plan-update.ps1"),
     ),
 ];
 
@@ -340,7 +364,11 @@ pub fn agent_paths(tool: AiTool) -> Vec<&'static str> {
 pub fn post_install_note(tool: AiTool) -> Option<&'static str> {
     match tool {
         AiTool::ClaudeCode => {
-            Some("Claude Code: run ./.aps/scripts/install-hooks.sh to wire hooks")
+            if cfg!(windows) {
+                Some("Claude Code: run .\\.aps\\scripts\\install-hooks.ps1 to wire hooks")
+            } else {
+                Some("Claude Code: run ./.aps/scripts/install-hooks.sh to wire hooks")
+            }
         }
         AiTool::Copilot => Some("Copilot: commit .github/agents so Copilot picks them up"),
         AiTool::Codex => Some("Codex: run codex skills install .agents/skills/aps-planning"),
@@ -507,14 +535,14 @@ pub fn plan_steps(selections: &Selections) -> Vec<ScaffoldStep> {
     let nested = selections.has_template(Template::IndexNested);
     let index_content = if nested {
         INDEX_NESTED_TEMPLATE
-    } else if selections.has_template(Template::Index)
-        || selections.shape == ProjectShape::SingleProject
-    {
-        INDEX_APS
     } else {
-        // Monorepo without the plain index template: seed the index from
-        // the monorepo variant instead.
-        INDEX_MONOREPO_TEMPLATE
+        // Project shape owns the root plan. Template selection controls the
+        // additional template assets, but a stale plain-index choice must not
+        // turn a reviewed Monorepo selection back into a single-project root.
+        match selections.shape {
+            ProjectShape::SingleProject => INDEX_APS,
+            ProjectShape::Monorepo => INDEX_MONOREPO_TEMPLATE,
+        }
     };
     templates.push(FileOp::Write {
         path: plans.join("index.aps.md"),
@@ -724,7 +752,9 @@ pub fn hooks_step() -> ScaffoldStep {
             path: PathBuf::from(path),
             content,
         });
-        hooks.push(FileOp::MarkExecutable(PathBuf::from(path)));
+        if path.ends_with(".sh") {
+            hooks.push(FileOp::MarkExecutable(PathBuf::from(path)));
+        }
     }
     ScaffoldStep {
         label: "Configure hooks".to_string(),
@@ -1267,6 +1297,21 @@ mod tests {
     }
 
     #[test]
+    fn hook_bundle_contains_shell_and_powershell_variants() {
+        let paths = HOOK_SCRIPTS
+            .iter()
+            .map(|(path, _)| *path)
+            .collect::<Vec<_>>();
+        assert!(paths.contains(&".aps/scripts/install-hooks.sh"));
+        assert!(paths.contains(&".aps/scripts/install-hooks.ps1"));
+        assert_eq!(paths.iter().filter(|path| path.ends_with(".sh")).count(), 6);
+        assert_eq!(
+            paths.iter().filter(|path| path.ends_with(".ps1")).count(),
+            6
+        );
+    }
+
+    #[test]
     fn custom_paths_flow_into_planned_ops() {
         let mut selections = base_selections();
         selections.plans_dir = "docs/plans/".to_string();
@@ -1285,10 +1330,10 @@ mod tests {
     }
 
     #[test]
-    fn monorepo_without_index_template_seeds_monorepo_index() {
+    fn monorepo_shape_is_authoritative_over_stale_plain_index_selection() {
         let mut selections = base_selections();
         selections.shape = ProjectShape::Monorepo;
-        selections.templates = vec![Template::MonorepoIndex];
+        selections.templates = vec![Template::Index];
 
         let steps = plan_steps(&selections);
         let index_op = steps

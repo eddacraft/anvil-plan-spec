@@ -11,7 +11,7 @@ curl -fsSL https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaf
 Windows PowerShell:
 
 ```powershell
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install.ps1))) --cli
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install.ps1)))
 ```
 
 Windows with Scoop:
@@ -20,9 +20,10 @@ Windows with Scoop:
 scoop install https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/packaging/scoop/aps.json
 ```
 
-In an interactive terminal this shows a **mode picker** before writing any
-files. On Windows, omit `--cli` from the PowerShell example above if you want
-the picker:
+In an interactive terminal the no-argument installer downloads the native
+binary and immediately opens its `aps init` TUI. This is one continuous
+onboarding journey on macOS, Linux, and Windows PowerShell. Use `--menu` for
+the advanced installer picker:
 
 1. **Install the APS CLI** on this machine
 2. **Initialize APS planning** in this repository
@@ -35,6 +36,8 @@ in CI):
 
 ```bash
 curl -fsSL .../scaffold/install | bash -s -- --cli       # CLI only, machine-wide
+curl -fsSL .../scaffold/install | bash -s -- --onboard   # install CLI, then init
+curl -fsSL .../scaffold/install | bash -s -- --menu      # advanced mode picker
 curl -fsSL .../scaffold/install | bash -s -- --init      # scaffold this repo
 curl -fsSL .../scaffold/install | bash -s -- --agent     # minimal agent bootstrap
 curl -fsSL .../scaffold/install | bash -s -- --upgrade   # upgrade in place
@@ -44,7 +47,11 @@ curl -fsSL .../scaffold/install | bash -s -- --setup claude-code   # add one int
 PowerShell uses the same flags after the scriptblock call:
 
 ```powershell
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install.ps1))) --cli
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install.ps1))) --onboard
 & ([scriptblock]::Create((irm https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install.ps1))) --init
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install.ps1))) --agent
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install.ps1))) --upgrade
 & ([scriptblock]::Create((irm https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install.ps1))) --setup opencode
 ```
 
@@ -62,9 +69,9 @@ Add hooks, agents, or tool skills any time after init with `aps setup`
 (see [usage](usage.md)). To pick AI agent ports interactively, run `aps init`
 from the installed CLI for the Ratatui onboarding wizard.
 
-On Windows, prefer the native binary (`aps.exe`) from the PowerShell installer
-or Scoop. It supports `init`, `setup`, `lint`, `next`, and `doctor`. Commands
-that still depend on the bash runtime should be run from WSL or Git Bash.
+On Windows, the native `aps.exe` from the PowerShell installer or Scoop carries
+the complete user command surface. PowerShell users do not need WSL or Git
+Bash. Agent and contributor automation may still choose those shells.
 
 ## Global Install
 
@@ -73,8 +80,10 @@ Install the APS CLI system-wide so `aps` is available in any directory:
 ```bash
 # Linux/macOS
 curl -fsSL https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install | bash -s -- --global
+```
 
-# Windows (PowerShell) — scriptblock form forwards flags correctly
+```powershell
+# Windows — scriptblock form forwards flags correctly
 & ([scriptblock]::Create((irm https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install.ps1))) --global
 ```
 
@@ -90,6 +99,11 @@ To use a custom location, set `APS_HOME`:
 curl -fsSL .../install | APS_HOME=/opt/aps bash -s -- --global
 ```
 
+```powershell
+$env:APS_HOME = "$HOME\Tools\aps"
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install.ps1))) --global
+```
+
 To update a global installation, reinstall the binary the same way you
 installed it:
 
@@ -100,6 +114,13 @@ curl -fsSL .../scaffold/install | bash -s -- --cli      # install script
 
 # Bash/PowerShell runtime only (air-gapped installs) — refresh in place:
 curl -fsSL .../scaffold/update | bash -s -- --global
+```
+
+PowerShell equivalents:
+
+```powershell
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install.ps1))) --cli
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/update.ps1))) --global
 ```
 
 > Note: `aps update` (the binary subcommand) reconciles a **project's**
@@ -129,6 +150,10 @@ cargo install aps-cli
 On Windows, install via the script (`--cli` pulls `aps.exe`) or **Scoop**:
 
 ```powershell
+$env:APS_VERSION = "v0.6.0"
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install.ps1))) --cli
+
+# Or use Scoop
 scoop install https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/packaging/scoop/aps.json
 ```
 
@@ -147,6 +172,15 @@ curl -fsSL https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaf
 
 # Install a specific version
 curl -fsSL https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install | VERSION=v0.3.0 bash
+```
+
+```powershell
+# Initialize a specific directory
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install.ps1))) --init .\my-project
+
+# Install a specific version
+$env:APS_VERSION = "v0.6.0"
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install.ps1))) --cli
 ```
 
 By default `--init` does not install hooks or a project-local CLI. Pass
@@ -184,6 +218,10 @@ rules, and skill files:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/update | bash
+```
+
+```powershell
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/update.ps1)))
 ```
 
 Your specs are preserved -- the updater only replaces templates, rules,
@@ -251,6 +289,14 @@ curl -fsSL https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaf
 curl -fsSL .../scaffold/upgrade | bash -s -- --apply --yes
 ```
 
+The native commands are identical in PowerShell:
+
+```powershell
+aps migrate
+aps migrate --apply
+aps migrate --apply --yes
+```
+
 `migrate` **dry-runs by default** and never deletes user content: `plans/**`,
 `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, and settings files are protected. Every
 removed path is copied to `.aps/backup/<timestamp>/` first. Hook paths in
@@ -309,13 +355,15 @@ directly (config discovery finds `plans_dir` — no `--plans` needed). Add
 Recommended PowerShell install:
 
 ```powershell
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install.ps1))) --cli
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install.ps1)))
 ```
 
-To use the interactive picker, omit `--cli`:
+That command installs `aps.exe` and opens its TUI. To install only the command,
+add `--cli`; to use the advanced installer picker, add `--menu`:
 
 ```powershell
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install.ps1)))
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install.ps1))) --cli
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install.ps1))) --menu
 ```
 
 To initialize the current repository directly:

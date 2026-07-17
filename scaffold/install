@@ -18,7 +18,9 @@ set -euo pipefail
 VERSION="${VERSION:-main}"
 USE_BINARY=false
 TARGET="."
-# Mode is chosen by a flag, or by the TTY picker when none is given.
+# No mode in a terminal runs native onboarding: install, then launch the TUI.
+# Explicit flags keep automation deterministic; --menu opens the legacy picker.
+#   onboard install the native CLI and immediately run `aps init`
 #   cli     install the APS CLI on this machine (was --global)
 #   init    scaffold APS planning into this repo (the old default)
 #   agent   minimal planning layer + agent next steps
@@ -26,6 +28,8 @@ TARGET="."
 #   setup   add a tool integration (--setup <tool>)
 MODE=""
 SETUP_TARGET=""
+INSTALLED_APS=""
+INSTALLED_KIND=""
 # init footprint flags (INSTALL-011): minimal by default, opt in to extras.
 USE_LOCAL_CLI=false
 INSTALL_HOOKS=false
@@ -33,6 +37,8 @@ INSTALL_HOOKS=false
 # Parse flags
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --onboard)          MODE="onboard" ;;
+    --menu)             MODE="menu" ;;
     --cli|--global|-g) MODE="cli" ;;
     --init)            MODE="init" ;;
     --agent)           MODE="agent" ;;
@@ -297,6 +303,9 @@ install_global() {
     info "bin/aps + lib/ installed to $aps_home"
   fi
 
+  INSTALLED_APS="$aps_home/bin/aps"
+  INSTALLED_KIND="$kind"
+
   setup_global_path "$aps_home"
 
   echo ""
@@ -311,9 +320,32 @@ install_global() {
     echo "  └── lib/             <- CLI libraries"
   fi
   echo ""
-  info "To create a new APS project:"
-  echo "  cd your-project && aps init"
-  echo ""
+  if [[ "$MODE" != "onboard" ]]; then
+    info "To create a new APS project:"
+    echo "  cd your-project && aps init"
+    echo ""
+  fi
+}
+
+run_onboarding() {
+  install_global
+  if [[ "$INSTALLED_KIND" != "binary" ]]; then
+    error "native onboarding requires the release binary on this platform"
+    echo "       The shell CLI fallback was installed. Run it explicitly, or retry --onboard when a native release is available." >&2
+    exit 1
+  fi
+
+  mkdir -p "$TARGET"
+  step "Launching native APS onboarding"
+  if [[ -t 0 && -t 1 ]]; then
+    (cd "$TARGET" && "$INSTALLED_APS" init)
+  elif have_tty; then
+    (cd "$TARGET" && "$INSTALLED_APS" init </dev/tty >/dev/tty 2>/dev/tty)
+  else
+    # Explicit --onboard is also useful in CI; without a terminal the native
+    # CLI follows its documented non-interactive defaults.
+    (cd "$TARGET" && "$INSTALLED_APS" init --non-interactive)
+  fi
 }
 
 # Agent bootstrap: minimal planning files plus agent-readable next steps.
@@ -567,6 +599,8 @@ Anvil Plan Spec (APS) installer
 Usage: curl -fsSL .../scaffold/install | bash -s -- [MODE] [TARGET]
 
 Modes:
+  --onboard          Install the native CLI and immediately run aps init
+  --menu             Show the advanced installer mode picker
   --cli              Install the APS CLI on this machine
   --init             Scaffold APS planning into this repository
   --agent            Minimal planning layer + agent next steps
@@ -587,7 +621,8 @@ falls back to the bash CLI only when no binary exists for this platform or
 By default --init writes only planning content + .aps/config.yml; the global
 'aps' binary drives the repo. Add hooks/agents/tool skills with 'aps setup'.
 
-With no mode in an interactive terminal, a picker is shown.
+With no mode in an interactive terminal, native onboarding starts immediately.
+Use --menu for the advanced installer mode picker.
 EOF
 }
 
@@ -634,11 +669,20 @@ have_tty() {
 
 if [[ -z "$MODE" ]]; then
   if have_tty; then
-    pick_mode
+    MODE="onboard"
   else
     usage_modes >&2
     echo "" >&2
-    error "no mode given and no terminal for the picker (use --cli/--init/--agent/--upgrade/--setup)"
+    error "no mode given and no terminal (use --onboard/--menu/--cli/--init/--agent/--upgrade/--setup)"
+    exit 1
+  fi
+fi
+
+if [[ "$MODE" == "menu" ]]; then
+  if have_tty; then
+    pick_mode
+  else
+    error "--menu requires an interactive terminal"
     exit 1
   fi
 fi
@@ -659,6 +703,7 @@ else
 fi
 
 case "$MODE" in
+  onboard) run_onboarding ;;
   cli)     install_global ;;
   init)    install_init ;;
   agent)   install_agent ;;

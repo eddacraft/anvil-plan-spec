@@ -14,10 +14,13 @@ $ErrorActionPreference = "Stop"
 
 $Version = if ($env:APS_VERSION) { $env:APS_VERSION } else { "main" }
 $Target = "."
-# Mode is chosen by a flag, or by the picker when none is given.
+# No mode in a terminal runs native onboarding: install, then launch the TUI.
+# Explicit flags keep automation deterministic; --menu opens the mode picker.
 #   cli / init / agent / upgrade / setup (see usage)
 $Mode = ""
 $SetupTarget = ""
+$InstalledApsPath = ""
+$InstalledApsKind = ""
 
 $UseBinary = $false
 # init footprint flags (INSTALL-011): minimal by default, opt in to extras.
@@ -26,6 +29,8 @@ $InstallHooks = $false
 
 for ($i = 0; $i -lt $args.Count; $i++) {
     switch ($args[$i]) {
+        "--onboard" { $Mode = "onboard" }
+        "--menu"    { $Mode = "menu" }
         { $_ -in "--cli", "--global", "-g" } { $Mode = "cli" }
         "--init"    { $Mode = "init" }
         "--agent"   { $Mode = "agent" }
@@ -279,6 +284,13 @@ function Install-ApsGlobal {
         Write-Info "bin/aps.ps1 + lib/ installed to $ApsHome"
     }
 
+    $script:InstalledApsPath = if ($kind -eq "binary") {
+        Join-Path $ApsHome "bin\aps.exe"
+    } else {
+        Join-Path $ApsHome "bin\aps.ps1"
+    }
+    $script:InstalledApsKind = $kind
+
     Set-ApsGlobalPath -ApsHome $ApsHome
 
     Write-Host ""
@@ -293,9 +305,30 @@ function Install-ApsGlobal {
         Write-Host "  +-- lib\             <- CLI libraries"
     }
     Write-Host ""
-    Write-Info "To create a new APS project:"
-    Write-Host "  cd your-project; aps init"
-    Write-Host ""
+    if ($Mode -ne "onboard") {
+        Write-Info "To create a new APS project:"
+        Write-Host "  cd your-project; aps init"
+        Write-Host ""
+    }
+}
+
+function Invoke-ApsOnboarding {
+    Install-ApsGlobal
+    if ($InstalledApsKind -ne "binary") {
+        Write-Err "native onboarding requires the Windows release binary"
+        Write-Host "  The PowerShell CLI fallback was installed. Run it explicitly, or retry --onboard when a native release is available."
+        exit 1
+    }
+
+    New-Item -ItemType Directory -Path $Target -Force | Out-Null
+    Write-Step "Launching native APS onboarding"
+    Push-Location $Target
+    try {
+        & $InstalledApsPath init
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    } finally {
+        Pop-Location
+    }
 }
 
 # --- Agent bootstrap: minimal planning layer + next steps ---
@@ -388,6 +421,7 @@ function Install-ApsSetup {
     }
     Write-Step "Running aps setup $Tool"
     & aps setup $Tool
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 
 # --- Mode picker (no flag given) ---
@@ -591,9 +625,18 @@ if (-not $Mode) {
     # Match Request-YesNo's interactivity check: redirected stdin must not
     # land in Read-Host and block.
     if ([Environment]::UserInteractive -and -not [Console]::IsInputRedirected) {
+        $Mode = "onboard"
+    } else {
+        [Console]::Error.WriteLine("error: no mode given (use --onboard/--menu/--cli/--init/--agent/--upgrade/--setup)")
+        exit 1
+    }
+}
+
+if ($Mode -eq "menu") {
+    if ([Environment]::UserInteractive -and -not [Console]::IsInputRedirected) {
         Select-ApsMode
     } else {
-        [Console]::Error.WriteLine("error: no mode given (use --cli/--init/--agent/--upgrade/--setup)")
+        [Console]::Error.WriteLine("error: --menu requires an interactive terminal")
         exit 1
     }
 }
@@ -613,6 +656,7 @@ if ($Mode -eq "cli") {
 }
 
 switch ($Mode) {
+    "onboard" { Invoke-ApsOnboarding }
     "cli"     { Install-ApsGlobal }
     "init"    { Install-ApsInit }
     "agent"   { Install-ApsAgent }

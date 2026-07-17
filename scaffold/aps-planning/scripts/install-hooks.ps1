@@ -4,9 +4,9 @@
 # Preserves existing settings and permissions.
 #
 # Usage:
-#   ./aps-planning/scripts/install-hooks.ps1            # Install all hooks
-#   ./aps-planning/scripts/install-hooks.ps1 --minimal   # PreToolUse + Stop + SessionStart only
-#   ./aps-planning/scripts/install-hooks.ps1 --remove    # Remove APS hooks
+#   ./.aps/scripts/install-hooks.ps1            # Install all hooks
+#   ./.aps/scripts/install-hooks.ps1 --minimal   # PreToolUse + Stop + SessionStart only
+#   ./.aps/scripts/install-hooks.ps1 --remove    # Remove APS hooks
 #
 # No external dependencies (uses native PowerShell JSON support)
 
@@ -28,7 +28,7 @@ foreach ($a in $extraArgs) {
 }
 
 if ($Help) {
-    Write-Host "Usage: ./aps-planning/scripts/install-hooks.ps1 [OPTIONS]"
+    Write-Host "Usage: ./.aps/scripts/install-hooks.ps1 [OPTIONS]"
     Write-Host ""
     Write-Host "Options:"
     Write-Host "  --minimal, -m  Install PreToolUse + Stop + SessionStart hooks"
@@ -64,7 +64,7 @@ function Test-ApsHook {
 
     # Old format: { "hook": "...aps-planning/scripts..." }
     $hookStr = if ($Entry.ContainsKey("hook")) { $Entry["hook"] } else { "" }
-    if ($hookStr -cmatch 'aps-planning/scripts' -or $hookStr -cmatch '\[APS\]') {
+    if ($hookStr -cmatch 'aps-planning/scripts' -or $hookStr -cmatch '\.aps/scripts' -or $hookStr -cmatch '\[APS\]') {
         return $true
     }
 
@@ -77,7 +77,7 @@ function Test-ApsHook {
             } elseif ($h.PSObject -and $h.PSObject.Properties["command"]) {
                 $cmd = $h.command
             }
-            if ($cmd -cmatch 'aps-planning/scripts') {
+            if ($cmd -cmatch 'aps-planning/scripts' -or $cmd -cmatch '\.aps/scripts') {
                 return $true
             }
         }
@@ -165,32 +165,32 @@ if ($Mode -ceq "remove") {
 $pretool = [ordered]@{
     matcher = "Write|Edit|Bash"
     hooks   = @(
-        [ordered]@{ type = "command"; command = "./aps-planning/scripts/pre-tool-check.ps1" }
+        [ordered]@{ type = "command"; command = "./.aps/scripts/pre-tool-check.ps1" }
     )
 }
 
 $posttool = [ordered]@{
     matcher = "Write|Edit"
     hooks   = @(
-        [ordered]@{ type = "command"; command = "./aps-planning/scripts/post-tool-nudge.ps1" }
+        [ordered]@{ type = "command"; command = "./.aps/scripts/post-tool-nudge.ps1" }
     )
 }
 
 $stop = [ordered]@{
     hooks = @(
-        [ordered]@{ type = "command"; command = "./aps-planning/scripts/check-complete.ps1" }
+        [ordered]@{ type = "command"; command = "./.aps/scripts/check-complete.ps1" }
     )
 }
 
 $enforcePlan = [ordered]@{
     hooks = @(
-        [ordered]@{ type = "command"; command = "./aps-planning/scripts/enforce-plan-update.ps1" }
+        [ordered]@{ type = "command"; command = "./.aps/scripts/enforce-plan-update.ps1" }
     )
 }
 
 $sessionStart = [ordered]@{
     hooks = @(
-        [ordered]@{ type = "command"; command = "./aps-planning/scripts/init-session.ps1" }
+        [ordered]@{ type = "command"; command = "./.aps/scripts/init-session.ps1" }
     )
 }
 

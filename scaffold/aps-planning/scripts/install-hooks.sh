@@ -5,9 +5,9 @@
 # Preserves existing settings and permissions.
 #
 # Usage:
-#   ./aps-planning/scripts/install-hooks.sh           # Install all hooks
-#   ./aps-planning/scripts/install-hooks.sh --minimal  # PreToolUse + Stop only
-#   ./aps-planning/scripts/install-hooks.sh --remove   # Remove APS hooks
+#   ./.aps/scripts/install-hooks.sh           # Install all hooks
+#   ./.aps/scripts/install-hooks.sh --minimal  # PreToolUse + Stop only
+#   ./.aps/scripts/install-hooks.sh --remove   # Remove APS hooks
 #
 # Requires: python3 (for JSON manipulation)
 
@@ -22,7 +22,7 @@ while [[ $# -gt 0 ]]; do
     --minimal|-m) MODE="minimal"; shift ;;
     --remove|-r)  MODE="remove";  shift ;;
     --help|-h)
-      echo "Usage: ./aps-planning/scripts/install-hooks.sh [OPTIONS]"
+      echo "Usage: ./.aps/scripts/install-hooks.sh [OPTIONS]"
       echo ""
       echo "Options:"
       echo "  --minimal, -m  Install PreToolUse + Stop + SessionStart hooks"
@@ -80,12 +80,12 @@ def is_aps_hook(entry):
     """Check if a hook entry is APS-related (handles both old and new format)."""
     # Old format: {"hook": "...aps-planning/scripts..."}
     hook_str = entry.get("hook", "")
-    if "[APS]" in hook_str or "aps-planning/scripts" in hook_str:
+    if "[APS]" in hook_str or "aps-planning/scripts" in hook_str or ".aps/scripts" in hook_str:
         return True
     # New format: {"hooks": [{"command": "...aps-planning/scripts..."}]}
     for h in entry.get("hooks", []):
         cmd = h.get("command", "")
-        if "aps-planning/scripts" in cmd:
+        if "aps-planning/scripts" in cmd or ".aps/scripts" in cmd:
             return True
     return False
 
@@ -113,7 +113,7 @@ pretool = {
     "matcher": "Write|Edit|Bash",
     "hooks": [{
         "type": "command",
-        "command": "./aps-planning/scripts/pre-tool-check.sh"
+        "command": "./.aps/scripts/pre-tool-check.sh"
     }]
 }
 
@@ -121,28 +121,28 @@ posttool = {
     "matcher": "Write|Edit",
     "hooks": [{
         "type": "command",
-        "command": "./aps-planning/scripts/post-tool-nudge.sh"
+        "command": "./.aps/scripts/post-tool-nudge.sh"
     }]
 }
 
 stop = {
     "hooks": [{
         "type": "command",
-        "command": "./aps-planning/scripts/check-complete.sh"
+        "command": "./.aps/scripts/check-complete.sh"
     }]
 }
 
 enforce_plan = {
     "hooks": [{
         "type": "command",
-        "command": "./aps-planning/scripts/enforce-plan-update.sh"
+        "command": "./.aps/scripts/enforce-plan-update.sh"
     }]
 }
 
 session_start = {
     "hooks": [{
         "type": "command",
-        "command": "./aps-planning/scripts/init-session.sh"
+        "command": "./.aps/scripts/init-session.sh"
     }]
 }
 

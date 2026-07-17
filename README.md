@@ -26,7 +26,7 @@ curl -fsSL https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaf
 Windows PowerShell:
 
 ```powershell
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install.ps1))) --cli
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install.ps1)))
 ```
 
 Or install with Scoop:
@@ -35,11 +35,14 @@ Or install with Scoop:
 scoop install https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/packaging/scoop/aps.json
 ```
 
-Then run `aps init` in your repository for the interactive setup wizard.
+In an interactive terminal, either one-liner installs the native binary and
+opens the `aps init` wizard in the same run. Use `--cli` when you only want to
+install the command.
 
 The installer can also initialize a repo, bootstrap an agent, upgrade, or add a
 tool integration. Use `--cli`, `--init`, `--agent`, `--upgrade`, or
-`--setup <tool>` to skip the picker.
+`--setup <tool>` to select an explicit flow, or `--menu` for the advanced
+picker.
 
 Want to inspect the installer first, pin a version, or run non-interactively?
 See [docs/installation.md](docs/installation.md).
@@ -243,12 +246,12 @@ your-project/
 | ----------- | ------------------------------------------------- | ------------------------------------------ |
 | **Linux**   | Native `aps` binary via install script or cargo   | Bash CLI fallback needs Bash 4.0+          |
 | **macOS**   | Native `aps` binary via install script or cargo   | Bash fallback needs Homebrew Bash 4.0+     |
-| **Windows** | Native `aps.exe` via PowerShell script or Scoop   | Use WSL/Git Bash for bash-only commands    |
+| **Windows** | Native `aps.exe` via PowerShell script or Scoop   | Full user command surface in PowerShell    |
 
-The native binary supports the core cross-platform surface (`init`, `setup`,
-`lint`, `next`, `doctor`). Commands that still depend on the bash runtime use
-WSL or Git Bash on Windows. macOS ships Bash 3.2 (too old for the fallback
-runtime); Homebrew's bash is picked up automatically.
+The native binary supports the complete user command surface on every listed
+platform. Windows users do not need WSL or Git Bash; those shells remain
+optional for agent and contributor automation. macOS ships Bash 3.2 (too old
+for the fallback runtime); Homebrew's bash is picked up automatically.
 
 ## AI agent guidance
 
