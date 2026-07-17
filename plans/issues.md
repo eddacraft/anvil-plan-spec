@@ -207,6 +207,33 @@ the Windows PowerShell 5.1 journey passes.
 
 ---
 
+### ISS-009: PowerShell 5.1 promotes expected native stderr
+
+| Field      | Value      |
+| ---------- | ---------- |
+| Status     | Open       |
+| Severity   | Low        |
+| Discovered | 2026-07-17 |
+| Module     | CIB        |
+| Work Item  | CIB-004    |
+
+**Context:** Windows PowerShell 5.1 completed installation, hooks, and lint in
+the native journey, then promoted the expected stderr from an empty `aps next`
+queue into a terminating `NativeCommandError` because the harness redirects
+native stderr while using `ErrorActionPreference = Stop`.
+
+**Impact:** The compatibility gate fails before it can assert the documented
+exit code and status message even though the CLI behaves correctly.
+
+**Implementation:** Capture commands with expected non-zero results under a
+temporary non-terminating preference, preserve their output and exit code, and
+restore strict error handling immediately afterwards. Close after the Windows
+PowerShell 5.1 journey passes.
+
+**Tracking:** [CIB-004](./modules/continuous-improvement-backlog.aps.md)
+
+---
+
 ## Questions
 
 _None yet._

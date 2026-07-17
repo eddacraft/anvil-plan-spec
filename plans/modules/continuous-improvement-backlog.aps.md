@@ -175,8 +175,11 @@ is promoted back to the relevant module.
   by Windows-style index, module, action, release, and template regressions;
   PowerShell 7 subsequently completed the full native journey. Windows
   PowerShell 5.1 then exposed an un-BOMed UTF-8 em dash inside an executable
-  installer string; that message is now ASCII-safe. Native 5.1 confirmation
-  remains pending.
+  installer string; that message is now ASCII-safe. Its next run completed
+  installation, hooks, and lint before the harness promoted the expected
+  non-zero `aps next` stderr into a terminating error. Expected native failures
+  are now captured without relaxing strict handling for the rest of the
+  journey. Native 5.1 confirmation remains pending.
 
 ## Status Roll-up
 
