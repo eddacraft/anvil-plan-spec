@@ -93,7 +93,7 @@ impl SetupMode {
             Self::InitMinimal => "index, rules, and context — nothing else",
             Self::AgentBootstrap => "minimal plan files + agent next steps",
             Self::ToolIntegrations => "skills and agents for selected AI tools",
-            Self::Hooks => "hook scripts under aps-planning/scripts/",
+            Self::Hooks => "hook scripts under .aps/scripts/",
             Self::Upgrade => {
                 "refresh existing generated templates (use `aps update` to add missing)"
             }
@@ -181,7 +181,10 @@ pub fn tool_integration_steps(tools: &[AiTool]) -> Vec<ScaffoldStep> {
         .iter()
         .map(|tool| ToolConfig::default_for(*tool))
         .collect();
-    let mut steps = vec![refresh_generated_step(skill_step(&configs))];
+    let mut steps = Vec::new();
+    if let Some(step) = skill_step(&configs) {
+        steps.push(refresh_generated_step(step));
+    }
     if let Some(step) = agents_step(&configs) {
         steps.push(refresh_generated_step(step));
     }
@@ -292,7 +295,7 @@ pub fn full_steps() -> Vec<ScaffoldStep> {
             },
         ],
     });
-    steps.push(skill_step(&[]));
+    steps.extend(skill_step(&[]));
     steps.push(hooks_step());
     steps
 }
@@ -889,9 +892,11 @@ mod tests {
         run_shortcut(&root, "claude-code", false).unwrap();
 
         assert!(root.join(".claude/agents/aps-conductor.md").exists());
-        assert!(root.join("aps-planning/SKILL.md").exists());
+        assert!(root.join(".claude/skills/aps-planning/SKILL.md").exists());
+        assert!(!root.join("aps-planning").exists());
         assert!(!root.join(".github/agents").exists());
         assert!(!root.join(".codex").exists());
+        assert!(!root.join(".agents").exists());
 
         fs::remove_dir_all(&root).unwrap();
     }
@@ -918,6 +923,9 @@ mod tests {
         let planner = fs::read_to_string(root.join(".codex/agents/aps-planner.toml")).unwrap();
         assert!(planner.contains("name = \"aps-planner\""));
         assert!(!planner.contains("stale"));
+        // Codex gets the skill at the .agents/skills root, not .claude/skills.
+        assert!(root.join(".agents/skills/aps-planning/SKILL.md").exists());
+        assert!(!root.join(".claude").exists());
         assert!(
             !root
                 .join(".codex/agents/codex-config-snippet.toml")
@@ -938,8 +946,9 @@ mod tests {
 
         assert!(root.join("plans/index.aps.md").exists());
         assert!(root.join("plans/designs/.design.template.md").exists());
-        assert!(root.join("aps-planning/SKILL.md").exists());
-        assert!(root.join("aps-planning/scripts/install-hooks.sh").exists());
+        assert!(root.join(".claude/skills/aps-planning/SKILL.md").exists());
+        assert!(root.join(".aps/scripts/install-hooks.sh").exists());
+        assert!(!root.join("aps-planning").exists());
 
         fs::remove_dir_all(&root).unwrap();
     }

@@ -12,7 +12,10 @@ use std::fs;
 use std::path::Path;
 
 use crate::config::{self, parse_config};
-use crate::scaffold::{agent_files, agent_paths};
+use crate::scaffold::{
+    AGENTS_SKILL_DIR, CLAUDE_SKILL_DIR, HOOK_SCRIPTS, SKILL_FILES, agent_files, agent_paths,
+    mark_executable,
+};
 use crate::wizard::{AiTool, ModelPreference};
 
 // Core generated files every APS project carries (relative to plans/). These
@@ -47,9 +50,10 @@ const DESIGNS: &[(&str, &str)] = &[(
     include_str!("../scaffold/designs/.design.template.md"),
 )];
 
-// Skill files (relative to the project root), reconciled only when the
-// aps-planning/ skill is installed.
-const SKILL: &[(&str, &str)] = &[
+// Legacy v1 skill files (relative to a root aps-planning/ tree). Projects
+// that still carry the v1 layout get refreshed in place; `aps migrate`
+// is what moves them to the v2 roots.
+const LEGACY_SKILL: &[(&str, &str)] = &[
     (
         "SKILL.md",
         include_str!("../scaffold/aps-planning/SKILL.md"),
@@ -168,16 +172,48 @@ pub fn cmd_update(start: &Path) -> i32 {
         }
     }
 
-    // Skill: reconcile when aps-planning/ exists, else report skipped.
-    let skill_dir = root.join("aps-planning");
-    println!("\nPlanning skill (aps-planning/):");
-    if skill_dir.is_dir() {
-        for (rel, content) in SKILL {
-            reconcile(&skill_dir.join(rel), rel, content, &mut tally);
+    // Skill: reconcile each v2 skill root that is installed (.claude/skills/
+    // for Claude Code / Copilot / OpenCode, .agents/skills/ for Codex / Grok),
+    // plus a legacy root aps-planning/ tree when the project still has one.
+    println!("\nPlanning skill:");
+    let mut skill_roots = 0;
+    for dir in [CLAUDE_SKILL_DIR, AGENTS_SKILL_DIR] {
+        if !root.join(dir).is_dir() {
+            continue;
+        }
+        skill_roots += 1;
+        for (name, content) in SKILL_FILES {
+            let rel = format!("{dir}/{name}");
+            reconcile(&root.join(&rel), &rel, content, &mut tally);
+        }
+    }
+    let legacy_skill = root.join("aps-planning");
+    if legacy_skill.is_dir() {
+        skill_roots += 1;
+        for (name, content) in LEGACY_SKILL {
+            let rel = format!("aps-planning/{name}");
+            reconcile(&root.join(&rel), &rel, content, &mut tally);
+        }
+        println!("  ! aps-planning/ is the v1 location — run `aps migrate` to move it");
+    }
+    if skill_roots == 0 {
+        for (name, _) in SKILL_FILES {
+            println!("  - {name} (skipped: skill not installed)");
+            tally.skipped += 1;
+        }
+    }
+
+    // Hook scripts: reconcile .aps/scripts/ when hooks are installed.
+    println!("\nHook scripts (.aps/scripts/):");
+    if root.join(".aps/scripts").is_dir() {
+        for (rel, content) in HOOK_SCRIPTS {
+            let path = root.join(rel);
+            reconcile(&path, rel, content, &mut tally);
+            let _ = mark_executable(&path);
         }
     } else {
-        for (rel, _) in SKILL {
-            println!("  - {rel} (skipped: skill not installed)");
+        for (rel, _) in HOOK_SCRIPTS {
+            println!("  - {rel} (skipped: hooks not installed)");
             tally.skipped += 1;
         }
     }
@@ -308,10 +344,58 @@ mod tests {
         let root = scratch("gated");
         let plans = root.join("plans");
         fs::create_dir_all(plans.join("designs")).unwrap();
-        fs::create_dir_all(root.join("aps-planning")).unwrap();
+        fs::create_dir_all(root.join(".claude/skills/aps-planning")).unwrap();
         assert_eq!(cmd_update(&root), 0);
         assert!(plans.join("designs/.design.template.md").is_file());
-        assert!(root.join("aps-planning/SKILL.md").is_file());
+        assert!(root.join(".claude/skills/aps-planning/SKILL.md").is_file());
+        // The v2 skill is three files — hooks.md is v1-only.
+        assert!(!root.join(".claude/skills/aps-planning/hooks.md").exists());
+        // No other skill root is invented.
+        assert!(!root.join(".agents").exists());
+        assert!(!root.join("aps-planning").exists());
+        fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn refreshes_legacy_root_skill_in_place() {
+        let root = scratch("legacy-skill");
+        let plans = root.join("plans");
+        fs::create_dir_all(plans.join("modules")).unwrap();
+        fs::create_dir_all(root.join("aps-planning")).unwrap();
+        fs::write(root.join("aps-planning/SKILL.md"), "stale\n").unwrap();
+
+        assert_eq!(cmd_update(&root), 0);
+
+        // Refreshed in place (v1 set, including hooks.md); migrate moves it.
+        let skill = fs::read_to_string(root.join("aps-planning/SKILL.md")).unwrap();
+        assert_ne!(skill, "stale\n");
+        assert!(root.join("aps-planning/hooks.md").is_file());
+        assert!(!root.join(".claude").exists());
+        fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn reconciles_hook_scripts_when_installed() {
+        let root = scratch("hooks");
+        let plans = root.join("plans");
+        fs::create_dir_all(plans.join("modules")).unwrap();
+        fs::create_dir_all(root.join(".aps/scripts")).unwrap();
+        fs::write(root.join(".aps/scripts/install-hooks.sh"), "stale\n").unwrap();
+
+        assert_eq!(cmd_update(&root), 0);
+
+        let script = fs::read_to_string(root.join(".aps/scripts/install-hooks.sh")).unwrap();
+        assert_ne!(script, "stale\n");
+        assert!(root.join(".aps/scripts/init-session.sh").is_file());
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mode = fs::metadata(root.join(".aps/scripts/install-hooks.sh"))
+                .unwrap()
+                .permissions()
+                .mode();
+            assert_ne!(mode & 0o111, 0, "hook script should be executable");
+        }
         fs::remove_dir_all(&root).ok();
     }
 
