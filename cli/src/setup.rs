@@ -948,6 +948,7 @@ mod tests {
         assert!(root.join("plans/designs/.design.template.md").exists());
         assert!(root.join(".claude/skills/aps-planning/SKILL.md").exists());
         assert!(root.join(".aps/scripts/install-hooks.sh").exists());
+        assert!(root.join(".aps/scripts/install-hooks.ps1").exists());
         assert!(!root.join("aps-planning").exists());
 
         fs::remove_dir_all(&root).unwrap();

@@ -362,6 +362,67 @@ out=$(cd "$(mktemp -d)" && bash "$INSTALL" --upgrade </dev/null 2>&1 || true)
 echo "$out" | grep -qi "nothing to upgrade" || fail "--upgrade did not reach upgrade path"
 pass
 
+# Test 32a: Native installer onboarding hands off to aps init (CIB-002)
+echo -n "Test: installer hands off to native init... "
+grep -qF -- '--onboard' "$INSTALL" || fail "install missing explicit onboarding mode"
+grep -q 'Invoke-ApsOnboarding' "$PROJECT_ROOT/scaffold/install.ps1" \
+  || fail "install.ps1 missing native onboarding handoff"
+if command -v script >/dev/null 2>&1; then
+  HANDOFF_DIR=$(mktemp -d)
+  mkdir -p "$HANDOFF_DIR/home/.aps/bin" "$HANDOFF_DIR/payload" "$HANDOFF_DIR/mock-bin"
+  cat > "$HANDOFF_DIR/payload/aps" <<'EOF'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >> "$APS_HANDOFF_LOG"
+EOF
+  chmod +x "$HANDOFF_DIR/payload/aps"
+  tar -czf "$HANDOFF_DIR/aps.tar.gz" -C "$HANDOFF_DIR/payload" aps
+  cat > "$HANDOFF_DIR/mock-bin/curl" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+dest=""
+while [[ $# -gt 0 ]]; do
+  if [[ "$1" == "-o" ]]; then
+    dest="$2"
+    shift 2
+  else
+    shift
+  fi
+done
+cp "$APS_TEST_ARCHIVE" "$dest"
+EOF
+  chmod +x "$HANDOFF_DIR/mock-bin/curl"
+  APS_HOME="$HANDOFF_DIR/home/.aps" \
+    APS_TEST_ARCHIVE="$HANDOFF_DIR/aps.tar.gz" \
+    APS_HANDOFF_LOG="$HANDOFF_DIR/handoff.log" \
+    PATH="$HANDOFF_DIR/mock-bin:$HANDOFF_DIR/home/.aps/bin:$PATH" \
+    script -q -e -c "bash '$INSTALL' --onboard" /dev/null \
+      </dev/null >/dev/null 2>&1 \
+    || fail "native onboarding path failed"
+  grep -qxF 'init' "$HANDOFF_DIR/handoff.log" \
+    || fail "native onboarding did not invoke aps init"
+  rm -rf "$HANDOFF_DIR"
+fi
+pass
+
+# Test 32b: User documentation keeps PowerShell first-class (CIB-004)
+echo -n "Test: PowerShell user documentation contract... "
+for doc in "$PROJECT_ROOT/README.md" "$PROJECT_ROOT/docs/installation.md" "$PROJECT_ROOT/docs/usage.md"; do
+  if grep -qE 'Use WSL/Git Bash|should be run from WSL|depend on the bash runtime' "$doc"; then
+    fail "$(basename "$doc") still requires Bash for Windows users"
+  fi
+done
+grep -qF 'scaffold/install.ps1' "$PROJECT_ROOT/README.md" \
+  || fail "README missing PowerShell installer"
+grep -qF 'scaffold/update.ps1' "$PROJECT_ROOT/docs/installation.md" \
+  || fail "installation docs missing PowerShell updater"
+grep -qF 'No user command requires WSL or Git Bash' "$PROJECT_ROOT/docs/usage.md" \
+  || fail "usage docs missing native PowerShell contract"
+grep -qF 'runs-on: windows-latest' "$PROJECT_ROOT/.github/workflows/ci.yml" \
+  || fail "CI missing native Windows runner"
+grep -qF 'test/windows-user-journey.ps1' "$PROJECT_ROOT/.github/workflows/ci.yml" \
+  || fail "CI missing PowerShell user-journey harness"
+pass
+
 # Test 33: curl installers init is minimal by default (INSTALL-011)
 echo -n "Test: curl installer init is minimal... "
 INSTALL="$PROJECT_ROOT/scaffold/install"

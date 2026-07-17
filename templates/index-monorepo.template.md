@@ -57,7 +57,7 @@ Prioritized queue of ready work across all packages:
 
 - [auth](./modules/01-auth.aps.md) — spans core + api + web
 
-## All Modules
+## Modules
 
 | Module                                       | Scope | Owner     | Status | Priority | Packages    | Dependencies |
 | -------------------------------------------- | ----- | --------- | ------ | -------- | ----------- | ------------ |

@@ -70,9 +70,21 @@ curl -fsSL https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaf
 ./scaffold/install ./your-project
 ```
 
-Then run `aps init` — the Ratatui-based wizard walks you through the rest
-(agent ports, modules, project context). It creates `plans/` with templates
-and `aps-rules.md` for AI guidance.
+Windows PowerShell uses the native installer and the same `aps` commands:
+
+```powershell
+# Install and open the native onboarding TUI
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install.ps1)))
+
+# Pin a release when required
+$env:APS_VERSION = "v0.6.0"
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install.ps1)))
+```
+
+The no-argument installer opens `aps init` automatically. If you installed with
+Scoop or `--cli`, run `aps init` yourself. The Ratatui-based wizard walks you
+through agent ports, modules, and project context, then creates `plans/` with
+templates and `aps-rules.md` for AI guidance.
 
 ## Prerequisites
 

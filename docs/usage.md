@@ -456,12 +456,20 @@ available via the CLI or by editing markdown directly.
 ## Windows
 
 On Windows, use the native `aps.exe` from the PowerShell installer or Scoop for
-the cross-platform command surface:
+the complete user command surface:
 
 ```powershell
 aps init
+aps setup
+aps update
+aps migrate
 aps lint plans\
 aps next
+aps start AUTH-003
+aps complete AUTH-003 --learning "validated on Windows"
+aps graph auth
+aps audit
+aps export --json
 aps doctor
 ```
 
@@ -474,8 +482,9 @@ use cases:
 .\bin\aps.ps1 lint plans\ --json
 ```
 
-Commands that still depend on the bash runtime should be run from WSL or Git
-Bash. See [installation.md](installation.md#windows-details) for the recommended
+No user command requires WSL or Git Bash. Those shells remain optional for
+agent and contributor automation. See
+[installation.md](installation.md#windows-details) for the recommended
 PowerShell and Scoop install paths.
 
 ## CI Integration

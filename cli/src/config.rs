@@ -271,6 +271,8 @@ const ALL_COMPONENTS: [Component; 6] = [
 /// same defaults the wizard uses.
 pub fn build_selections(base: Option<Selections>, flags: &InitFlags) -> Result<Selections, String> {
     let from_config = base.is_some();
+    let shape_overridden = flags.shape.is_some();
+    let templates_overridden = !flags.templates.is_empty();
     let mut selections = base.unwrap_or(Selections {
         profile: Profile::Solo,
         shape: ProjectShape::SingleProject,
@@ -290,7 +292,7 @@ pub fn build_selections(base: Option<Selections>, flags: &InitFlags) -> Result<S
     if let Some(shape) = &flags.shape {
         selections.shape = shape_from_key(shape)?;
     }
-    if !flags.templates.is_empty() {
+    if templates_overridden {
         selections.templates = flags
             .templates
             .iter()
@@ -298,6 +300,63 @@ pub fn build_selections(base: Option<Selections>, flags: &InitFlags) -> Result<S
             .collect::<Result<_, _>>()?;
     } else if selections.templates.is_empty() && !from_config {
         selections.templates = default_templates(selections.profile, selections.shape);
+    }
+
+    // Flags override replayed config. When only shape changes, carry the
+    // inherited non-root templates forward but replace the old shape's root
+    // index. Explicit --templates remain authoritative and are validated
+    // below instead of being silently repaired.
+    if shape_overridden
+        && !templates_overridden
+        && !selections.templates.contains(&Template::IndexNested)
+    {
+        selections.templates.retain(|template| {
+            !matches!(
+                template,
+                Template::Index | Template::MonorepoIndex | Template::IndexNested
+            )
+        });
+        selections.templates.push(match selections.shape {
+            ProjectShape::SingleProject => Template::Index,
+            ProjectShape::Monorepo => Template::MonorepoIndex,
+        });
+    }
+
+    let has_plain_index = selections.templates.contains(&Template::Index);
+    let has_monorepo_index = selections.templates.contains(&Template::MonorepoIndex);
+    let has_nested_index = selections.templates.contains(&Template::IndexNested);
+    let root_template_count = [has_plain_index, has_monorepo_index, has_nested_index]
+        .into_iter()
+        .filter(|selected| *selected)
+        .count();
+    if root_template_count > 1 {
+        return Err(
+            "templates conflict: choose exactly one of index, monorepo-index, or index-nested"
+                .to_string(),
+        );
+    }
+    if !has_nested_index {
+        match selections.shape {
+            ProjectShape::SingleProject if has_monorepo_index => {
+                return Err(
+                    "shape 'single' conflicts with template 'monorepo-index'; use 'index'"
+                        .to_string(),
+                );
+            }
+            ProjectShape::Monorepo if has_plain_index => {
+                return Err(
+                    "shape 'monorepo' conflicts with template 'index'; use 'monorepo-index'"
+                        .to_string(),
+                );
+            }
+            ProjectShape::SingleProject if !has_plain_index => {
+                selections.templates.push(Template::Index);
+            }
+            ProjectShape::Monorepo if !has_monorepo_index => {
+                selections.templates.push(Template::MonorepoIndex);
+            }
+            _ => {}
+        }
     }
     if let Some(custom) = &flags.custom_template {
         selections.custom_template = Some(custom.clone());
@@ -660,6 +719,86 @@ mod tests {
         );
         assert_eq!(selections.components, ALL_COMPONENTS.to_vec());
         assert!(selections.tools.is_empty());
+    }
+
+    #[test]
+    fn flags_reject_root_index_that_conflicts_with_project_shape() {
+        let flags = InitFlags {
+            shape: Some("monorepo".to_string()),
+            templates: vec!["index".to_string()],
+            ..InitFlags::default()
+        };
+
+        let err = build_selections(None, &flags).unwrap_err();
+        assert!(err.contains("monorepo-index"), "got: {err}");
+    }
+
+    #[test]
+    fn shape_flag_replaces_inherited_root_template_in_both_directions() {
+        let mut single = sample_selections();
+        single.shape = ProjectShape::SingleProject;
+        single.templates = vec![Template::Module, Template::Index];
+        let to_monorepo = build_selections(
+            Some(single),
+            &InitFlags {
+                shape: Some("monorepo".to_string()),
+                ..InitFlags::default()
+            },
+        )
+        .unwrap();
+        assert_eq!(to_monorepo.shape, ProjectShape::Monorepo);
+        assert!(to_monorepo.templates.contains(&Template::MonorepoIndex));
+        assert!(!to_monorepo.templates.contains(&Template::Index));
+
+        let mut monorepo = sample_selections();
+        monorepo.shape = ProjectShape::Monorepo;
+        monorepo.templates = vec![Template::Module, Template::MonorepoIndex];
+        let to_single = build_selections(
+            Some(monorepo),
+            &InitFlags {
+                shape: Some("single".to_string()),
+                ..InitFlags::default()
+            },
+        )
+        .unwrap();
+        assert_eq!(to_single.shape, ProjectShape::SingleProject);
+        assert!(to_single.templates.contains(&Template::Index));
+        assert!(!to_single.templates.contains(&Template::MonorepoIndex));
+
+        // A federated root is independent of the package-layout shape and is
+        // therefore preserved when only --shape changes.
+        let mut nested = sample_selections();
+        nested.shape = ProjectShape::SingleProject;
+        nested.templates = vec![Template::Module, Template::IndexNested];
+        let nested_with_monorepo_shape = build_selections(
+            Some(nested),
+            &InitFlags {
+                shape: Some("monorepo".to_string()),
+                ..InitFlags::default()
+            },
+        )
+        .unwrap();
+        assert!(
+            nested_with_monorepo_shape
+                .templates
+                .contains(&Template::IndexNested)
+        );
+        assert!(
+            !nested_with_monorepo_shape
+                .templates
+                .contains(&Template::MonorepoIndex)
+        );
+    }
+
+    #[test]
+    fn flags_reject_multiple_root_templates_including_nested() {
+        let flags = InitFlags {
+            templates: vec!["index-nested".to_string(), "index".to_string()],
+            ..InitFlags::default()
+        };
+
+        let err = build_selections(None, &flags).unwrap_err();
+        assert!(err.contains("choose exactly one"), "got: {err}");
     }
 
     #[test]

@@ -98,6 +98,10 @@ though installer decision D-029 calls for handing off to the same choice model.
 **Impact:** First-time users see two different setup experiences and must infer
 that a second command is required to reach the intended initializer.
 
+**Implementation:** The default interactive installer now performs native
+onboarding in one run; explicit `--onboard` and `--menu` modes keep automation
+and advanced choices deterministic. Close after native Windows CI evidence.
+
 **Tracking:** [CIB-002](./modules/continuous-improvement-backlog.aps.md)
 
 ---
@@ -121,7 +125,33 @@ or the end-to-end selection path rather than the pure scaffold planner.
 **Impact:** The generated plan contradicts the reviewed setup choice and starts
 a monorepo with the wrong planning structure.
 
+**Implementation:** Project shape now owns root-index generation, wizard shape
+changes repair the root-template selection, contradictory flags are rejected,
+and native user-journey tests assert monorepo index content plus config. Close
+after the native Windows shape journey passes.
+
 **Tracking:** [CIB-003](./modules/continuous-improvement-backlog.aps.md)
+
+---
+
+### ISS-006: Windows user journeys lack native runtime validation
+
+| Field      | Value      |
+| ---------- | ---------- |
+| Status     | Open       |
+| Severity   | Medium     |
+| Discovered | 2026-07-17 |
+| Module     | CIB        |
+| Work Item  | CIB-004    |
+
+**Context:** CI cross-compiles the Rust CLI for Windows and runs PowerShell
+parity under Ubuntu, but no native Windows job exercises `aps.exe` through a
+representative user journey from PowerShell.
+
+**Impact:** Windows-specific path, process, encoding, executable, or installer
+regressions can ship while existing portability checks remain green.
+
+**Tracking:** [CIB-004](./modules/continuous-improvement-backlog.aps.md)
 
 ---
 

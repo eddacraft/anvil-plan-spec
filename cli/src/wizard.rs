@@ -241,6 +241,21 @@ impl WizardState {
             .iter()
             .position(|shape| *shape == project_shape)
             .unwrap_or(0);
+
+        // A user can return from Templates and change the project shape. Keep
+        // the root template coherent instead of retaining the old shape's
+        // index selection. A federated root is an explicit choice and remains
+        // authoritative across shape changes.
+        if self.templates_initialized && !self.selected_templates.contains(&Template::IndexNested) {
+            self.selected_templates
+                .retain(|template| !matches!(template, Template::Index | Template::MonorepoIndex));
+            self.selected_templates.push(match project_shape {
+                ProjectShape::SingleProject => Template::Index,
+                ProjectShape::Monorepo => Template::MonorepoIndex,
+            });
+            self.selected_templates
+                .sort_by_key(|template| Self::template_order(*template));
+        }
     }
 
     pub fn workspace_tools(&self) -> &[WorkspaceTool] {
@@ -654,12 +669,28 @@ impl WizardState {
     }
 
     pub fn toggle_template(&mut self, template: Template) {
+        if !self.template_is_compatible_with_shape(template) {
+            return;
+        }
+
         if let Some(index) = self
             .selected_templates
             .iter()
             .position(|selected| *selected == template)
         {
+            if matches!(template, Template::Index | Template::MonorepoIndex) {
+                // Every non-federated project has exactly one shape-owned root.
+                return;
+            }
             self.selected_templates.remove(index);
+            if template == Template::IndexNested {
+                self.selected_templates.push(match self.project_shape {
+                    ProjectShape::SingleProject => Template::Index,
+                    ProjectShape::Monorepo => Template::MonorepoIndex,
+                });
+                self.selected_templates
+                    .sort_by_key(|candidate| Self::template_order(*candidate));
+            }
         } else {
             // Index, MonorepoIndex, and IndexNested all scaffold the root
             // index.aps.md — selecting one deselects the others so the scaffold
@@ -679,6 +710,14 @@ impl WizardState {
             self.selected_templates
                 .sort_by_key(|template| Self::template_order(*template));
         }
+    }
+
+    fn template_is_compatible_with_shape(&self, template: Template) -> bool {
+        !matches!(
+            (self.project_shape, template),
+            (ProjectShape::SingleProject, Template::MonorepoIndex)
+                | (ProjectShape::Monorepo, Template::Index)
+        )
     }
 
     pub fn toggle_component(&mut self, component: Component) {
@@ -710,6 +749,17 @@ impl WizardState {
     pub fn custom_template_path(&self) -> Option<&str> {
         let path = self.custom_template.value.trim();
         (self.custom_template_enabled && !path.is_empty()).then_some(path)
+    }
+
+    pub fn root_index_label(&self) -> &'static str {
+        if self.selected_templates.contains(&Template::IndexNested) {
+            "federated child-plan index"
+        } else {
+            match self.project_shape {
+                ProjectShape::SingleProject => "single-project index",
+                ProjectShape::Monorepo => "monorepo index",
+            }
+        }
     }
 
     pub fn plans_dir(&self) -> &str {
@@ -1134,13 +1184,21 @@ fn render_templates(
         .iter()
         .map(|template| {
             let selected = state.selected_templates().contains(template);
+            let compatible = state.template_is_compatible_with_shape(*template);
+            let marker = if !compatible {
+                "[-]"
+            } else if selected {
+                "[x]"
+            } else {
+                "[ ]"
+            };
             SelectItem::new(
-                format!(
-                    "{} {}",
-                    if selected { "[x]" } else { "[ ]" },
-                    template.label()
-                ),
-                template.description(),
+                format!("{} {}", marker, template.label()),
+                if compatible {
+                    template.description().to_string()
+                } else {
+                    format!("Unavailable for {}", state.project_shape.label())
+                },
             )
         })
         .collect();
@@ -1293,9 +1351,10 @@ fn render_review(frame: &mut Frame<'_>, area: Rect, state: &WizardState) {
             .join(", ")
     };
     let summary = format!(
-        "Profile: {}\nProject shape: {}\nAI tools: {}\nTemplates: {}\nPaths: plans={} docs={} tooling={}\nComponents: {}\n\nPress enter to scaffold, esc to go back.",
+        "Profile: {}\nProject shape: {}\nRoot index: {}\nAI tools: {}\nTemplates: {}\nPaths: plans={} docs={} tooling={}\nComponents: {}\n\nPress enter to scaffold, esc to go back.",
         state.profile().label(),
         state.project_shape.label(),
+        state.root_index_label(),
         tools,
         templates,
         state.plans_dir(),
@@ -1881,6 +1940,24 @@ mod tests {
     }
 
     #[test]
+    fn changing_shape_after_templates_are_initialized_replaces_root_index() {
+        let mut state = WizardState::default();
+        advance_to(&mut state, WizardStep::Templates);
+        assert!(state.selected_templates().contains(&Template::Index));
+
+        state.set_project_shape(ProjectShape::Monorepo);
+
+        assert!(
+            state
+                .selected_templates()
+                .contains(&Template::MonorepoIndex)
+        );
+        assert!(!state.selected_templates().contains(&Template::Index));
+        assert!(state.selected_templates().contains(&Template::Quickstart));
+        assert_eq!(state.root_index_label(), "monorepo index");
+    }
+
+    #[test]
     fn space_toggles_template_under_cursor() {
         let mut state = WizardState::default();
         advance_to(&mut state, WizardStep::Templates);
@@ -1891,23 +1968,16 @@ mod tests {
     }
 
     #[test]
-    fn index_and_monorepo_index_are_mutually_exclusive() {
+    fn root_template_remains_coherent_with_project_shape() {
         let mut state = WizardState::default();
         advance_to(&mut state, WizardStep::Templates);
 
         // Solo+single starts with Index selected.
         assert!(state.selected_templates().contains(&Template::Index));
 
+        // An incompatible monorepo template cannot contradict Single Project.
+        assert!(!state.template_is_compatible_with_shape(Template::MonorepoIndex));
         state.toggle_template(Template::MonorepoIndex);
-        assert!(
-            state
-                .selected_templates()
-                .contains(&Template::MonorepoIndex)
-        );
-        assert!(!state.selected_templates().contains(&Template::Index));
-
-        // And back the other way.
-        state.toggle_template(Template::Index);
         assert!(state.selected_templates().contains(&Template::Index));
         assert!(
             !state
@@ -1915,11 +1985,29 @@ mod tests {
                 .contains(&Template::MonorepoIndex)
         );
 
+        // The shape-owned root cannot be deselected.
+        state.toggle_template(Template::Index);
+        assert!(state.selected_templates().contains(&Template::Index));
+
+        // Federated selection replaces the root; deselecting it restores the
+        // root implied by project shape.
+        state.toggle_template(Template::IndexNested);
+        assert!(state.selected_templates().contains(&Template::IndexNested));
+        assert!(!state.selected_templates().contains(&Template::Index));
+        state.toggle_template(Template::IndexNested);
+        assert!(state.selected_templates().contains(&Template::Index));
+        assert!(!state.selected_templates().contains(&Template::IndexNested));
+
         // At most one index template is ever selected.
         let index_count = state
             .selected_templates()
             .iter()
-            .filter(|t| matches!(t, Template::Index | Template::MonorepoIndex))
+            .filter(|t| {
+                matches!(
+                    t,
+                    Template::Index | Template::MonorepoIndex | Template::IndexNested
+                )
+            })
             .count();
         assert_eq!(index_count, 1);
     }

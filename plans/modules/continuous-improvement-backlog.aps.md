@@ -4,7 +4,7 @@
 | --- | --------- | ------ | -------- | ----------- |
 | CIB | Conductor | @aneki | medium   | In Progress |
 
-**Last reviewed:** 2026-07-16
+**Last reviewed:** 2026-07-17
 
 ## Purpose
 
@@ -27,6 +27,8 @@ coherent feature or needs its own design decisions.
 - Follow-up work spanning completed modules or distribution surfaces
 - User-journey regressions that need triage before implementation
 - Compatibility cleanup that should not be lost after a larger feature ships
+- Native Windows PowerShell parity for every user-facing APS workflow; Git Bash
+  or WSL may support agent automation but is not a user prerequisite
 
 ## Out of Scope
 
@@ -50,6 +52,7 @@ owning module and leave a `Superseded by:` reference here.
 | [agents](./agents.aps.md)                 | APS planning and status-response surfaces      | In Progress |
 | [tui](./tui.aps.md)                       | Interactive initialization journey             | Complete    |
 | [monorepo](./monorepo.aps.md)             | Monorepo and nested-plan scaffold expectations | Complete    |
+| [ci-parity](./ci-parity.aps.md)           | Native Windows behavioural validation          | Complete    |
 
 ## Cross-Module Work Items
 
@@ -80,30 +83,40 @@ is promoted back to the relevant module.
 - **Confidence:** high
 - **Dependencies:** none
 
-### CIB-002: Hand the public curl journey to the native TUI
+### CIB-002: Hand the public installers to the native TUI
 
-- **Status:** Draft
-- **Intent:** Make the default interactive curl installation feel like one APS
+- **Status:** In Progress
+- **Intent:** Make each default interactive installation feel like one APS
   setup journey instead of a shell picker followed by a separate `aps init`.
 - **Expected Outcome:** On a supported interactive terminal, the no-argument
-  public `curl | bash` entrypoint installs or locates the native APS binary and
-  hands control to its TUI in the same run. Explicit installer modes and
-  non-interactive automation remain deterministic, and unsupported platforms
-  retain a clear shell fallback.
-- **Validation:** A PTY-backed test of the public installer reaches the native
-  TUI without requiring the user to run a second command; explicit `--cli`,
-  `--init`, and non-interactive paths retain their documented behaviour on
-  Unix and PowerShell entrypoints.
+  Unix `curl | bash` and Windows PowerShell entrypoints install or locate the
+  native APS binary and hand control to its TUI in the same run. Explicit
+  installer modes and non-interactive automation remain deterministic, and
+  unsupported platforms retain a clear fallback.
+- **Validation:** A PTY-backed Unix test drives the no-argument public installer
+  into the real native TUI without a second command. The native Windows
+  PowerShell job installs the release-shaped GNU archive through the public
+  installer and proves the same onboarding handoff with redirected-input
+  defaults; Rust wizard tests cover the interactive state machine. Explicit
+  CLI, init, and non-interactive paths retain their documented behaviour. The
+  Windows user journey must not require Git Bash or WSL.
+- **Learning:** "Default installer entrypoints should share one native onboarding handoff; advanced shell modes remain explicit."
 - **Identified From:** User-observed first-run journey on 2026-07-16: the curl
   command presents the shell CLI and the TUI appears only after `aps init`.
 - **Files:** `scaffold/install`, `scaffold/install.ps1`, installer tests,
   `docs/installation.md`
 - **Confidence:** medium
-- **Dependencies:** none
+- **Results:** The default interactive Unix and PowerShell entrypoints now
+  install the native binary and launch `aps init` in the same run. `--onboard`
+  exposes that route explicitly for automation, `--menu` preserves the advanced
+  picker, and a Unix PTY regression proves the installed binary renders the
+  native TUI. The Windows job is configured to install the shipped GNU archive
+  and exercise the PowerShell handoff under both PowerShell 7 and Windows
+  PowerShell 5.1; native execution evidence is still pending.
 
 ### CIB-003: Keep init project-shape and root-template choices coherent
 
-- **Status:** Draft
+- **Status:** In Progress
 - **Intent:** Ensure the init choices shown to users produce the root plan shape
   they selected.
 - **Expected Outcome:** Selecting Monorepo produces a monorepo root
@@ -111,11 +124,14 @@ is promoted back to the relevant module.
   nested/federated selection produces the federation root and child plans.
   Template choices cannot silently contradict the selected project shape, and
   the review screen states which root index will be written.
-- **Validation:** An end-to-end test drives the released/installed binary
-  through each project-shape choice and asserts the resulting root index
-  content and `.aps/config.yml`; the monorepo journey fails if it writes the
-  single-project index. Existing non-interactive template selection remains
-  covered.
+- **Validation:** Native Unix and Windows PowerShell journeys use the installed
+  binary to scaffold single-project, monorepo, and nested roots, then assert the
+  resulting root index content and `.aps/config.yml`; the monorepo journey
+  fails if it writes the single-project index. Wizard state-machine tests drive
+  interactive shape selection, template toggles, and back-navigation. Config
+  replay and non-interactive template selection remain covered, and the
+  Windows journey must not require Git Bash or WSL.
+- **Learning:** "Project shape must own the generated root index at the scaffold boundary; template choices cannot override it silently."
 - **Identified From:** User-observed init journey on 2026-07-16: choosing
   Monorepo installs the monorepo template asset but the generated root plan uses
   the old index. The source already has a plan-level unit assertion for the
@@ -124,14 +140,43 @@ is promoted back to the relevant module.
 - **Files:** `cli/src/wizard.rs`, `cli/src/scaffold.rs`, `cli/src/config.rs`,
   init journey tests
 - **Confidence:** medium
-- **Dependencies:** none
+- **Results:** Project shape is authoritative at the scaffold boundary,
+  returning to change shape updates the selected root template, contradictory
+  or multiply selected root-template flags fail clearly, and an explicit shape
+  replaces a stale root inherited from config. Review names the root index that
+  will be written. The monorepo root template also uses the canonical
+  `## Modules` heading so the generated plan passes structural lint.
+
+### CIB-004: Enforce native Windows PowerShell user journeys
+
+- **Status:** In Progress
+- **Intent:** Turn Windows PowerShell support from a portability claim into a
+  behavioural compatibility gate for user-facing APS workflows.
+- **Expected Outcome:** Every documented user workflow has a native PowerShell
+  route using `aps.exe`, including installation, initialization, setup, update,
+  validation, status, and recovery. Windows users do not need Git Bash or WSL;
+  those shells may remain documented as optional agent or contributor tools.
+- **Validation:** A `windows-latest` CI job starts in PowerShell, stages the
+  Windows binary, and exercises a representative user journey through version
+  reporting, non-interactive init, setup, lint, next/status, update, and
+  doctor/recovery. Existing Ubuntu PowerShell parity and Windows
+  cross-compilation remain supporting checks, not substitutes for the native
+  runtime journey.
+- **Identified From:** User compatibility requirement on 2026-07-17 and audit
+  of CI coverage showing Windows cross-compilation plus Ubuntu-hosted PowerShell
+  parity, but no native Windows end-to-end job.
+- **Files:** `.github/workflows/ci.yml`, `scaffold/install.ps1`,
+  `scaffold/update.ps1`, Windows smoke-test harness, user installation and usage
+  documentation
+- **Confidence:** medium
 
 ## Status Roll-up
 
 - **Concern:** Standing APS maintenance intake
-- **Progress:** 0/3 work items Complete
-- **Readout:** Three user-facing consistency fixes are captured as Draft and
-  await readiness review.
+- **Progress:** 0/4 work items Complete
+- **Readout:** CIB-002, CIB-003, and CIB-004 are implemented locally and remain
+  In Progress pending their native Windows CI evidence. CIB-001 remains
+  isolated in its own worktree.
 
 ## Decisions
 
@@ -146,6 +191,11 @@ is promoted back to the relevant module.
 - **D-004:** Init selection authority — _decided 2026-07-16: the generated root
   index must match the reviewed project-shape/template selection._ Internal
   template installation must not diverge from the user-visible choice.
+- **D-005:** Windows user contract — _decided 2026-07-17: native PowerShell is
+  first-class for user-facing APS workflows._ Git Bash and WSL may be used by
+  agents or contributors, but users must be able to install and operate APS
+  without them. Windows compatibility requires native behavioural evidence;
+  cross-compilation and PowerShell-on-Ubuntu checks are supporting evidence.
 
 ## Notes
 

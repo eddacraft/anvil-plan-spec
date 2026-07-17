@@ -41,6 +41,15 @@ jobs:
         working-directory: cli
         run: cargo test --locked
 
+      - name: cargo build
+        working-directory: cli
+        run: cargo build --locked
+
+      - name: Native Unix user journey
+        run: bash test/native-user-journey.sh
+        env:
+          APS_BIN: cli/target/debug/aps
+
       # Compile-check the Windows target on every PR. The release workflow is
       # the only place that *builds* Windows, so without this a unix-only API
       # (as in v0.5.0's audit.rs) is first discovered at tag time, failing the
@@ -114,6 +123,65 @@ jobs:
       - name: Run PowerShell parity harness
         shell: pwsh
         run: ./test/ps-parity.ps1
+
+  windows-gnu-artifact:
+    name: Build shipped Windows GNU archive
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install MinGW linker
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends gcc-mingw-w64-x86-64
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-gnu
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: cli -> target
+          key: x86_64-pc-windows-gnu
+
+      - name: Build shipped Windows target
+        working-directory: cli
+        run: cargo build --release --locked --target x86_64-pc-windows-gnu
+
+      - name: Package release-shaped archive
+        run: |
+          mkdir -p dist
+          cp cli/target/x86_64-pc-windows-gnu/release/aps.exe dist/
+          cd dist
+          zip aps-x86_64-pc-windows-gnu.zip aps.exe
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-gnu-archive
+          path: dist/aps-x86_64-pc-windows-gnu.zip
+          if-no-files-found: error
+
+  windows-user-journey:
+    name: Native Windows PowerShell user journey
+    needs: windows-gnu-artifact
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-gnu-archive
+          path: dist
+
+      - name: Run PowerShell 7 user journey
+        shell: pwsh
+        run: ./test/windows-user-journey.ps1 -ReleaseArchive ./dist/aps-x86_64-pc-windows-gnu.zip
+
+      - name: Run Windows PowerShell 5.1 user journey
+        shell: powershell
+        run: ./test/windows-user-journey.ps1 -ReleaseArchive ./dist/aps-x86_64-pc-windows-gnu.zip
 
   cli-parity:
     name: Cross-CLI lint parity
