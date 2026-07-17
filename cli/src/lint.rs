@@ -1876,6 +1876,12 @@ mod tests {
     }
 
     #[test]
+    fn windows_index_path_uses_index_rules() {
+        let report = lint_text(r"plans\index.aps.md", "# Plan\n\n## Overview\n\ntext\n");
+        assert_eq!(codes(&report), vec!["E004"]);
+    }
+
+    #[test]
     fn issues_field_lines_are_section_relative() {
         let text = "\
 # Issues\n\n## Issues\n\n### ISS-001: Broken\n\n| Status | Open |\n\n## Questions\n";

@@ -169,6 +169,11 @@ is promoted back to the relevant module.
   `scaffold/update.ps1`, Windows smoke-test harness, user installation and usage
   documentation
 - **Confidence:** medium
+- **Progress:** The first native Windows run successfully installed and
+  executed the shipped GNU archive, then exposed Windows path separators being
+  misclassified by Rust lint. Path classification is now normalised and backed
+  by Windows-style index, module, action, release, and template regressions;
+  native CI confirmation remains pending.
 
 ## Status Roll-up
 

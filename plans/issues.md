@@ -155,6 +155,32 @@ regressions can ship while existing portability checks remain green.
 
 ---
 
+### ISS-007: Rust lint misclassifies Windows paths
+
+| Field      | Value      |
+| ---------- | ---------- |
+| Status     | Open       |
+| Severity   | Medium     |
+| Discovered | 2026-07-17 |
+| Module     | CIB        |
+| Work Item  | CIB-004    |
+
+**Context:** The first native Windows user journey reached `aps lint` with a
+valid monorepo root, but Rust path classification treated
+`plans\index.aps.md` as a simple module because its rules only recognised `/`
+separators.
+
+**Impact:** Native Windows lint applies the wrong validation rules to indexes,
+modules, actions, and releases even though the same project passes on Unix.
+
+**Implementation:** Normalise separators at the parser classification boundary
+and cover Windows-style paths with parser and lint regression tests. Close
+after the native Windows journey passes.
+
+**Tracking:** [CIB-004](./modules/continuous-improvement-backlog.aps.md)
+
+---
+
 ## Questions
 
 _None yet._
