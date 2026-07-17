@@ -181,6 +181,32 @@ after the native Windows journey passes.
 
 ---
 
+### ISS-008: Windows PowerShell 5.1 misparses installer string
+
+| Field      | Value      |
+| ---------- | ---------- |
+| Status     | Open       |
+| Severity   | Medium     |
+| Discovered | 2026-07-17 |
+| Module     | CIB        |
+| Work Item  | CIB-004    |
+
+**Context:** After PowerShell 7 completed the full native journey, Windows
+PowerShell 5.1 parsed the UTF-8 installer without a BOM. An em dash inside a
+double-quoted error message was decoded with a smart-quote byte, prematurely
+closing the string and producing a misleading missing-brace error.
+
+**Impact:** The public installer cannot be parsed by Windows PowerShell 5.1
+even though its PowerShell 7 journey passes.
+
+**Implementation:** Keep executable installer strings ASCII-safe where
+un-BOMed source decoding can create PowerShell quote characters. Close after
+the Windows PowerShell 5.1 journey passes.
+
+**Tracking:** [CIB-004](./modules/continuous-improvement-backlog.aps.md)
+
+---
+
 ## Questions
 
 _None yet._

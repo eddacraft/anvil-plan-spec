@@ -380,7 +380,7 @@ function Install-ApsUpgrade {
     Write-Host "Upgrade existing project"
     Write-Host ""
     if (-not (Test-Path -LiteralPath $PlansDir -PathType Container)) {
-        Write-Err "no plans/ directory at $Target — nothing to upgrade"
+        Write-Err "no plans/ directory at $Target -- nothing to upgrade"
         exit 1
     }
     Write-Step "Refreshing templates and CLI via the update entrypoint"
