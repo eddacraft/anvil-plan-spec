@@ -1,7 +1,6 @@
 ---
 description: Coordinate APS execution through CLI-backed next-work selection, context packaging, dependency checks, validation, and learning capture
 mode: subagent
-model: anthropic/claude-opus-4-6
 steps: 50
 tools:
   read: true

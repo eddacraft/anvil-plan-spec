@@ -1,7 +1,6 @@
 ---
 description: Create, manage, execute, and review plans following the Anvil Plan Spec (APS) format, including initializing projects, modules, work items, action plans, validation, status tracking, and wave-based parallel execution
 mode: subagent
-model: anthropic/claude-opus-4-6
 steps: 50
 tools:
   read: true

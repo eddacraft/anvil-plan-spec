@@ -152,8 +152,10 @@ Agents are configured as subagents (`mode: subagent`). Invoke via `@mention`:
 ```
 
 Switch to an agent as a primary with Tab, or invoke as subagent with
-`@mention`. The Planner and Conductor use `anthropic/claude-opus-4-6`; edit the
-`model` field in the frontmatter to change.
+`@mention`. By default APS omits a `model` field so OpenCode uses each user's
+configured provider. Explicit install preference `opus` / `sonnet` pins
+OpenAI Codex-family IDs (`openai/gpt-5.6-sol` / `openai/gpt-5.6-terra`), not
+Anthropic — or set `model:` in the agent frontmatter yourself.
 
 ### Codex
 
@@ -168,8 +170,9 @@ cp scaffold/agents/codex/aps-librarian.toml .codex/agents/
 
 Codex discovers project roles automatically from `.codex/agents/`. Each file
 is a complete standalone role definition; no `.codex/config.toml` registration
-is required. Model and reasoning settings inherit from the parent session
-unless you set them directly in a role file.
+is required. `aps init` / `aps setup codex` write a `model` field from the
+install model preference (default: `gpt-5.6-sol` for planner/conductor,
+`gpt-5.6-terra` for librarian). Override the field in a role file if needed.
 
 For an existing APS project, run `aps update` or `aps setup codex` to refresh
 the standalone roles and remove the obsolete registration snippet.
@@ -212,23 +215,41 @@ wire some up.
 
 ## Model Cost
 
-- **Planner** and **Conductor** use Opus (most capable, higher cost) because
-  planning and orchestration require deep reasoning about architecture,
-  dependencies, and trade-offs.
-- **Librarian** uses Sonnet (fast, lower cost) because repo hygiene is
-  pattern-matching and file organisation — less reasoning-intensive.
+Install-time generation maps a **preference tier** (`default` / `opus` /
+`sonnet` in config) to concrete IDs per tool. With `default` (recommended):
 
-You can change the model in each agent's frontmatter if you prefer different
-cost/capability trade-offs.
+| Role | Claude Code | OpenCode | Codex |
+| ---- | ----------- | -------- | ----- |
+| Planner / Conductor | `opus` | *(omit — user config)* | `gpt-5.6-sol` |
+| Librarian | `sonnet` | *(omit — user config)* | `gpt-5.6-terra` |
+
+- **Planner** and **Conductor** use the premium tier (where pinned) because
+  planning and orchestration need deeper reasoning about architecture and
+  trade-offs.
+- **Librarian** uses the balanced tier because repo hygiene is mostly
+  pattern-matching and file organisation.
+- **OpenCode** is multi-provider: default leaves `model` unset so each
+  person's provider/model setup wins. Explicit `opus` / `sonnet` pin
+  OpenAI Codex-family IDs (`openai/gpt-5.6-sol` / `openai/gpt-5.6-terra`)
+  only when requested.
+
+Choosing `opus` or `sonnet` in `aps init` forces **every** role on that tool
+to the premium or balanced tier (where the tool supports pins). Copilot
+agents have no model field (n/a in the wizard). You can still hand-edit
+installed agent files after install.
 
 ## Building Agent Variants
 
-The build script generates tool-specific agents from shared core prompts:
+Agent **bodies** live in `scaffold/agents/core/`. The CLI generates tool
+envelopes (frontmatter / TOML + model IDs) at install from those cores and
+the selected model preference.
+
+The build script still produces **default-preference goldens** for review:
 
 ```bash
 bash scaffold/agents/build.sh
 ```
 
-This regenerates all tool variants (Claude Code, Copilot, OpenCode, Codex)
-from `scaffold/agents/core/`. Grok Build consumes the Codex-shared
-`.agents/skills/` payload directly, so it has no generated variant.
+This regenerates Claude Code, Copilot, OpenCode, and Codex trees under
+`scaffold/agents/`. Grok Build consumes the shared `.agents/skills/` payload
+directly, so it has no agent variant.

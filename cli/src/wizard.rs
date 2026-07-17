@@ -326,6 +326,7 @@ impl WizardState {
                 WizardEvent::Continue
             }
             Action::Character('m') => {
+                // No-op for tools without a model field (Copilot/Grok/Generic).
                 self.cycle_current_model();
                 WizardEvent::Continue
             }
@@ -765,7 +766,9 @@ impl WizardState {
 
     fn cycle_current_model(&mut self) {
         if let Some(config) = self.current_tool_config_mut() {
-            config.model = config.model.next();
+            if config.tool.supports_model_preference() {
+                config.model = config.model.next();
+            }
         }
     }
 
@@ -1092,13 +1095,18 @@ fn render_tool_config(
         .tool_configs()
         .iter()
         .map(|config| {
+            let model = if config.tool.supports_model_preference() {
+                config.model.label()
+            } else {
+                "n/a"
+            };
             SelectItem::new(
                 config.tool.label(),
                 format!(
                     "agents: {}  hooks: {}  model: {}",
                     if config.install_agents { "yes" } else { "no" },
                     config.hooks.label(),
-                    config.model.label()
+                    model
                 ),
             )
         })
@@ -1456,16 +1464,15 @@ impl AiTool {
         !matches!(self, Self::Generic | Self::Grok)
     }
 
+    /// Whether install-time agent generation applies a model field for this tool.
+    pub fn supports_model_preference(self) -> bool {
+        matches!(self, Self::ClaudeCode | Self::OpenCode | Self::Codex)
+    }
+
     fn default_model(self) -> ModelPreference {
-        match self {
-            // Anthropic-native tools: prefer Opus for planner/conductor work.
-            Self::ClaudeCode | Self::OpenCode => ModelPreference::Opus,
-            // Codex runs on OpenAI. Opus/Sonnet are not Codex models — leave
-            // "default" so the parent session's model wins.
-            Self::Codex => ModelPreference::Default,
-            // Copilot/Grok/Generic do not expose an APS-driven model choice.
-            Self::Copilot | Self::Grok | Self::Generic => ModelPreference::Default,
-        }
+        // Role-weighted vendor defaults (planner/conductor premium, librarian
+        // balanced). Explicit opus/sonnet force every role to that tier.
+        ModelPreference::Default
     }
 }
 
@@ -1547,9 +1554,12 @@ impl ModelPreference {
         }
     }
 
+    /// Display label. Keys stay default/opus/sonnet for config compatibility;
+    /// install maps them to vendor IDs (Anthropic aliases or GPT-5.6 tiers).
     fn label(self) -> &'static str {
         match self {
             Self::Default => "default",
+            // "opus"/"sonnet" = premium/balanced tier across vendors.
             Self::Opus => "opus",
             Self::Sonnet => "sonnet",
         }
@@ -1672,7 +1682,7 @@ mod tests {
                     tool: AiTool::ClaudeCode,
                     install_agents: true,
                     hooks: HookVerbosity::Minimal,
-                    model: ModelPreference::Opus,
+                    model: ModelPreference::Default,
                 },
                 ToolConfig {
                     tool: AiTool::Generic,
@@ -1685,15 +1695,36 @@ mod tests {
     }
 
     #[test]
-    fn tool_model_defaults_match_vendor() {
-        // Claude Code / OpenCode ship Anthropic model IDs in agent frontmatter.
-        assert_eq!(AiTool::ClaudeCode.default_model(), ModelPreference::Opus);
-        assert_eq!(AiTool::OpenCode.default_model(), ModelPreference::Opus);
-        // Codex is OpenAI — not sonnet/opus.
-        assert_eq!(AiTool::Codex.default_model(), ModelPreference::Default);
-        assert_eq!(AiTool::Copilot.default_model(), ModelPreference::Default);
-        assert_eq!(AiTool::Grok.default_model(), ModelPreference::Default);
-        assert_eq!(AiTool::Generic.default_model(), ModelPreference::Default);
+    fn tool_model_defaults_and_capability() {
+        for tool in [
+            AiTool::ClaudeCode,
+            AiTool::OpenCode,
+            AiTool::Codex,
+            AiTool::Copilot,
+            AiTool::Grok,
+            AiTool::Generic,
+        ] {
+            assert_eq!(tool.default_model(), ModelPreference::Default);
+        }
+        assert!(AiTool::ClaudeCode.supports_model_preference());
+        assert!(AiTool::OpenCode.supports_model_preference());
+        assert!(AiTool::Codex.supports_model_preference());
+        assert!(!AiTool::Copilot.supports_model_preference());
+        assert!(!AiTool::Grok.supports_model_preference());
+        assert!(!AiTool::Generic.supports_model_preference());
+    }
+
+    #[test]
+    fn model_cycle_ignored_for_tools_without_model_field() {
+        let mut state = WizardState::default();
+        state.toggle_tool(AiTool::Copilot);
+        state.handle(Action::Select);
+        state.handle(Action::Select);
+        state.handle(Action::Select);
+        assert_eq!(state.step(), WizardStep::ToolConfig);
+        state.handle(Action::Character('m'));
+        state.handle(Action::Character('m'));
+        assert_eq!(state.tool_configs()[0].model, ModelPreference::Default);
     }
 
     #[test]
@@ -1709,6 +1740,8 @@ mod tests {
 
         state.handle(Action::Character('a'));
         state.handle(Action::Right);
+        // Default → opus → sonnet
+        state.handle(Action::Character('m'));
         state.handle(Action::Character('m'));
 
         assert_eq!(

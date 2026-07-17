@@ -1,9 +1,13 @@
 # APS Librarian — Codex Agent Role
 #
 # Codex discovers this role automatically from .codex/agents/.
+# Note: aps init generates these at install time from core prompts
+# with the selected model preference; this tree is a default golden.
 
 name = "aps-librarian"
 description = "Repository organizing, cleanup, documentation filing, archiving stale specs, detecting orphaned files, cross-reference maintenance, and general repo hygiene"
+
+model = "gpt-5.6-terra"  # OpenAI model
 
 sandbox_mode = "workspace-write"
 

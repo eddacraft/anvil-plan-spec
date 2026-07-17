@@ -152,6 +152,17 @@ mode agents (users invoke them deliberately, not as the default primary agent).
 - **D-018:** Shared core vs per-tool rewrite — _decided: write a shared core
   prompt, then wrap it in tool-specific frontmatter/packaging. Minimises
   drift between harness variants._
+- **D-041:** Install-time agent generation — _decided: the CLI renders agent
+  envelopes from `scaffold/agents/core/` + model preference at
+  `aps init` / `aps setup` / `aps update`. Scaffold tool trees are
+  default-preference goldens only (`build.sh`). Model preference keys stay
+  `default` / `opus` / `sonnet` (config-stable); they map to vendor IDs
+  (Claude aliases, Codex `gpt-5.6-sol` / `gpt-5.6-terra`). OpenCode
+  `default` omits `model` so multi-provider user configs win; explicit
+  opus/sonnet pin OpenAI (`openai/gpt-5.6-sol` / `openai/gpt-5.6-terra`),
+  not Anthropic. Copilot/Grok/Generic show model n/a and ignore cycle.
+  Skills stay authored (not generated from agent cores) — harness body
+  divergence is handled by variant-vs-stub, not multi-home of one body._
 
 ## Ready Checklist
 
@@ -348,10 +359,11 @@ mode agents (users invoke them deliberately, not as the default primary agent).
   - Codex: significant — entirely different format (TOML config, agent roles,
     `developer_instructions` field, concurrent thread model)
   - Gemini: minimal — skill only, no agent adaptation needed
-- The Planner is the heavier agent (Opus for Claude Code, model varies per
-  tool). The Librarian is lighter (Sonnet). Tools with model selection:
-  Claude Code (model field), OpenCode (model field), Codex (model in TOML).
-  Copilot and Gemini don't expose model choice in agent/skill config.
+- The Planner/Conductor are the heavier roles (premium tier); Librarian is
+  lighter (balanced). With preference `default`: Claude `opus`/`sonnet`,
+  OpenCode omits `model` (user provider wins), Codex `gpt-5.6-sol` /
+  `gpt-5.6-terra`. Tools with model selection: Claude Code, OpenCode, Codex.
+  Copilot has no model field. Install applies the preference (D-041).
 - Agents should NOT duplicate the SKILL.md content. The passive skill handles
   behavioral guidance (plan-before-code, update specs). The agents handle
   active dispatch (create a plan for me, audit the repo).
