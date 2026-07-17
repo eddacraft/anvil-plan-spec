@@ -84,7 +84,7 @@ request differently, and duplicated instructions can drift.
 
 | Field      | Value      |
 | ---------- | ---------- |
-| Status     | Open       |
+| Status     | Closed (2026-07-17) |
 | Severity   | Medium     |
 | Discovered | 2026-07-16 |
 | Module     | CIB        |
@@ -110,7 +110,7 @@ and advanced choices deterministic. Close after native Windows CI evidence.
 
 | Field      | Value      |
 | ---------- | ---------- |
-| Status     | Open       |
+| Status     | Closed (2026-07-17) |
 | Severity   | Medium     |
 | Discovered | 2026-07-16 |
 | Module     | CIB        |
@@ -138,7 +138,7 @@ after the native Windows shape journey passes.
 
 | Field      | Value      |
 | ---------- | ---------- |
-| Status     | Open       |
+| Status     | Closed (2026-07-17) |
 | Severity   | Medium     |
 | Discovered | 2026-07-17 |
 | Module     | CIB        |
@@ -159,7 +159,7 @@ regressions can ship while existing portability checks remain green.
 
 | Field      | Value      |
 | ---------- | ---------- |
-| Status     | Open       |
+| Status     | Closed (2026-07-17) |
 | Severity   | Medium     |
 | Discovered | 2026-07-17 |
 | Module     | CIB        |
@@ -185,7 +185,7 @@ after the native Windows journey passes.
 
 | Field      | Value      |
 | ---------- | ---------- |
-| Status     | Open       |
+| Status     | Closed (2026-07-17) |
 | Severity   | Medium     |
 | Discovered | 2026-07-17 |
 | Module     | CIB        |
@@ -211,7 +211,7 @@ the Windows PowerShell 5.1 journey passes.
 
 | Field      | Value      |
 | ---------- | ---------- |
-| Status     | Open       |
+| Status     | Closed (2026-07-17) |
 | Severity   | Low        |
 | Discovered | 2026-07-17 |
 | Module     | CIB        |
