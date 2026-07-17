@@ -1241,7 +1241,9 @@ mod tests {
             assert!(!content.contains("model:"));
         }
 
-        assert!(resolve_model(AiTool::Grok, AgentRole::Planner, ModelPreference::Default).is_none());
+        assert!(
+            resolve_model(AiTool::Grok, AgentRole::Planner, ModelPreference::Default).is_none()
+        );
         assert!(agent_files(AiTool::Grok, ModelPreference::Default).is_empty());
     }
 

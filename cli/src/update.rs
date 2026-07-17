@@ -190,11 +190,12 @@ pub fn cmd_update(start: &Path) -> i32 {
         ".codex/codex-config-snippet.toml",
     ];
     // Prefer each tool's model preference from `.aps/config.yml` when present.
-    let config_models: Vec<(AiTool, ModelPreference)> = fs::read_to_string(root.join(".aps/config.yml"))
-        .ok()
-        .and_then(|text| parse_config(&text).ok())
-        .map(|s| s.tools.into_iter().map(|c| (c.tool, c.model)).collect())
-        .unwrap_or_default();
+    let config_models: Vec<(AiTool, ModelPreference)> =
+        fs::read_to_string(root.join(".aps/config.yml"))
+            .ok()
+            .and_then(|text| parse_config(&text).ok())
+            .map(|s| s.tools.into_iter().map(|c| (c.tool, c.model)).collect())
+            .unwrap_or_default();
     let model_for = |tool: AiTool| -> ModelPreference {
         config_models
             .iter()
@@ -203,7 +204,12 @@ pub fn cmd_update(start: &Path) -> i32 {
             .unwrap_or(ModelPreference::Default)
     };
 
-    for tool in [AiTool::ClaudeCode, AiTool::Copilot, AiTool::Codex, AiTool::OpenCode] {
+    for tool in [
+        AiTool::ClaudeCode,
+        AiTool::Copilot,
+        AiTool::Codex,
+        AiTool::OpenCode,
+    ] {
         let label = match tool {
             AiTool::ClaudeCode => "Claude Code agents (.claude/agents/)",
             AiTool::Copilot => "Copilot agents (.github/agents/)",
@@ -212,9 +218,7 @@ pub fn cmd_update(start: &Path) -> i32 {
             _ => "agents",
         };
         println!("\n{label}:");
-        let installed = agent_paths(tool)
-            .iter()
-            .any(|rel| root.join(rel).is_file())
+        let installed = agent_paths(tool).iter().any(|rel| root.join(rel).is_file())
             || (tool == AiTool::Codex
                 && legacy_codex_snippets
                     .iter()
