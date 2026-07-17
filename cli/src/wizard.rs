@@ -765,10 +765,10 @@ impl WizardState {
     }
 
     fn cycle_current_model(&mut self) {
-        if let Some(config) = self.current_tool_config_mut() {
-            if config.tool.supports_model_preference() {
-                config.model = config.model.next();
-            }
+        if let Some(config) = self.current_tool_config_mut()
+            && config.tool.supports_model_preference()
+        {
+            config.model = config.model.next();
         }
     }
 
