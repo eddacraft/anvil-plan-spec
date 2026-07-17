@@ -85,7 +85,7 @@ is promoted back to the relevant module.
 
 ### CIB-002: Hand the public installers to the native TUI
 
-- **Status:** In Progress
+- **Status:** Complete: 2026-07-17
 - **Intent:** Make each default interactive installation feel like one APS
   setup journey instead of a shell picker followed by a separate `aps init`.
 - **Expected Outcome:** On a supported interactive terminal, the no-argument
@@ -112,11 +112,11 @@ is promoted back to the relevant module.
   picker, and a Unix PTY regression proves the installed binary renders the
   native TUI. The Windows job is configured to install the shipped GNU archive
   and exercise the PowerShell handoff under both PowerShell 7 and Windows
-  PowerShell 5.1; native execution evidence is still pending.
+  PowerShell 5.1. Both native Windows variants passed in CI.
 
 ### CIB-003: Keep init project-shape and root-template choices coherent
 
-- **Status:** In Progress
+- **Status:** Complete: 2026-07-17
 - **Intent:** Ensure the init choices shown to users produce the root plan shape
   they selected.
 - **Expected Outcome:** Selecting Monorepo produces a monorepo root
@@ -145,11 +145,12 @@ is promoted back to the relevant module.
   or multiply selected root-template flags fail clearly, and an explicit shape
   replaces a stale root inherited from config. Review names the root index that
   will be written. The monorepo root template also uses the canonical
-  `## Modules` heading so the generated plan passes structural lint.
+  `## Modules` heading so the generated plan passes structural lint. Native
+  Windows CI confirmed single-project, monorepo, and nested root generation.
 
 ### CIB-004: Enforce native Windows PowerShell user journeys
 
-- **Status:** In Progress
+- **Status:** Complete: 2026-07-17
 - **Intent:** Turn Windows PowerShell support from a portability claim into a
   behavioural compatibility gate for user-facing APS workflows.
 - **Expected Outcome:** Every documented user workflow has a native PowerShell
@@ -169,7 +170,7 @@ is promoted back to the relevant module.
   `scaffold/update.ps1`, Windows smoke-test harness, user installation and usage
   documentation
 - **Confidence:** medium
-- **Progress:** The first native Windows run successfully installed and
+- **Results:** The first native Windows run successfully installed and
   executed the shipped GNU archive, then exposed Windows path separators being
   misclassified by Rust lint. Path classification is now normalised and backed
   by Windows-style index, module, action, release, and template regressions;
@@ -179,15 +180,15 @@ is promoted back to the relevant module.
   installation, hooks, and lint before the harness promoted the expected
   non-zero `aps next` stderr into a terminating error. Expected native failures
   are now captured without relaxing strict handling for the rest of the
-  journey. Native 5.1 confirmation remains pending.
+  journey. The final CI run passed the full native journey under both
+  PowerShell 7 and Windows PowerShell 5.1.
 
 ## Status Roll-up
 
 - **Concern:** Standing APS maintenance intake
-- **Progress:** 0/4 work items Complete
-- **Readout:** CIB-002, CIB-003, and CIB-004 are implemented locally and remain
-  In Progress pending their native Windows CI evidence. CIB-001 remains
-  isolated in its own worktree.
+- **Progress:** 3/4 work items Complete
+- **Readout:** CIB-002, CIB-003, and CIB-004 are complete with native Windows
+  CI evidence. CIB-001 remains Draft and isolated in its own worktree.
 
 ## Decisions
 
