@@ -43,10 +43,16 @@ impl FileType {
 
 /// True when `path` sits anywhere under a `releases/` directory.
 pub fn in_releases_dir(path: &str) -> bool {
+    let path = path.replace('\\', "/");
     path.contains("/releases/") || path.starts_with("releases/")
 }
 
 pub fn file_type(path: &str) -> FileType {
+    // Paths discovered on Windows contain backslashes. Normalise at the
+    // classification boundary so every path rule has the same semantics on
+    // Unix and Windows (CIB-004 / ISS-006).
+    let normalized = path.replace('\\', "/");
+    let path = normalized.as_str();
     let basename = path.rsplit('/').next().unwrap_or(path);
     let dirname = match path.rfind('/') {
         Some(index) => &path[..index],
@@ -746,9 +752,25 @@ mod tests {
     }
 
     #[test]
+    fn classifies_windows_paths_by_file_role() {
+        assert_eq!(file_type(r"plans\index.aps.md"), FileType::Index);
+        assert_eq!(file_type(r"plans\modules\auth.aps.md"), FileType::Module);
+        assert_eq!(
+            file_type(r"plans\execution\AUTH-001.actions.md"),
+            FileType::Actions
+        );
+        assert_eq!(file_type(r"plans\releases\v0.6.0.md"), FileType::Release);
+        assert_eq!(
+            file_type(r"plans\releases\.release.template.md"),
+            FileType::Template
+        );
+    }
+
+    #[test]
     fn in_releases_dir_matches_both_anchors() {
         assert!(in_releases_dir("plans/releases/v0.3.0.md")); // nested
         assert!(in_releases_dir("releases/v0.3.0.md")); // repo-relative root
+        assert!(in_releases_dir(r"plans\releases\v0.3.0.md")); // Windows
         assert!(!in_releases_dir("plans/modules/auth.aps.md"));
         assert!(!in_releases_dir("releases.md")); // not a dir segment
     }
