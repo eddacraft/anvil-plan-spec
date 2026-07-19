@@ -2,9 +2,9 @@
 
 | ID           | Owner  | Priority | Status |
 | ------------ | ------ | -------- | ------ |
-| INTEGRATIONS | @aneki | medium   | In Progress |
+| INTEGRATIONS | @aneki | medium   | Complete |
 
-**Last reviewed:** 2026-07-16
+**Last reviewed:** 2026-07-17
 
 ## Purpose
 
@@ -39,7 +39,7 @@ without making external systems the source of truth.
 
 ## Work Items
 
-### INTEGRATIONS-001: Define JSON export shape — In Progress
+### INTEGRATIONS-001: Define JSON export shape — Complete 2026-07-16
 
 - **Intent:** Let external tools consume APS without owning APS state
 - **Expected Outcome:** Documented JSON shape for index, modules, work items,
@@ -49,8 +49,9 @@ without making external systems the source of truth.
   stable JSON suitable for CI or GitHub sync experiments
 - **Files:** docs/integrations.md
 - **Confidence:** medium
+- **Results:** Shape documented in docs/integrations.md (schema aps-export/v1). Landed 2026-07-16.
 
-### INTEGRATIONS-002: Implement `aps export --json` — In Progress
+### INTEGRATIONS-002: Implement `aps export --json` — Complete 2026-07-16
 
 - **Intent:** Give non-CLI stakeholders and CI a machine-readable view of a
   plan tree (the substrate for dashboards, PR comments, and sync experiments).
@@ -65,8 +66,9 @@ without making external systems the source of truth.
 - **Dependencies:** INTEGRATIONS-001
 - **Files:** cli/src/export.rs, cli/src/main.rs, bin/aps, lib/export.sh
 - **Confidence:** medium
+- **Results:** Rust + bash export, byte-identical, parity-bound. Landed 2026-07-16.
 
-### INTEGRATIONS-003: GitHub Action for lint + rollup — In Progress
+### INTEGRATIONS-003: GitHub Action for lint + rollup — Complete 2026-07-16
 
 - **Intent:** One-line CI adoption for teams: lint plans on every PR and
   optionally post the rollup as a sticky PR comment (completes the second half
@@ -81,6 +83,7 @@ without making external systems the source of truth.
 - **Dependencies:** None (rollup comment reuses existing `aps rollup`)
 - **Files:** action.yml, docs/integrations.md, .github/workflows/
 - **Confidence:** medium
+- **Results:** action.yml composite + dogfood job `aps-lint` in ci.yml (uses: ./). Landed 2026-07-16.
 
 ## Ready Checklist
 

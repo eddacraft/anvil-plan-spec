@@ -37,6 +37,7 @@ execution plans, decisions, and design documents.
 
 ### EXAMPLES-001: Expand worked examples — Draft
 
+- **Status:** Draft
 - **Intent:** Show APS in more than one project shape and tool workflow
 - **Expected Outcome:** Examples cover single-feature, multi-module, agent-led,
   and execution-plan workflows with valid markdown.
@@ -44,7 +45,7 @@ execution plans, decisions, and design documents.
 - **Files:** examples/, test/fixtures/valid/
 - **Confidence:** medium
 
-### EXAMPLES-002: Team rollout guide + multi-owner example — In Progress
+### EXAMPLES-002: Team rollout guide + multi-owner example — Complete 2026-07-16
 
 - **Intent:** Give a team adopting APS the conventions the format alone
   doesn't answer: who owns the index, how plan changes are reviewed, how
@@ -60,3 +61,4 @@ execution plans, decisions, and design documents.
 - **Dependencies:** None (references INTEGRATIONS-003 Action once it exists)
 - **Files:** docs/team-rollout.md, examples/team-payments/
 - **Confidence:** high
+- **Results:** Team rollout guide + lint-clean multi-owner example. Landed 2026-07-16.

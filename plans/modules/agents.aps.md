@@ -2,9 +2,9 @@
 
 | ID    | Owner  | Priority | Status   |
 | ----- | ------ | -------- | -------- |
-| AGENT | @aneki | high     | In Progress |
+| AGENT | @aneki | high     | Complete |
 
-**Last reviewed:** 2026-07-16
+**Last reviewed:** 2026-07-17
 
 ## Purpose
 
@@ -273,7 +273,7 @@ mode agents (users invoke them deliberately, not as the default primary agent).
   Manual end-to-end tests documented in docs/plans/2026-03-15-agent-cross-harness-test-plan.md — require
   respective tool installs. Claude Code agents validated live.
 
-### AGENT-007: Retire Gemini scaffolding, add Grok (D-040) — In Progress
+### AGENT-007: Retire Gemini scaffolding, add Grok (D-040) — Complete 2026-07-16
 
 - **Intent:** Land the D-040 harness-set revision in the shipped tooling:
   Gemini out of init/setup/wizard/installers in all three CLIs; Grok in,
@@ -291,6 +291,7 @@ mode agents (users invoke them deliberately, not as the default primary agent).
   `--tools claude-code,copilot,codex,opencode,grok`; `gemini` as a tool value
   errors with a pointer to D-040; cargo test green.
 - **Confidence:** high
+- **Results:** Gemini retired from init/setup/wizard/installers; Grok added via Codex-shared `.agents/skills/` (D-040). Landed 2026-07-16.
 - **Dependencies:** D-040
 - **Files:** cli/src/, lib/scaffold.sh, scaffold/agents/, scaffold/install.ps1,
   test/run.sh, docs/

@@ -2,9 +2,9 @@
 
 | ID  | Owner  | Priority | Status      |
 | --- | ------ | -------- | ----------- |
-| VAL | @aneki | high     | In Progress |
+| VAL | @aneki | high     | Complete |
 
-**Last reviewed:** 2026-07-16
+**Last reviewed:** 2026-07-17
 
 ## Purpose
 
@@ -45,7 +45,7 @@ development and CI.
 - **Files:** bin/, lib/, test/fixtures/
 - **Confidence:** high
 
-### VAL-002: Fence-aware shared parser helpers — In Progress
+### VAL-002: Fence-aware shared parser helpers — Complete 2026-07-16
 
 - **Intent:** Close ISS-001 — work-item headers inside fenced code blocks are
   parsed as real items by the shared helpers (`get_work_items` and friends),
@@ -62,3 +62,4 @@ development and CI.
 - **Files:** lib/lint.sh, lib/orchestrate.sh, lib/Lint.psm1, cli/src/parser.rs,
   test/fixtures/
 - **Confidence:** high
+- **Results:** All shared parser helpers are fence-aware in bash, PowerShell, and Rust (D-039). Shared fixture pins the contract; ISS-001 closed. Landed 2026-07-16.

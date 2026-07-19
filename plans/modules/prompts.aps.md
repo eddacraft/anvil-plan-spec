@@ -70,6 +70,7 @@ harness now has a prompt entry point (D-006 closed by PROMPTS-003).
 
 ### PROMPTS-001: Normalize existing prompt variants — Ready
 
+- **Status:** Ready
 - **Intent:** Keep the OpenCode and Claude Code variants consistent with the
   generic APS rules so tool prompts state only their tool-specific deltas and
   otherwise defer to shared APS concepts.
@@ -83,7 +84,7 @@ harness now has a prompt entry point (D-006 closed by PROMPTS-003).
 - **Dependencies:** None
 - **Files:** docs/ai/prompting/opencode/, docs/ai/prompting/claudecode/
 
-### PROMPTS-002: Document variant-vs-stub policy — In Progress
+### PROMPTS-002: Document variant-vs-stub policy — Complete 2026-07-16
 
 - **Intent:** Make the 4th In-Scope rule concrete so future harnesses have a
   rule for whether to ship a full variant or a stub (resolves D-038).
@@ -94,11 +95,12 @@ harness now has a prompt entry point (D-006 closed by PROMPTS-003).
 - **Validation:** README review against the coverage table; markdownlint passes;
   a reader can decide variant-vs-stub for a new harness from the doc alone.
 - **Confidence:** high
+- **Results:** Variant-vs-stub policy documented; coverage table updated. Landed 2026-07-16.
 - **Dependencies:** None
 - **Files:** docs/ai/prompting/README.md, plans/modules/prompts.aps.md,
   plans/index.aps.md
 
-### PROMPTS-003: Add stub prompts for uncovered harnesses — In Progress
+### PROMPTS-003: Add stub prompts for uncovered harnesses — Complete 2026-07-16
 
 - **Intent:** Close the D-006 gap for Copilot, Codex, and Grok, which have no
   prompt entry point today.
@@ -111,6 +113,7 @@ harness now has a prompt entry point (D-006 closed by PROMPTS-003).
 - **Validation:** Each targeted harness resolves from prompt entry point →
   generic prompt → `AGENTS.md` with no dead links; markdownlint passes.
 - **Confidence:** medium
+- **Results:** Stub entry points for Copilot, Codex, and Grok. Closes D-006 coverage gap. Landed 2026-07-16.
 - **Dependencies:** PROMPTS-002, AGENT, D-040
 - **Files:** docs/ai/prompting/copilot/, docs/ai/prompting/codex/,
   docs/ai/prompting/grok/
