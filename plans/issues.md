@@ -236,4 +236,85 @@ PowerShell 5.1 journey passes.
 
 ## Questions
 
-_None yet._
+### Q-001: Which shared claim transport should team mode use?
+
+| Field      | Value      |
+| ---------- | ---------- |
+| Status     | Open       |
+| Priority   | High       |
+| Discovered | TEAM-000   |
+| Assigned   | unassigned |
+
+**Context:** Local exclusive files can coordinate processes sharing one
+filesystem, but team projects also need an atomic single winner across
+independent clones. The transport must preserve APS portability and auditability
+without requiring a hosted APS database.
+
+**Options considered:**
+
+1. Git refs/objects — compare-and-set and outside the worktree, but remote
+   namespace support, permissions, discovery, and cleanup need proof.
+2. Tracked claim files — visible and portable, but create default-branch churn
+   and reproduce the merge conflicts claims are meant to prevent.
+3. Provider state — authenticated and visible, but provider-specific and not
+   available offline.
+4. Required hosted service — strong shared transactions, rejected by current
+   APS constraints.
+
+**Related:** TEAM-000, TEAM-001, TEAM-002
+
+---
+
+### Q-002: How do claims affect the effective and declared work-item status?
+
+| Field      | Value      |
+| ---------- | ---------- |
+| Status     | Open       |
+| Priority   | High       |
+| Discovered | TEAM-000   |
+| Assigned   | unassigned |
+
+**Context:** Claims should immediately hide contested work from team-aware
+`next`, but changing shared APS markdown during claim acquisition causes the
+same cross-branch conflicts the coordination plane is intended to avoid. The
+design separates declared status from effective coordination views, but must
+decide when a successful claim becomes durably `In Progress`.
+
+**Options considered:**
+
+1. Claim only changes the effective view; the actor's implementation PR carries
+   the durable `In Progress`/completion edits.
+2. A coordinator writes `In Progress` directly to the integration branch.
+3. Claim changes the actor's branch copy only, while shared claim state prevents
+   another actor selecting the item.
+
+**Related:** TEAM-000, ORCH-002
+
+---
+
+### Q-003: How are actor identity, lease expiry, and takeover trusted?
+
+| Field      | Value      |
+| ---------- | ---------- |
+| Status     | Open       |
+| Priority   | High       |
+| Discovered | TEAM-000   |
+| Assigned   | unassigned |
+
+**Context:** A local actor name is self-asserted, while a provider can bind an
+operation to an authenticated user. Expiry must recover crashed agents without
+allowing clock skew, a short pause, or a malicious claimant to steal live work.
+APS must define useful coordination semantics without becoming an identity or
+authorisation provider.
+
+**Options considered:**
+
+1. Advisory identity with holder-only renew/release and explicit audited
+   takeover after expiry.
+2. Provider-authenticated identity when available, local advisory fallback.
+3. Human approval for every takeover, safer but unsuitable for unattended
+   recovery.
+
+**Related:** TEAM-000, TEAM-001, TEAM-002, TEAM-003
+
+---
