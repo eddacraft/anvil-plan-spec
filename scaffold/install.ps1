@@ -313,6 +313,12 @@ function Install-ApsGlobal {
 }
 
 function Invoke-ApsOnboarding {
+    if ((Test-Path -LiteralPath $Target) -and
+        -not (Test-Path -LiteralPath $Target -PathType Container)) {
+        Write-Err "TARGET exists and is not a directory: $Target"
+        exit 1
+    }
+
     Install-ApsGlobal
     if ($InstalledApsKind -ne "binary") {
         Write-Err "native onboarding requires the Windows release binary"
@@ -320,7 +326,12 @@ function Invoke-ApsOnboarding {
         exit 1
     }
 
-    New-Item -ItemType Directory -Path $Target -Force | Out-Null
+    try {
+        New-Item -ItemType Directory -Path $Target -Force -ErrorAction Stop | Out-Null
+    } catch {
+        Write-Err "Failed to create TARGET directory '$Target': $($_.Exception.Message)"
+        exit 1
+    }
     Write-Step "Launching native APS onboarding"
     Push-Location $Target
     try {
