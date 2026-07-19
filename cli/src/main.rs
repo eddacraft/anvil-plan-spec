@@ -12,6 +12,7 @@ mod date;
 mod doctor;
 mod export;
 mod lint;
+mod managed;
 mod migrate;
 mod next;
 mod orchestrate;

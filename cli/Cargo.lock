@@ -112,6 +112,7 @@ dependencies = [
  "crossterm",
  "eddacraft-tui",
  "ratatui",
+ "sha2",
 ]
 
 [[package]]

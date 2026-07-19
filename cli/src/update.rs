@@ -12,6 +12,7 @@ use std::fs;
 use std::path::Path;
 
 use crate::config::{self, parse_config};
+use crate::managed::{self, ReconcileResult};
 use crate::scaffold::{
     AGENTS_SKILL_DIR, CLAUDE_SKILL_DIR, HOOK_SCRIPTS, SKILL_FILES, agent_files, agent_paths,
     mark_executable,
@@ -172,19 +173,54 @@ pub fn cmd_update(start: &Path) -> i32 {
         }
     }
 
-    // Skill: reconcile each v2 skill root that is installed (.claude/skills/
-    // for Claude Code / Copilot / OpenCode, .agents/skills/ for Codex / Grok),
-    // plus a legacy root aps-planning/ tree when the project still has one.
+    // Skill: managed reconcile for each v2 skill root that is installed
+    // (.claude/skills/ for Claude Code / Copilot / OpenCode, .agents/skills/
+    // for Codex / Grok). Sidecar `.aps-managed.json` distinguishes APS-owned
+    // content from user edits — dirty trees are refused, not overwritten.
+    // Legacy root aps-planning/ stays on string reconcile until migrate.
+    // Agents remain on string reconcile (managed inventory is Phase 3).
     println!("\nPlanning skill:");
     let mut skill_roots = 0;
+    let expected_skill = managed::expected_skill_manifest();
     for dir in [CLAUDE_SKILL_DIR, AGENTS_SKILL_DIR] {
-        if !root.join(dir).is_dir() {
+        let skill_dir = root.join(dir);
+        if !skill_dir.is_dir() {
             continue;
         }
         skill_roots += 1;
-        for (name, content) in SKILL_FILES {
-            let rel = format!("{dir}/{name}");
-            reconcile(&root.join(&rel), &rel, content, &mut tally);
+        match managed::reconcile_managed_skill(&skill_dir, &SKILL_FILES, &expected_skill) {
+            Ok(ReconcileResult::Unchanged) => {
+                println!("  = {dir} (unchanged)");
+                tally.unchanged += 1;
+            }
+            Ok(ReconcileResult::Updated) => {
+                println!("  ~ {dir} (updated)");
+                tally.updated += 1;
+            }
+            Ok(ReconcileResult::Added) => {
+                println!("  + {dir} (added)");
+                tally.added += 1;
+            }
+            Ok(ReconcileResult::DirtySkipped) => {
+                println!("  ! {dir} (dirty: user modified; not updated)");
+                tally.skipped += 1;
+            }
+            Ok(ReconcileResult::UnmanagedSkipped) => {
+                println!("  ! {dir} (unmanaged: differs from embeds; not updated)");
+                tally.skipped += 1;
+            }
+            Ok(ReconcileResult::Adopted) => {
+                println!("  ~ {dir} (adopted managed marker)");
+                tally.updated += 1;
+            }
+            Ok(ReconcileResult::BrokenSkipped) => {
+                println!("  ! {dir} (broken managed marker; not updated)");
+                tally.skipped += 1;
+            }
+            Err(err) => {
+                println!("  ! {dir} (failed: {err})");
+                tally.failed += 1;
+            }
         }
     }
     let legacy_skill = root.join("aps-planning");
@@ -348,6 +384,12 @@ mod tests {
         assert_eq!(cmd_update(&root), 0);
         assert!(plans.join("designs/.design.template.md").is_file());
         assert!(root.join(".claude/skills/aps-planning/SKILL.md").is_file());
+        // Empty skill dir is installed with content + managed marker.
+        assert!(
+            root.join(".claude/skills/aps-planning")
+                .join(crate::managed::MANIFEST_NAME)
+                .is_file()
+        );
         // The v2 skill is three files — hooks.md is v1-only.
         assert!(!root.join(".claude/skills/aps-planning/hooks.md").exists());
         // No other skill root is invented.
@@ -460,6 +502,67 @@ mod tests {
         fs::create_dir_all(plans.join("execution")).unwrap();
         assert_eq!(cmd_update(&root), 0); // first run adds
         assert_eq!(cmd_update(&root), 0); // second run is a no-op write-wise
+        fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn managed_skill_refuses_dirty_user_edits() {
+        let root = scratch("skill-dirty");
+        let plans = root.join("plans");
+        let skill = root.join(".claude/skills/aps-planning");
+        fs::create_dir_all(plans.join("modules")).unwrap();
+        fs::create_dir_all(&skill).unwrap();
+        // First update installs embeds + marker into the empty skill dir.
+        assert_eq!(cmd_update(&root), 0);
+        assert!(skill.join(crate::managed::MANIFEST_NAME).is_file());
+        fs::write(skill.join("SKILL.md"), "# local fork\n").unwrap();
+
+        assert_eq!(cmd_update(&root), 0);
+        assert_eq!(
+            fs::read_to_string(skill.join("SKILL.md")).unwrap(),
+            "# local fork\n"
+        );
+        fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn managed_skill_adopts_matching_unmanaged_tree() {
+        let root = scratch("skill-adopt");
+        let plans = root.join("plans");
+        let skill = root.join(".claude/skills/aps-planning");
+        fs::create_dir_all(plans.join("modules")).unwrap();
+        fs::create_dir_all(&skill).unwrap();
+        for (name, content) in SKILL_FILES {
+            fs::write(skill.join(name), content).unwrap();
+        }
+
+        assert_eq!(cmd_update(&root), 0);
+        assert!(skill.join(crate::managed::MANIFEST_NAME).is_file());
+        // Content unchanged; only the marker was added.
+        assert_eq!(
+            fs::read_to_string(skill.join("SKILL.md")).unwrap(),
+            SKILL_FILES[0].1
+        );
+        fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn managed_skill_skips_unmanaged_differing_tree() {
+        let root = scratch("skill-unmanaged");
+        let plans = root.join("plans");
+        let skill = root.join(".claude/skills/aps-planning");
+        fs::create_dir_all(plans.join("modules")).unwrap();
+        fs::create_dir_all(&skill).unwrap();
+        fs::write(skill.join("SKILL.md"), "custom\n").unwrap();
+        fs::write(skill.join("reference.md"), "custom\n").unwrap();
+        fs::write(skill.join("examples.md"), "custom\n").unwrap();
+
+        assert_eq!(cmd_update(&root), 0);
+        assert!(!skill.join(crate::managed::MANIFEST_NAME).exists());
+        assert_eq!(
+            fs::read_to_string(skill.join("SKILL.md")).unwrap(),
+            "custom\n"
+        );
         fs::remove_dir_all(&root).ok();
     }
 }
