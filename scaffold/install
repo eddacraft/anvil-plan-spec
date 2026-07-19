@@ -328,6 +328,11 @@ install_global() {
 }
 
 run_onboarding() {
+  if [[ -e "$TARGET" && ! -d "$TARGET" ]]; then
+    error "TARGET exists and is not a directory: $TARGET"
+    exit 1
+  fi
+
   install_global
   if [[ "$INSTALLED_KIND" != "binary" ]]; then
     error "native onboarding requires the release binary on this platform"
@@ -335,7 +340,10 @@ run_onboarding() {
     exit 1
   fi
 
-  mkdir -p "$TARGET"
+  if ! mkdir -p "$TARGET"; then
+    error "Failed to create TARGET directory: $TARGET"
+    exit 1
+  fi
   step "Launching native APS onboarding"
   if [[ -t 0 && -t 1 ]]; then
     (cd "$TARGET" && "$INSTALLED_APS" init)

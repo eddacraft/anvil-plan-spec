@@ -322,6 +322,9 @@ grep -q 'pick_mode' "$INSTALL" || fail "install missing TTY picker"
 # PowerShell parity
 grep -qF -- '--upgrade' "$PROJECT_ROOT/scaffold/install.ps1" || fail "install.ps1 missing --upgrade"
 grep -q 'Select-ApsMode' "$PROJECT_ROOT/scaffold/install.ps1" || fail "install.ps1 missing picker"
+grep -q 'TARGET exists and is not a directory' "$INSTALL" || fail "bash onboarding does not reject file TARGETs"
+grep -q 'TARGET exists and is not a directory' "$PROJECT_ROOT/scaffold/install.ps1" || fail "PowerShell onboarding does not reject file TARGETs"
+grep -q 'New-Item -ItemType Directory -Path $Target' "$PROJECT_ROOT/scaffold/install.ps1" || fail "PowerShell onboarding does not create a missing TARGET"
 pass
 
 # Test 31: Installer argument guards reject bad input without network
@@ -338,6 +341,11 @@ fi
 if bash "$INSTALL" --agent /abs </dev/null >/dev/null 2>&1; then
   fail "absolute TARGET should be rejected for project modes"
 fi
+ONBOARD_FILE=$(mktemp)
+onboard_error=$(bash "$INSTALL" --onboard "$ONBOARD_FILE" </dev/null 2>&1 || true)
+echo "$onboard_error" | grep -q 'TARGET exists and is not a directory' \
+  || fail "onboarding file TARGET should fail clearly before network access"
+rm -f "$ONBOARD_FILE"
 # No mode + no terminal MUST exit non-zero (not silently scaffold). setsid
 # detaches the controlling terminal so /dev/tty is genuinely absent.
 if bash "$INSTALL" </dev/null >/dev/null 2>&1; then
@@ -395,9 +403,11 @@ EOF
     APS_TEST_ARCHIVE="$HANDOFF_DIR/aps.tar.gz" \
     APS_HANDOFF_LOG="$HANDOFF_DIR/handoff.log" \
     PATH="$HANDOFF_DIR/mock-bin:$HANDOFF_DIR/home/.aps/bin:$PATH" \
-    script -q -e -c "bash '$INSTALL' --onboard" /dev/null \
+    script -q -e -c "bash '$INSTALL' --onboard '$HANDOFF_DIR/project'" /dev/null \
       </dev/null >/dev/null 2>&1 \
     || fail "native onboarding path failed"
+  [[ -d "$HANDOFF_DIR/project" ]] \
+    || fail "native onboarding did not create the missing TARGET"
   grep -qxF 'init' "$HANDOFF_DIR/handoff.log" \
     || fail "native onboarding did not invoke aps init"
   rm -rf "$HANDOFF_DIR"
