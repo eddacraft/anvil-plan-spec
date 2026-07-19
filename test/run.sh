@@ -341,11 +341,12 @@ fi
 if bash "$INSTALL" --agent /abs </dev/null >/dev/null 2>&1; then
   fail "absolute TARGET should be rejected for project modes"
 fi
-ONBOARD_FILE=$(mktemp)
-onboard_error=$(bash "$INSTALL" --onboard "$ONBOARD_FILE" </dev/null 2>&1 || true)
+ONBOARD_ROOT=$(mktemp -d)
+: > "$ONBOARD_ROOT/not-a-directory"
+onboard_error=$(cd "$ONBOARD_ROOT" && bash "$INSTALL" --onboard not-a-directory </dev/null 2>&1 || true)
 echo "$onboard_error" | grep -q 'TARGET exists and is not a directory' \
   || fail "onboarding file TARGET should fail clearly before network access"
-rm -f "$ONBOARD_FILE"
+rm -rf "$ONBOARD_ROOT"
 # No mode + no terminal MUST exit non-zero (not silently scaffold). setsid
 # detaches the controlling terminal so /dev/tty is genuinely absent.
 if bash "$INSTALL" </dev/null >/dev/null 2>&1; then
@@ -403,7 +404,7 @@ EOF
     APS_TEST_ARCHIVE="$HANDOFF_DIR/aps.tar.gz" \
     APS_HANDOFF_LOG="$HANDOFF_DIR/handoff.log" \
     PATH="$HANDOFF_DIR/mock-bin:$HANDOFF_DIR/home/.aps/bin:$PATH" \
-    script -q -e -c "bash '$INSTALL' --onboard '$HANDOFF_DIR/project'" /dev/null \
+    script -q -e -c "cd '$HANDOFF_DIR' && bash '$INSTALL' --onboard project" /dev/null \
       </dev/null >/dev/null 2>&1 \
     || fail "native onboarding path failed"
   [[ -d "$HANDOFF_DIR/project" ]] \
