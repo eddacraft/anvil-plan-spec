@@ -5,7 +5,7 @@
 | Status  | Active     |
 | Owner   | @aneki     |
 | Created | 2025-12-31 |
-| Updated | 2026-07-17 |
+| Updated | 2026-07-19 |
 
 ## Problem
 
@@ -85,6 +85,7 @@ release narratives live in [`plans/releases/`](./releases/).
 | [examples](./modules/examples.aps.md)         | Additional worked examples                                | In Progress |
 | [prompts](./modules/prompts.aps.md)           | Tool-specific prompt variants                             | In Progress |
 | [integrations](./modules/integrations.aps.md) | JSON export, GitHub Action, lint/rollup CI surface        | Complete    |
+| [team-coordination](./modules/team-coordination.aps.md) | Multi-human, multi-agent claims, handoffs, and visibility | Draft |
 | [monorepo](./modules/monorepo.aps.md)         | Nested index.aps.md plans, federated lint + orchestration | Complete |
 | [package-views](./modules/package-views.aps.md) | CLI tooling for the tagged monorepo tier (`Packages:` lint, next filter, generated views) | Complete |
 | [ci-parity](./modules/ci-parity.aps.md)       | Behavioural pwsh + cross-CLI parity checks in CI          | Complete |
@@ -149,3 +150,4 @@ These are explicitly out of scope:
 - **D-038:** Promote `prompts` from Draft to Ready — _decided 2026-06-27: yes. Work broken out into PROMPTS-001 (normalize existing variants), PROMPTS-002 (variant-vs-stub policy), PROMPTS-003 (stubs for Copilot/Codex/Gemini, closing the D-006 coverage gap). See [prompts.aps.md](./modules/prompts.aps.md)_
 - **D-039:** CLI three-way lockstep — _decided 2026-07-01: the `aps` CLI has three independent implementations of one command surface — Rust (`cli/src/`, the primary distributed binary), bash (`bin/aps` + `lib/*.sh`, the zero-dependency Unix reference/fallback), and PowerShell (`bin/aps.ps1` + `lib/*.psm1`, the Windows fallback). They do not call each other, so a rule added to one is absent from the others until ported by hand. **Policy:** all three stay in lockstep — a lint/`next`/orchestration change is not `Complete` until it lands in all three and the shared parity suite (`test/fixtures/**`) confirms identical behaviour. This supersedes orchestrate D-006's "bash is feature-frozen after parity" clause (bash is a maintained peer, not frozen) and extends the PowerShell-parity rule to Rust. See tui D-031, orchestrate D-006, and monorepo MONO-007 (the first parity debt this policy retires)._
 - **D-040:** Harness set revision — Gemini out, Grok in — _decided 2026-07-16: the supported harness set becomes **Claude Code, Copilot, Codex, OpenCode, Grok** (amends the five fixed by D-013/D-019). xAI's Grok Build reads the `AGENTS.md` instruction-file family and discovers Agent Skills from `.agents/skills/` (and `.claude/` assets) natively, so it slots into the existing Codex-shared paths with no bespoke assets — no `GROK.md`, no handwritten skill copies. Gemini scaffolding (`.gemini/skills/`, the `gemini` tool option in init/setup/wizard) is removed from all three CLIs and the installers; existing user installs are untouched and `GEMINI.md` stays on the migrate "protected, never removed" list. See [prompts.aps.md](./modules/prompts.aps.md) PROMPTS-003 and [agents.aps.md](./modules/agents.aps.md)._
+- **D-041:** Explore a team coordination plane — _decided 2026-07-19: add TEAM as a Draft module to design optional actor/run identity, atomic claim leases, handoffs, conflict-aware selection, and delivery visibility for multi-human projects running separate agent processes. Durable APS markdown remains the source of planning intent; transient coordination must not require hosted state, expand the canonical status vocabulary, or add mandatory fields to minimal templates. See [team-coordination.aps.md](./modules/team-coordination.aps.md) and [the draft design](./designs/2026-07-19-team-coordination.design.md)._
