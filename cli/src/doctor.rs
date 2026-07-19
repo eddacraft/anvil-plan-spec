@@ -220,11 +220,7 @@ fn config_expects_skill(root: &Path) -> bool {
     selections.tools.iter().any(|c| {
         matches!(
             c.tool,
-            AiTool::ClaudeCode
-                | AiTool::Copilot
-                | AiTool::Codex
-                | AiTool::OpenCode
-                | AiTool::Grok
+            AiTool::ClaudeCode | AiTool::Copilot | AiTool::Codex | AiTool::OpenCode | AiTool::Grok
         )
     })
 }
@@ -235,10 +231,7 @@ fn skill_freshness_findings(root: &Path) -> Vec<Finding> {
         (CLAUDE_SKILL_DIR, root.join(CLAUDE_SKILL_DIR)),
         (AGENTS_SKILL_DIR, root.join(AGENTS_SKILL_DIR)),
     ];
-    let present: Vec<_> = roots
-        .iter()
-        .filter(|(_, path)| path.is_dir())
-        .collect();
+    let present: Vec<_> = roots.iter().filter(|(_, path)| path.is_dir()).collect();
 
     if present.is_empty() {
         return if config_expects_skill(root) {
@@ -261,11 +254,9 @@ fn skill_freshness_findings(root: &Path) -> Vec<Finding> {
         .map(|(label, path)| {
             let state = managed::evaluate_skill_dir(path, &expected);
             match state {
-                SkillState::Fresh => Finding::new(
-                    Level::Ok,
-                    "planning skill",
-                    format!("{label}: fresh"),
-                ),
+                SkillState::Fresh => {
+                    Finding::new(Level::Ok, "planning skill", format!("{label}: fresh"))
+                }
                 SkillState::Stale => Finding::new(
                     Level::Warn,
                     "planning skill",
@@ -287,7 +278,10 @@ fn skill_freshness_findings(root: &Path) -> Vec<Finding> {
                 SkillState::Broken => Finding::new(
                     Level::Problem,
                     "planning skill",
-                    format!("{label}: broken managed marker — fix or remove {}", managed::MANIFEST_NAME),
+                    format!(
+                        "{label}: broken managed marker — fix or remove {}",
+                        managed::MANIFEST_NAME
+                    ),
                 ),
                 SkillState::Absent => Finding::new(
                     Level::Warn,

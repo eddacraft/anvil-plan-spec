@@ -104,10 +104,7 @@ impl SkillManifest {
     pub fn to_json(&self) -> String {
         let mut out = String::new();
         out.push_str("{\n");
-        out.push_str(&format!(
-            "  \"schemaVersion\": {},\n",
-            self.schema_version
-        ));
+        out.push_str(&format!("  \"schemaVersion\": {},\n", self.schema_version));
         out.push_str(&format!("  \"kind\": \"{}\",\n", escape_json(&self.kind)));
         out.push_str(&format!("  \"name\": \"{}\",\n", escape_json(&self.name)));
         out.push_str(&format!(
@@ -213,7 +210,7 @@ pub fn evaluate_skill_dir(skill_dir: &Path, expected: &SkillManifest) -> SkillSt
 ///
 /// - Absent → write files + marker (`Added`)
 /// - Fresh → no-op (`Unchanged`)
-/// - Stale → rewrite files + marker (`Updated`)
+/// - Stale → refresh marker; rewrite files only when content differs from embeds (`Updated`)
 /// - Dirty → refuse (`DirtySkipped`)
 /// - Unmanaged matching embeds → write marker only (`Adopted`)
 /// - Unmanaged differing → refuse (`UnmanagedSkipped`)
@@ -231,7 +228,11 @@ pub fn reconcile_managed_skill(
         }
         SkillState::Fresh => Ok(ReconcileResult::Unchanged),
         SkillState::Stale => {
-            write_skill_files(skill_dir, files)?;
+            // Content may already match embeds (e.g. only cliVersion in the
+            // marker drifted). Avoid needless file rewrites/mtime churn.
+            if !skill_files_match(skill_dir, files) {
+                write_skill_files(skill_dir, files)?;
+            }
             write_skill_marker(skill_dir, expected).map_err(|e| e.to_string())?;
             Ok(ReconcileResult::Updated)
         }
@@ -289,10 +290,7 @@ fn escape_json(s: &str) -> String {
 
 fn json_u32(text: &str, key: &str) -> Result<u32, String> {
     let after = after_key(text, key)?;
-    let digits: String = after
-        .chars()
-        .take_while(|c| c.is_ascii_digit())
-        .collect();
+    let digits: String = after.chars().take_while(|c| c.is_ascii_digit()).collect();
     if digits.is_empty() {
         return Err(format!("non-numeric value for '{key}'"));
     }
@@ -323,8 +321,8 @@ fn json_string_map(text: &str, key: &str) -> Result<BTreeMap<String, String>, St
                 break;
             }
         }
-        let (k, after_key_str) = parse_json_string(cursor)
-            .map_err(|e| format!("{key} entry key: {e}"))?;
+        let (k, after_key_str) =
+            parse_json_string(cursor).map_err(|e| format!("{key} entry key: {e}"))?;
         let after_colon = after_key_str
             .trim_start()
             .strip_prefix(':')
@@ -454,7 +452,7 @@ mod tests {
     }
 
     #[test]
-    fn stale_marker_with_matching_hashes_updates() {
+    fn stale_marker_with_matching_content_refreshes_marker_only() {
         let dir = scratch("stale");
         install_expected(&dir);
         // Rewrite marker to an older cliVersion / digest while keeping file hashes.
@@ -470,9 +468,47 @@ mod tests {
             ReconcileResult::Updated
         );
         assert_eq!(evaluate_skill_dir(&dir, &expected), SkillState::Fresh);
-        // Content restored to embeds.
+        // On-disk skill content already matched embeds — still intact.
         let skill = fs::read_to_string(dir.join("SKILL.md")).unwrap();
         assert_eq!(skill, SKILL_FILES[0].1);
+        fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn stale_marker_with_outdated_content_rewrites_files() {
+        let dir = scratch("stale-content");
+        // Old content + marker that tracks it (so evaluate returns Stale, not Dirty).
+        let old = [
+            ("SKILL.md", "old skill\n"),
+            ("reference.md", "old ref\n"),
+            ("examples.md", "old examples\n"),
+        ];
+        let mut files = BTreeMap::new();
+        for (name, content) in &old {
+            fs::write(dir.join(name), content).unwrap();
+            files.insert((*name).to_string(), sha256_hex(content.as_bytes()));
+        }
+        let stale = SkillManifest {
+            schema_version: SCHEMA_VERSION,
+            kind: KIND_SKILL.to_string(),
+            name: SKILL_NAME.to_string(),
+            cli_version: "0.0.1".to_string(),
+            bundle_digest: bundle_digest(&files),
+            files,
+        };
+        write_skill_marker(&dir, &stale).unwrap();
+
+        let expected = expected_skill_manifest();
+        assert_eq!(evaluate_skill_dir(&dir, &expected), SkillState::Stale);
+        assert_eq!(
+            reconcile_managed_skill(&dir, &SKILL_FILES, &expected).unwrap(),
+            ReconcileResult::Updated
+        );
+        assert_eq!(evaluate_skill_dir(&dir, &expected), SkillState::Fresh);
+        assert_eq!(
+            fs::read_to_string(dir.join("SKILL.md")).unwrap(),
+            SKILL_FILES[0].1
+        );
         fs::remove_dir_all(&dir).ok();
     }
 

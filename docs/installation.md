@@ -251,7 +251,7 @@ Skill trees also carry a managed inventory sidecar (`.aps-managed.json`) next to
 `SKILL.md`. `aps update` uses it to refresh APS-owned skill content safely: it
 will not overwrite skill files you have modified (dirty), and it can adopt a
 matching unmanaged install by writing the marker only. `aps doctor` reports each
-installed skill root as fresh, stale, dirty, unmanaged, or broken.
+installed skill root as fresh, stale, dirty, unmanaged, broken, or absent (empty).
 
 ## Project Config Contract (`.aps/config.yml`)
 
