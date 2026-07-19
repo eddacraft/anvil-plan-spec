@@ -10,6 +10,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- **Managed skill freshness** — planning skill installs write
+  `.aps-managed.json` (SHA-256 inventory + CLI version). `aps update`
+  reconciles skill trees safely: fresh stays put, stale rewrites, dirty and
+  unmanaged-differing trees are refused, and matching unmanaged installs are
+  adopted with a marker only. `aps doctor` reports each skill root as
+  Fresh/Stale/Dirty/Unmanaged/Broken/Absent. Agent inventory remains Phase 3.
 - **`aps export --json`** (INTEGRATIONS-001/002) — a compact, deterministic
   JSON snapshot of the plan tree (schema `aps-export/v1`): modules in file
   order, work items in document order, with statuses, dependency tokens,

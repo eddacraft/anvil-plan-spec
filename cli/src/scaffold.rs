@@ -13,6 +13,7 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
+use crate::managed::{self, MANIFEST_NAME};
 use crate::wizard::{
     AiTool, Component, HookVerbosity, ModelPreference, Profile, ProjectShape, Template, ToolConfig,
 };
@@ -692,6 +693,7 @@ pub fn skill_step(tools: &[ToolConfig]) -> Option<ScaffoldStep> {
         .any(|c| matches!(c.tool, AiTool::Codex | AiTool::Grok));
 
     let mut ops = Vec::new();
+    let marker_json = managed::expected_skill_manifest().to_json();
     for (dir, wanted) in [
         (CLAUDE_SKILL_DIR, claude_root),
         (AGENTS_SKILL_DIR, agents_root),
@@ -705,6 +707,11 @@ pub fn skill_step(tools: &[ToolConfig]) -> Option<ScaffoldStep> {
                 content,
             });
         }
+        // Managed inventory sidecar so `aps update` can refuse dirty trees.
+        ops.push(FileOp::WriteOwned {
+            path: PathBuf::from(dir).join(MANIFEST_NAME),
+            content: marker_json.clone(),
+        });
     }
     (!ops.is_empty()).then(|| ScaffoldStep {
         label: "Install planning skill".to_string(),
@@ -1375,6 +1382,7 @@ mod tests {
             "plans/releases/README.md",
             "plans/releases/.release.template.md",
             ".claude/skills/aps-planning/SKILL.md",
+            ".claude/skills/aps-planning/.aps-managed.json",
             ".claude/agents/aps-conductor.md",
             ".aps/scripts/install-hooks.sh",
             ".aps/config.yml",
@@ -1442,8 +1450,11 @@ mod tests {
         // Tool-agnostic (setup all) defaults to the shared .claude/skills root.
         let step = skill_step(&[]).unwrap();
         assert_eq!(roots(&step), (true, false));
-        // hooks.md is v1-only; the v2 skill is exactly three files per root.
-        assert_eq!(step.ops.len(), SKILL_FILES.len());
+        // hooks.md is v1-only; the v2 skill is three content files + managed marker.
+        assert_eq!(step.ops.len(), SKILL_FILES.len() + 1);
+        assert!(step.ops.iter().any(|op| {
+            matches!(op, FileOp::WriteOwned { path, .. } if path.ends_with(MANIFEST_NAME))
+        }));
     }
 
     #[test]

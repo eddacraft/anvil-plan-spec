@@ -8,8 +8,10 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::config;
-use crate::scaffold::CLI_VERSION;
+use crate::config::{self, parse_config};
+use crate::managed::{self, SkillState};
+use crate::scaffold::{AGENTS_SKILL_DIR, CLAUDE_SKILL_DIR, CLI_VERSION};
+use crate::wizard::AiTool;
 
 /// Files a complete vendored/global bash `lib/` runtime must contain. Used to
 /// flag a half-installed `~/.aps/lib/` (e.g. one missing `audit.sh`).
@@ -201,7 +203,100 @@ pub fn diagnose(start: &Path, home: &Path, exe: Option<&Path>) -> Report {
         ));
     }
 
+    // 6. Planning skill freshness (Phase 1 managed inventory — skills only).
+    findings.extend(skill_freshness_findings(&root));
+
     Report { findings }
+}
+
+/// Tools that install the planning skill (generic-only projects do not).
+fn config_expects_skill(root: &Path) -> bool {
+    let Ok(text) = std::fs::read_to_string(root.join(".aps/config.yml")) else {
+        return false;
+    };
+    let Ok(selections) = parse_config(&text) else {
+        return false;
+    };
+    selections.tools.iter().any(|c| {
+        matches!(
+            c.tool,
+            AiTool::ClaudeCode
+                | AiTool::Copilot
+                | AiTool::Codex
+                | AiTool::OpenCode
+                | AiTool::Grok
+        )
+    })
+}
+
+fn skill_freshness_findings(root: &Path) -> Vec<Finding> {
+    let expected = managed::expected_skill_manifest();
+    let roots = [
+        (CLAUDE_SKILL_DIR, root.join(CLAUDE_SKILL_DIR)),
+        (AGENTS_SKILL_DIR, root.join(AGENTS_SKILL_DIR)),
+    ];
+    let present: Vec<_> = roots
+        .iter()
+        .filter(|(_, path)| path.is_dir())
+        .collect();
+
+    if present.is_empty() {
+        return if config_expects_skill(root) {
+            vec![Finding::new(
+                Level::Warn,
+                "planning skill",
+                "not installed — run `aps setup claude-code` (or codex/grok)".to_string(),
+            )]
+        } else {
+            vec![Finding::new(
+                Level::Ok,
+                "planning skill",
+                "not installed (optional)".to_string(),
+            )]
+        };
+    }
+
+    present
+        .into_iter()
+        .map(|(label, path)| {
+            let state = managed::evaluate_skill_dir(path, &expected);
+            match state {
+                SkillState::Fresh => Finding::new(
+                    Level::Ok,
+                    "planning skill",
+                    format!("{label}: fresh"),
+                ),
+                SkillState::Stale => Finding::new(
+                    Level::Warn,
+                    "planning skill",
+                    format!("{label}: stale — run `aps update`"),
+                ),
+                SkillState::Dirty => Finding::new(
+                    Level::Warn,
+                    "planning skill",
+                    format!("{label}: dirty (user modified) — not overwritten by `aps update`"),
+                ),
+                SkillState::Unmanaged => Finding::new(
+                    Level::Warn,
+                    "planning skill",
+                    format!(
+                        "{label}: unmanaged (no {}) — run `aps update` to adopt if content matches",
+                        managed::MANIFEST_NAME
+                    ),
+                ),
+                SkillState::Broken => Finding::new(
+                    Level::Problem,
+                    "planning skill",
+                    format!("{label}: broken managed marker — fix or remove {}", managed::MANIFEST_NAME),
+                ),
+                SkillState::Absent => Finding::new(
+                    Level::Warn,
+                    "planning skill",
+                    format!("{label}: empty — run `aps update` to install"),
+                ),
+            }
+        })
+        .collect()
 }
 
 /// Render a report to stdout and return the process exit code (1 if any
@@ -327,6 +422,122 @@ mod tests {
             .unwrap();
         assert_eq!(runtime.level, Level::Problem);
         assert!(runtime.detail.contains("audit.sh"));
+
+        fs::remove_dir_all(&root).ok();
+        fs::remove_dir_all(&home).ok();
+    }
+
+    #[test]
+    fn missing_skill_is_ok_when_optional() {
+        let root = scratch("skill-optional");
+        let home = scratch("skill-optional-home");
+        fs::create_dir_all(root.join(".aps")).unwrap();
+        fs::write(
+            root.join(".aps/config.yml"),
+            format!("cli_version: {CLI_VERSION}\nplans_dir: plans/\n"),
+        )
+        .unwrap();
+
+        let report = diagnose(&root, &home, Some(Path::new("/usr/bin/aps")));
+        assert_eq!(level_of(&report, "planning skill"), Level::Ok);
+        assert!(
+            report
+                .findings
+                .iter()
+                .find(|f| f.label == "planning skill")
+                .unwrap()
+                .detail
+                .contains("optional")
+        );
+
+        fs::remove_dir_all(&root).ok();
+        fs::remove_dir_all(&home).ok();
+    }
+
+    #[test]
+    fn missing_skill_warns_when_tools_configured() {
+        let root = scratch("skill-expected");
+        let home = scratch("skill-expected-home");
+        fs::create_dir_all(root.join(".aps")).unwrap();
+        fs::write(
+            root.join(".aps/config.yml"),
+            format!(
+                "cli_version: {CLI_VERSION}\nplans_dir: plans/\ntools:\n  - name: claude-code\n    agents: true\n    hooks: none\n    model: default\n"
+            ),
+        )
+        .unwrap();
+
+        let report = diagnose(&root, &home, Some(Path::new("/usr/bin/aps")));
+        assert_eq!(level_of(&report, "planning skill"), Level::Warn);
+
+        fs::remove_dir_all(&root).ok();
+        fs::remove_dir_all(&home).ok();
+    }
+
+    #[test]
+    fn fresh_skill_is_ok() {
+        let root = scratch("skill-fresh");
+        let home = scratch("skill-fresh-home");
+        fs::create_dir_all(root.join(".aps")).unwrap();
+        fs::write(
+            root.join(".aps/config.yml"),
+            format!("cli_version: {CLI_VERSION}\nplans_dir: plans/\n"),
+        )
+        .unwrap();
+        let skill = root.join(CLAUDE_SKILL_DIR);
+        let expected = managed::expected_skill_manifest();
+        for (name, content) in crate::scaffold::SKILL_FILES {
+            fs::create_dir_all(&skill).unwrap();
+            fs::write(skill.join(name), content).unwrap();
+        }
+        managed::write_skill_marker(&skill, &expected).unwrap();
+
+        let report = diagnose(&root, &home, Some(Path::new("/usr/bin/aps")));
+        assert_eq!(level_of(&report, "planning skill"), Level::Ok);
+        assert!(
+            report
+                .findings
+                .iter()
+                .find(|f| f.label == "planning skill")
+                .unwrap()
+                .detail
+                .contains("fresh")
+        );
+
+        fs::remove_dir_all(&root).ok();
+        fs::remove_dir_all(&home).ok();
+    }
+
+    #[test]
+    fn dirty_skill_warns() {
+        let root = scratch("skill-dirty");
+        let home = scratch("skill-dirty-home");
+        fs::create_dir_all(root.join(".aps")).unwrap();
+        fs::write(
+            root.join(".aps/config.yml"),
+            format!("cli_version: {CLI_VERSION}\nplans_dir: plans/\n"),
+        )
+        .unwrap();
+        let skill = root.join(CLAUDE_SKILL_DIR);
+        let expected = managed::expected_skill_manifest();
+        for (name, content) in crate::scaffold::SKILL_FILES {
+            fs::create_dir_all(&skill).unwrap();
+            fs::write(skill.join(name), content).unwrap();
+        }
+        managed::write_skill_marker(&skill, &expected).unwrap();
+        fs::write(skill.join("SKILL.md"), "edited\n").unwrap();
+
+        let report = diagnose(&root, &home, Some(Path::new("/usr/bin/aps")));
+        assert_eq!(level_of(&report, "planning skill"), Level::Warn);
+        assert!(
+            report
+                .findings
+                .iter()
+                .find(|f| f.label == "planning skill")
+                .unwrap()
+                .detail
+                .contains("dirty")
+        );
 
         fs::remove_dir_all(&root).ok();
         fs::remove_dir_all(&home).ok();
