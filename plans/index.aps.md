@@ -5,7 +5,7 @@
 | Status  | Active     |
 | Owner   | @aneki     |
 | Created | 2025-12-31 |
-| Updated | 2026-07-16 |
+| Updated | 2026-07-17 |
 
 ## Problem
 
@@ -37,14 +37,14 @@ APS needs continued development to:
 | [scaffold](./modules/scaffold.aps.md)     | One-command setup for new projects    | Complete |
 | [templates](./modules/templates.aps.md)   | Reduce friction, mark optional fields | Complete |
 | [docs](./modules/docs.aps.md)             | Workflow guide, improved onboarding   | Complete |
-| [validation](./modules/validation.aps.md) | CLI tool to validate APS documents    | In Progress |
+| [validation](./modules/validation.aps.md) | CLI tool to validate APS documents    | Complete |
 
 ### Shipped (v0.3 — Distribution)
 
 | Module                              | Purpose                                                   | Status                  |
 | ----------------------------------- | --------------------------------------------------------- | ----------------------- |
 | [install](./modules/install.aps.md) | Global binary install, project config contract, migration | Complete |
-| [agents](./modules/agents.aps.md)   | APS Planner + Librarian agents, multi-harness             | In Progress             |
+| [agents](./modules/agents.aps.md)   | APS Planner + Librarian agents, multi-harness             | Complete             |
 
 ### In Progress (v0.4 — Orchestration & UX)
 
@@ -84,7 +84,7 @@ release narratives live in [`plans/releases/`](./releases/).
 | [tasks](./modules/tasks.aps.md)               | Claude Code Tasks integration                             | Complete |
 | [examples](./modules/examples.aps.md)         | Additional worked examples                                | In Progress |
 | [prompts](./modules/prompts.aps.md)           | Tool-specific prompt variants                             | In Progress |
-| [integrations](./modules/integrations.aps.md) | JSON export, GitHub Action, lint/rollup CI surface        | In Progress |
+| [integrations](./modules/integrations.aps.md) | JSON export, GitHub Action, lint/rollup CI surface        | Complete    |
 | [monorepo](./modules/monorepo.aps.md)         | Nested index.aps.md plans, federated lint + orchestration | Complete |
 | [package-views](./modules/package-views.aps.md) | CLI tooling for the tagged monorepo tier (`Packages:` lint, next filter, generated views) | Complete |
 | [ci-parity](./modules/ci-parity.aps.md)       | Behavioural pwsh + cross-CLI parity checks in CI          | Complete |

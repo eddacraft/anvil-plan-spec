@@ -7,7 +7,7 @@
 | ------- | ---------- |
 | Scope   | ALL        |
 | Status  | Active     |
-| Updated | 2026-06-08 |
+| Updated | 2026-07-17 |
 
 ## Purpose
 
@@ -27,6 +27,22 @@ section below.
 
 _Will roll into the next cut. See [`plans/index.aps.md`](./index.aps.md) for
 the active roadmap._
+
+### Team Rollout (v0.7.0)
+
+| Task             | Module                 | Description                                      | Status               |
+| ---------------- | ---------------------- | ------------------------------------------------ | -------------------- |
+| VAL-002          | validation             | Fence-aware shared parser helpers                | Complete: 2026-07-16 |
+| AGENT-007        | agents                 | Retire Gemini scaffolding, add Grok (D-040)      | Complete: 2026-07-16 |
+| PROMPTS-002      | prompts                | Variant-vs-stub policy                           | Complete: 2026-07-16 |
+| PROMPTS-003      | prompts                | Stub prompts for Copilot, Codex, Grok            | Complete: 2026-07-16 |
+| INTEGRATIONS-001 | integrations           | JSON export shape                                | Complete: 2026-07-16 |
+| INTEGRATIONS-002 | integrations           | `aps export --json`                              | Complete: 2026-07-16 |
+| INTEGRATIONS-003 | integrations           | GitHub Action for lint + rollup                  | Complete: 2026-07-16 |
+| EXAMPLES-002     | examples               | Team rollout guide + multi-owner example         | Complete: 2026-07-16 |
+| CIB-002          | continuous-improvement | Public installer → native TUI handoff            | Complete: 2026-07-17 |
+| CIB-003          | continuous-improvement | Monorepo shape seeds monorepo root index         | Complete: 2026-07-17 |
+| CIB-004          | continuous-improvement | Native Windows PowerShell user journeys          | Complete: 2026-07-17 |
 
 ### Compound-Engineering Library
 
