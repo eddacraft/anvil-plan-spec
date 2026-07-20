@@ -212,6 +212,61 @@ if ($out -match 'local edits' -and $skillText -match 'user edit') {
 Remove-Item -LiteralPath $mng -Recurse -Force -ErrorAction SilentlyContinue
 Remove-Item Env:APS_LOCAL -ErrorAction SilentlyContinue
 
+Write-Host "`nInit v2 minimal layout (INSTALL-023)...`n"
+
+# Scenario 10: `aps.ps1 init` scaffolds the v2 minimal layout (INSTALL-011 /
+# INSTALL-023): plans templates + seed index + .aps/config.yml only — no root
+# aps-planning/, no .claude/commands/, no root bin/. Tool skills are opt-in
+# via --tools and land under managed markers; `aps.ps1 update` then accepts
+# the result as a v2 layout without touching the fresh skill tree.
+$env:APS_LOCAL = $ProjectRoot
+
+# Minimal default: no --tools means no tool footprint at all.
+$initMin = Join-Path ([System.IO.Path]::GetTempPath()) ("aps-ps-init-min-" + [System.Guid]::NewGuid().ToString('N'))
+New-Item -ItemType Directory -Path $initMin | Out-Null
+& pwsh -NoProfile -File $ApsPs1 init $initMin --non-interactive *> $null
+if ((Test-Path (Join-Path $initMin ".aps/config.yml")) -and
+    (Test-Path (Join-Path $initMin "plans/index.aps.md")) -and
+    (Test-Path (Join-Path $initMin "plans/aps-rules.md")) -and
+    -not (Test-Path (Join-Path $initMin ".claude"))) {
+    Pass 'init minimal default: plans + config only, no .claude/ at all'
+} else {
+    $tree = (Get-ChildItem -Force $initMin | ForEach-Object Name) -join ' '
+    Fail "init minimal default footprint wrong (top level: $tree)"
+}
+Remove-Item -LiteralPath $initMin -Recurse -Force -ErrorAction SilentlyContinue
+
+# With --tools claude-code: managed skill installed, still no v1 footprint.
+$initCc = Join-Path ([System.IO.Path]::GetTempPath()) ("aps-ps-init-cc-" + [System.Guid]::NewGuid().ToString('N'))
+New-Item -ItemType Directory -Path $initCc | Out-Null
+& pwsh -NoProfile -File $ApsPs1 init $initCc --non-interactive --tools claude-code *> $null
+$ccMarker = Join-Path $initCc ".claude/skills/aps-planning/.aps-managed.json"
+if ((Test-Path (Join-Path $initCc ".aps/config.yml")) -and
+    (Test-Path (Join-Path $initCc "plans/index.aps.md")) -and
+    (Test-Path (Join-Path $initCc "plans/aps-rules.md")) -and
+    (Test-Path -LiteralPath $ccMarker) -and
+    -not (Test-Path (Join-Path $initCc "aps-planning")) -and
+    -not (Test-Path (Join-Path $initCc ".claude/commands")) -and
+    -not (Test-Path (Join-Path $initCc "bin"))) {
+    Pass 'init --tools claude-code: managed skill installed, no v1 footprint'
+} else {
+    $tree = (Get-ChildItem -Force $initCc | ForEach-Object Name) -join ' '
+    Fail "init --tools claude-code footprint wrong (top level: $tree)"
+}
+
+# The init result is a valid v2 layout: `update` runs the v2 path cleanly and
+# leaves the fresh skill marker byte-identical.
+$ccBefore = Get-Content -LiteralPath $ccMarker -Raw
+& pwsh -NoProfile -File $ApsPs1 update $initCc *> $null
+$updExit = $LASTEXITCODE
+if ($updExit -eq 0 -and (Get-Content -LiteralPath $ccMarker -Raw) -ceq $ccBefore) {
+    Pass 'update accepts the init result as v2, fresh marker byte-identical'
+} else {
+    Fail "update after init not clean (exit $updExit) or marker rewritten"
+}
+Remove-Item -LiteralPath $initCc -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item Env:APS_LOCAL -ErrorAction SilentlyContinue
+
 Write-Host ""
 if ($script:failed -gt 0) {
     Write-Host "$($script:failed) PowerShell parity test(s) failed" -ForegroundColor Red
