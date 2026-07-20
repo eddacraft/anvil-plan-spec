@@ -274,6 +274,237 @@ detect_monorepo_tool() {
   fi
 }
 
+# --- Managed skill markers (D-042 / INSTALL-020) ---
+#
+# Sidecar `.aps-managed.json` written next to each managed skill tree so
+# installs and updates can distinguish APS-owned content from user edits.
+# The JSON shape, per-file SHA-256 hashes, and bundle digest are
+# byte-identical with the Rust implementation (cli/src/managed.rs) and the
+# PowerShell port (lib/Scaffold.psm1): any CLI can verify a tree written by
+# any other. Phase 1 covers the planning skill (SKILL.md, reference.md,
+# examples.md); agent inventory is Phase 3.
+
+APS_MANAGED_MARKER=".aps-managed.json"
+
+# SHA-256 hex digest of a file / of stdin.
+managed_sha256_file() {
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$1" | awk '{print $1}'
+  elif command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 "$1" | awk '{print $1}'
+  else
+    error "sha256sum or shasum is required for managed skill markers"
+    exit 1
+  fi
+}
+
+managed_sha256_stdin() {
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum | awk '{print $1}'
+  else
+    shasum -a 256 | awk '{print $1}'
+  fi
+}
+
+# Canonical skill payload, downloaded once per run and cleaned up on exit.
+# Call outside command substitutions so the cache and trap persist.
+APS_SKILL_PAYLOAD_DIR=""
+
+managed_cleanup_payload() {
+  [[ -n "$APS_SKILL_PAYLOAD_DIR" ]] && rm -rf "$APS_SKILL_PAYLOAD_DIR"
+}
+
+managed_ensure_payload() {
+  [[ -n "$APS_SKILL_PAYLOAD_DIR" ]] && return 0
+  APS_SKILL_PAYLOAD_DIR="$(mktemp -d "${TMPDIR:-/tmp}/aps-skill-payload.XXXXXX")"
+  trap managed_cleanup_payload EXIT
+  local f
+  for f in "${V2_SKILL_FILES[@]}"; do
+    download "$f" "$APS_SKILL_PAYLOAD_DIR/${f#scaffold/aps-planning/}"
+  done
+}
+
+# Canonical marker JSON for a payload dir. Matches Rust
+# SkillManifest::to_json byte-for-byte: camelCase keys, two-space indent,
+# files sorted bytewise, trailing newline. bundleDigest is SHA-256 over
+# sorted "name=hash\n" lines.
+managed_manifest_json() {
+  local payload="$1"
+  local f rel sorted=()
+  while IFS= read -r rel; do sorted+=("$rel"); done < <(
+    for f in "${V2_SKILL_FILES[@]}"; do printf '%s\n' "${f#scaffold/aps-planning/}"; done | LC_ALL=C sort
+  )
+  local material="" hash json_files=()
+  for rel in "${sorted[@]}"; do
+    hash="$(managed_sha256_file "$payload/$rel")"
+    material+="${rel}=${hash}"$'\n'
+    json_files+=("    \"$rel\": \"$hash\"")
+  done
+  local digest
+  digest="$(printf '%s' "$material" | managed_sha256_stdin)"
+  printf '{\n'
+  printf '  "schemaVersion": 1,\n'
+  printf '  "kind": "skill",\n'
+  printf '  "name": "aps-planning",\n'
+  printf '  "cliVersion": "%s",\n' "$APS_CLI_VERSION"
+  printf '  "bundleDigest": "%s",\n' "$digest"
+  printf '  "files": {\n'
+  local i last=$(( ${#json_files[@]} - 1 ))
+  for i in "${!json_files[@]}"; do
+    if (( i < last )); then
+      printf '%s,\n' "${json_files[$i]}"
+    else
+      printf '%s\n' "${json_files[$i]}"
+    fi
+  done
+  printf '  }\n}\n'
+}
+
+# Print "name<TAB>hash" lines from a marker's files map. Fails (exit 1) when
+# the marker is not a readable skill manifest — schemaVersion 1, kind
+# "skill", and a files map of plain string pairs.
+managed_parse_marker() {
+  local marker="$1"
+  grep -q '"schemaVersion"[[:space:]]*:[[:space:]]*1' "$marker" 2>/dev/null || return 1
+  grep -q '"kind"[[:space:]]*:[[:space:]]*"skill"' "$marker" 2>/dev/null || return 1
+  grep -q '"files"' "$marker" 2>/dev/null || return 1
+  awk '
+    /"files"[[:space:]]*:[[:space:]]*\{/ { in_files = 1; next }
+    in_files && /\}/ { in_files = 0 }
+    in_files {
+      line = $0
+      if (line ~ /^[[:space:]]*"[^"]+"[[:space:]]*:[[:space:]]*"[^"]*",?[[:space:]]*$/) {
+        k = line; sub(/^[[:space:]]*"/, "", k); sub(/".*$/, "", k)
+        v = line; sub(/^[^:]*:[[:space:]]*"/, "", v); sub(/",?[[:space:]]*$/, "", v)
+        printf "%s\t%s\n", k, v
+      } else if (line !~ /^[[:space:]]*$/) {
+        bad = 1
+      }
+    }
+    END { exit bad }
+  ' "$marker"
+}
+
+# Classify a skill dir against the canonical payload:
+# absent | fresh | stale | dirty | unmanaged | broken
+managed_eval_skill_dir() {
+  local skill_dir="$1" payload="$2"
+  if [[ ! -d "$skill_dir" ]]; then
+    printf 'absent\n'
+    return 0
+  fi
+  local marker="$skill_dir/$APS_MANAGED_MARKER"
+  local f rel
+  if [[ ! -f "$marker" ]]; then
+    for f in "${V2_SKILL_FILES[@]}"; do
+      rel="${f#scaffold/aps-planning/}"
+      if [[ -f "$skill_dir/$rel" ]]; then
+        printf 'unmanaged\n'
+        return 0
+      fi
+    done
+    # Empty dir (or only non-skill files) — safe to install.
+    printf 'absent\n'
+    return 0
+  fi
+  local entries
+  if ! entries="$(managed_parse_marker "$marker")"; then
+    printf 'broken\n'
+    return 0
+  fi
+  # Dirty when any tracked file is missing or no longer matches the marker.
+  local name hash
+  while IFS=$'\t' read -r name hash; do
+    [[ -n "$name" ]] || continue
+    if [[ ! -f "$skill_dir/$name" ]] || [[ "$(managed_sha256_file "$skill_dir/$name")" != "$hash" ]]; then
+      printf 'dirty\n'
+      return 0
+    fi
+  done <<< "$entries"
+  # Canonical serialisation makes equivalence a byte comparison (all three
+  # CLIs write the same shape). A semantically-equivalent but non-canonical
+  # marker classifies as stale and converges to canonical on update.
+  if [[ "$(cat "$marker")" == "$(managed_manifest_json "$payload")" ]]; then
+    printf 'fresh\n'
+  else
+    printf 'stale\n'
+  fi
+}
+
+managed_files_match() {
+  local skill_dir="$1" payload="$2" f rel
+  for f in "${V2_SKILL_FILES[@]}"; do
+    rel="${f#scaffold/aps-planning/}"
+    cmp -s "$payload/$rel" "$skill_dir/$rel" || return 1
+  done
+  return 0
+}
+
+managed_copy_files() {
+  local skill_dir="$1" payload="$2" f rel
+  mkdir -p "$skill_dir"
+  for f in "${V2_SKILL_FILES[@]}"; do
+    rel="${f#scaffold/aps-planning/}"
+    cp "$payload/$rel" "$skill_dir/$rel"
+  done
+}
+
+# Reconcile one skill tree with managed-marker safety. Prints the outcome:
+# added | updated | unchanged | adopted | dirty-skipped | unmanaged-skipped |
+# broken-skipped (mirrors Rust reconcile_managed_skill).
+managed_reconcile_skill() {
+  local skill_dir="$1"
+  managed_ensure_payload
+  local payload="$APS_SKILL_PAYLOAD_DIR"
+  local state
+  state="$(managed_eval_skill_dir "$skill_dir" "$payload")"
+  case "$state" in
+    absent)
+      managed_copy_files "$skill_dir" "$payload"
+      managed_manifest_json "$payload" > "$skill_dir/$APS_MANAGED_MARKER"
+      printf 'added\n'
+      ;;
+    fresh) printf 'unchanged\n' ;;
+    stale)
+      # Content may already match the payload (only the marker drifted) —
+      # avoid needless rewrites/mtime churn.
+      managed_files_match "$skill_dir" "$payload" || managed_copy_files "$skill_dir" "$payload"
+      managed_manifest_json "$payload" > "$skill_dir/$APS_MANAGED_MARKER"
+      printf 'updated\n'
+      ;;
+    dirty) printf 'dirty-skipped\n' ;;
+    unmanaged)
+      if managed_files_match "$skill_dir" "$payload"; then
+        managed_manifest_json "$payload" > "$skill_dir/$APS_MANAGED_MARKER"
+        printf 'adopted\n'
+      else
+        printf 'unmanaged-skipped\n'
+      fi
+      ;;
+    broken) printf 'broken-skipped\n' ;;
+  esac
+}
+
+# Reconcile + user-facing messaging for one skill tree.
+v2_reconcile_skill_tree() {
+  local skill_dir="$1" label="$2" result
+  managed_ensure_payload
+  result="$(managed_reconcile_skill "$skill_dir")"
+  case "$result" in
+    dirty-skipped)
+      warn "$label has local edits — left untouched."
+      echo "  Restore the files (or remove the directory) and re-run to refresh." >&2
+      ;;
+    unmanaged-skipped)
+      warn "$label exists but was not installed by APS — left untouched."
+      echo "  Remove the directory to let APS manage it." >&2
+      ;;
+    broken-skipped)
+      warn "$label has an unreadable $APS_MANAGED_MARKER — left untouched."
+      ;;
+  esac
+}
+
 # --- v2 install functions ---
 
 # Write config.yml
@@ -430,16 +661,10 @@ v2_install_cli() {
   chmod +x "$aps_dir/bin/aps"
 }
 
-# Install v2 skill files to .claude/skills/aps-planning/
+# Install v2 skill files to .claude/skills/aps-planning/ (managed, D-042)
 v2_install_skill() {
   local target="$1"
-  local skill_dir="$target/.claude/skills/aps-planning"
-
-  mkdir -p "$skill_dir"
-  for f in "${V2_SKILL_FILES[@]}"; do
-    local rel="${f#scaffold/aps-planning/}"
-    download "$f" "$skill_dir/$rel"
-  done
+  v2_reconcile_skill_tree "$target/.claude/skills/aps-planning" ".claude/skills/aps-planning"
 }
 
 # Install v2 hook scripts to .aps/scripts/
@@ -505,16 +730,10 @@ v2_install_codex() {
   v2_install_agents_skill "$target"
 }
 
-# Install skill to .agents/skills/aps-planning/ (for Codex/Grok)
+# Install skill to .agents/skills/aps-planning/ (for Codex/Grok; managed, D-042)
 v2_install_agents_skill() {
   local target="$1"
-  local skill_dir="$target/.agents/skills/aps-planning"
-
-  mkdir -p "$skill_dir"
-  for f in "${V2_SKILL_FILES[@]}"; do
-    local rel="${f#scaffold/aps-planning/}"
-    download "$f" "$skill_dir/$rel"
-  done
+  v2_reconcile_skill_tree "$target/.agents/skills/aps-planning" ".agents/skills/aps-planning"
 }
 
 # Set up PATH for .aps/bin

@@ -869,5 +869,52 @@ echo "$output" | grep -q "^### (untagged)$" || fail "missing (untagged) heading"
 echo "$output" | awk '/### \(untagged\)/{f=1} f && /MISC/{found=1} END{exit !found}' || fail "MISC not under (untagged)"
 pass
 
+# Test 57: INSTALL-020 / D-042 — managed skill markers: bash writes the
+# canonical `.aps-managed.json` on skill install and `aps update` reconciles
+# each tree by marker state instead of blind-overwriting.
+echo -n "Test: managed skill markers (bash write + reconcile)... "
+MNG_DIR=$(mktemp -d)
+MNG_SKILL="$MNG_DIR/.claude/skills/aps-planning"
+MNG_MARKER="$MNG_SKILL/.aps-managed.json"
+APS_LOCAL="$PROJECT_ROOT" $APS init "$MNG_DIR" --profile solo --scope small --tools claude-code > /dev/null 2>&1 || fail "init with claude-code failed"
+[[ -f "$MNG_MARKER" ]] || fail "marker not written on install"
+grep -q '"schemaVersion": 1' "$MNG_MARKER" || fail "marker missing schemaVersion"
+grep -q '"kind": "skill"' "$MNG_MARKER" || fail "marker missing kind"
+grep -q '"bundleDigest": "[0-9a-f]\{64\}"' "$MNG_MARKER" || fail "marker missing bundle digest"
+grep -q '"SKILL.md": "[0-9a-f]\{64\}"' "$MNG_MARKER" || fail "marker missing SKILL.md hash"
+# Fresh: update leaves marker and files untouched byte-for-byte
+cp "$MNG_MARKER" "$MNG_DIR/.marker-before"
+APS_LOCAL="$PROJECT_ROOT" $APS update "$MNG_DIR" > /dev/null 2>&1 || fail "update on fresh tree failed"
+cmp -s "$MNG_MARKER" "$MNG_DIR/.marker-before" || fail "fresh update rewrote the marker"
+# Dirty: user edit is refused and preserved
+echo "user edit" >> "$MNG_SKILL/SKILL.md"
+output=$(APS_LOCAL="$PROJECT_ROOT" $APS update "$MNG_DIR" 2>&1) || fail "update on dirty tree errored"
+echo "$output" | grep -q "local edits" || fail "dirty tree not reported"
+grep -q "user edit" "$MNG_SKILL/SKILL.md" || fail "dirty tree was overwritten"
+# Stale: valid old marker refreshes without touching matching content
+sed -i '$ d' "$MNG_SKILL/SKILL.md"
+sed -i 's/"cliVersion": "[^"]*"/"cliVersion": "0.0.1"/' "$MNG_MARKER"
+APS_LOCAL="$PROJECT_ROOT" $APS update "$MNG_DIR" > /dev/null 2>&1 || fail "update on stale tree failed"
+grep -q '"cliVersion": "0.0.1"' "$MNG_MARKER" && fail "stale marker not refreshed"
+cmp -s "$MNG_MARKER" "$MNG_DIR/.marker-before" || fail "stale refresh is not canonical"
+# Adopt: matching files without a marker gain one, files untouched
+rm "$MNG_MARKER"
+APS_LOCAL="$PROJECT_ROOT" $APS update "$MNG_DIR" > /dev/null 2>&1 || fail "update on adoptable tree failed"
+[[ -f "$MNG_MARKER" ]] || fail "matching unmanaged tree not adopted"
+# Unmanaged differing: refused, no marker written
+rm "$MNG_MARKER"
+echo "custom skill" > "$MNG_SKILL/SKILL.md"
+output=$(APS_LOCAL="$PROJECT_ROOT" $APS update "$MNG_DIR" 2>&1) || fail "update on unmanaged tree errored"
+echo "$output" | grep -q "not installed by APS" || fail "unmanaged tree not reported"
+[[ ! -f "$MNG_MARKER" ]] || fail "unmanaged differing tree gained a marker"
+grep -q "custom skill" "$MNG_SKILL/SKILL.md" || fail "unmanaged tree was overwritten"
+# Broken: unreadable marker refused
+echo "{not json" > "$MNG_MARKER"
+output=$(APS_LOCAL="$PROJECT_ROOT" $APS update "$MNG_DIR" 2>&1) || fail "update on broken marker errored"
+echo "$output" | grep -q "unreadable" || fail "broken marker not reported"
+grep -q "custom skill" "$MNG_SKILL/SKILL.md" || fail "broken-marker tree was overwritten"
+rm -rf "$MNG_DIR"
+pass
+
 echo ""
 echo -e "${GREEN}All tests passed!${NC}"
