@@ -849,7 +849,26 @@ Notes on schema:
 - **Dependencies:** INSTALL-020
 - **Files:** scaffold/update, scaffold/update.ps1, test/run.sh,
   docs/installation.md
-- **Status:** Ready
+- **Status:** Complete: 2026-07-20
+- **Results:** Both curl updaters were rewritten delegate-first: they resolve
+  a capable `aps` CLI (PATH binary, then vendored `.aps/bin`), run
+  `aps update` for the v2 refresh and D-042 marker reconciliation, and — when
+  no CLI exists — bootstrap the pinned bash/PowerShell CLI at `$VERSION` into
+  a temp dir and delegate to that, so markers are never silently skipped. A
+  post-flight check retries via the bootstrap CLI if a stale pre-D-042
+  delegate left a new skill tree unmarked. v1→v2 migration is embedded in
+  both scripts in D-039 lockstep, conservative per D-033: APS-generated
+  `aps-planning/`, `.claude/commands/plan*.md`, and `plans/aps-rules.md` are
+  backed up to `.aps/backup/<ts>/` before removal; mixed-content trees warn
+  instead; hook paths in settings rewritten to `.aps/scripts`; minimal
+  `.aps/config.yml` written. Both scripts gained `APS_LOCAL` offline mode.
+  Verified: `test/run.sh` Tests 58 (v1 fixture → v2 layout with markers,
+  user index untouched; second run refreshes in place) and 59 (static guard:
+  scaffold payload paths only, no legacy writes); manual pwsh 7.5.2
+  end-to-end runs incl. bootstrap path; bash- and pwsh-written markers
+  byte-identical. Known follow-ups: user-edited v1 skill files are refreshed
+  (old copies in backup) rather than reconciled per-file; root `designs/`
+  move stays `aps migrate` scope; `.aps-version` removal is INSTALL-022.
 
 ### INSTALL-022: Retire `.aps-version`; single version surface
 
@@ -894,7 +913,23 @@ Notes on schema:
 - **Confidence:** high
 - **Dependencies:** INSTALL-020
 - **Files:** lib/Scaffold.psm1, test/ps-parity.ps1, docs/installation.md
-- **Status:** Ready
+- **Status:** Complete: 2026-07-20
+- **Results:** `Invoke-ApsInit` rewritten to the v2 minimal default —
+  `Install-ApsPlansV2` plus new `Install-ApsIndexV2` and `Write-ApsConfigV2`
+  (mirrors bash `write_config` byte-shape: comment header, key order,
+  per-tool subkeys, LF/no-BOM, `context/` gitignore). The v1 init body was
+  deleted, not gated; `plans/.aps-version` deliberately not written (D-044).
+  Flags: `[target-dir]`, `--tools <csv>` (validated; `gemini` errors with
+  the D-040 pointer), `--hooks`, `--non-interactive` (accepted for bash
+  parity; the port never prompts), `--help`. Tool routing matches
+  `Update-ApsV2`, and selections are recorded in config.yml so later updates
+  refresh them. Unreferenced v1 helpers `Install-ApsIndex` and
+  `Install-ApsPath` deleted; v1-update helpers retained. Verified:
+  `test/ps-parity.ps1` scenario 10 (minimal default has no `.claude/` at
+  all; `--tools claude-code` installs the managed skill with no v1
+  footprint; `aps.ps1 update` accepts the result as v2 with a byte-stable
+  marker), full pwsh suite and `test/run.sh` green. Deferred: interactive
+  wizard and `--profile`/`--scope`/`--local-cli` flags; post-init lint step.
 
 ## Execution Strategy
 
@@ -945,10 +980,10 @@ Sequential — each item builds on the previous contract:
 
 - INSTALL-019: Rust managed markers (Complete — retroactive record)
 - INSTALL-020: bash + PowerShell marker parity (D-042) (Complete)
-- INSTALL-021: curl updaters to current layout (D-043, depends on 020)
+- INSTALL-021: curl updaters to current layout (D-043) (Complete)
 - INSTALL-022: retire `.aps-version` (D-044, depends on 020; coordinate
   with 021)
-- INSTALL-023: pwsh `Invoke-ApsInit` to v2 minimal layout (found during 020)
+- INSTALL-023: pwsh `Invoke-ApsInit` to v2 minimal layout (Complete)
 
 ## Notes
 

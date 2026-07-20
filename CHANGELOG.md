@@ -24,6 +24,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   plan templates, `.aps/scripts/`, config timestamp) so v2 projects are no
   longer re-scaffolded as v1, and both fallback CLIs refuse dirty or
   unmanaged-differing skill trees instead of blind-overwriting.
+- **Curl updaters deliver the current layout** (INSTALL-021, D-043) —
+  `scaffold/update` and `scaffold/update.ps1` no longer maintain the v1
+  layout in place. They delegate to a capable `aps` CLI (bootstrapping the
+  pinned fallback CLI when none is installed) for the v2 refresh and marker
+  reconciliation, and migrate v1 installs conservatively per D-033:
+  APS-generated `aps-planning/`, `.claude/commands/`, and old rules are
+  backed up to `.aps/backup/<ts>/` before removal, hook paths are rewritten
+  to `.aps/scripts`, and a `.aps/config.yml` contract is written. Static
+  guard tests pin that the legacy paths never come back.
+- **PowerShell `aps.ps1 init` scaffolds v2** (INSTALL-023) — the last v1
+  scaffolder is gone: pwsh init now writes the minimal v2 layout (plans
+  templates + seed index + `.aps/config.yml`, byte-shape-identical to the
+  bash config), with `--tools`/`--hooks` opting into managed skill trees,
+  agents, and hook scripts. The retired `gemini` tool errors with a D-040
+  pointer, matching the other CLIs.
 - **`aps export --json`** (INTEGRATIONS-001/002) — a compact, deterministic
   JSON snapshot of the plan tree (schema `aps-export/v1`): modules in file
   order, work items in document order, with statuses, dependency tokens,
