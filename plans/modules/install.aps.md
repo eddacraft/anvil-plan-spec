@@ -148,6 +148,34 @@ picker so users do not have to read documentation before choosing the safe path.
   all reference the same semver. Project pinning is `cli_version` in
   `.aps/config.yml`, not channel-specific pins. CI installs the pinned release
   then runs `aps` without extra flags when config is present._
+- **D-042:** Managed skill markers are a three-CLI parity surface — _decided
+  2026-07-20: `.aps-managed.json` (per-file SHA-256 inventory, bundle digest,
+  and producing CLI version, per INSTALL-019) is written on skill install and
+  reconciled on update by all three CLIs — Rust (`cli/src/managed.rs`), bash
+  (`lib/scaffold.sh`), and PowerShell (`lib/Scaffold.psm1`) — plus the curl
+  installers. Markers are byte-identical across producers so any CLI can
+  verify an install written by any other. PowerShell is a first-class
+  supported surface (the adopting audience is PowerShell-heavy) and bash is
+  the deliberate fallback; neither may lag the Rust implementation. Extends
+  D-039 lockstep to the install/update surface._
+- **D-043:** Curl entrypoints always deliver the current layout — _decided
+  2026-07-20: `scaffold/update` and `scaffold/update.ps1` bring a project to
+  the latest (v2) layout — skill trees under `.claude/skills/` +
+  `.agents/skills/`, hook scripts under `.aps/scripts/`, `.aps/config.yml`
+  contract, managed markers — migrating v1 installs (root `aps-planning/`,
+  `.claude/commands/`) along the way. They never maintain the v1 layout in
+  place, and they fetch the packaged `scaffold/aps-planning/` payload, not
+  the repo-dev root copy. Aligns the public curl surface with D-023 (no
+  shipped commands) and D-032 (bare defaults)._
+- **D-044:** Single on-disk version surface — _decided 2026-07-20:
+  `cli_version` in `.aps/config.yml` is the only version stamp APS writes
+  into a project (per D-035/D-036, one semver across channels).
+  `plans/.aps-version` is retired: nothing writes it, updaters remove it
+  after migration, and the skill's staleness check text points at
+  `.aps/config.yml` (compare against the running CLI) instead of a hardcoded
+  spec-version constant. Kills the current three-way confusion where the
+  skill says "APS version 0.2.0", bash writes the CLI semver into
+  `.aps-version`, and the Rust binary writes nothing._
 
 **D-013 Detail: Multi-Tool Skill Compatibility (Researched 2026-02-19)**
 
@@ -730,6 +758,144 @@ Notes on schema:
   the vendored CLI as `--local-cli`-only. Test 40 asserts the docs + picker
   reflect no default vendoring. Full suite + markdownlint green.
 
+### INSTALL-019: Managed skill freshness markers (Rust) — Complete 2026-07-19
+
+- **Intent:** Make `aps update` safe on skill trees the current binary did not
+  write: distinguish "ours and current", "ours but old", "user-modified", and
+  "not ours" instead of blindly overwriting.
+- **Expected Outcome:** Skill installs write a `.aps-managed.json` sidecar
+  (per-file SHA-256 inventory, bundle digest over the sorted name→hash map,
+  producing CLI version). `aps update` reconciles each skill root by marker
+  state: fresh stays put, stale rewrites, dirty and differing-unmanaged trees
+  are refused, matching-unmanaged trees are adopted (marker written, files
+  untouched). `aps doctor` reports each root as
+  Fresh/Stale/Dirty/Unmanaged/Broken/Absent.
+- **Validation:** `cargo test` covers marker round-trip, each reconcile state,
+  and doctor reporting.
+- **Confidence:** high
+- **Dependencies:** INSTALL-013, INSTALL-014
+- **Files:** cli/src/managed.rs, cli/src/update.rs, cli/src/doctor.rs,
+  cli/src/scaffold.rs, docs/installation.md
+- **Status:** Complete: 2026-07-19
+- **Results:** Landed Rust-only (commits 553955c, 3270609): `managed.rs`
+  provides the manifest type, digest, marker IO, and
+  `reconcile_managed_skill`; update and doctor consume it; agent-file
+  inventory deferred as Phase 3. _Recorded retroactively 2026-07-20 — the
+  work shipped without a plan item; bash/PowerShell parity split out as
+  INSTALL-020 (D-042)._
+
+### INSTALL-020: Port managed skill reconciliation to bash + PowerShell
+
+- **Intent:** D-042 — the marker contract is only useful if every CLI honours
+  it; today a bash or PowerShell install looks Unmanaged to the Rust binary
+  and the fallback CLIs still blind-overwrite on update.
+- **Expected Outcome:** bash (`lib/scaffold.sh`) and PowerShell
+  (`lib/Scaffold.psm1`) write `.aps-managed.json` on skill install and apply
+  the same reconcile states on update (fresh/stale/dirty/unmanaged/adopt) as
+  `cli/src/managed.rs`. The curl installers (`scaffold/install`,
+  `scaffold/install.ps1`) write the marker too. Marker JSON is byte-identical
+  across all producers for the same payload.
+- **Validation:** A parity fixture asserts byte-identical
+  `.aps-managed.json` from Rust, bash, and pwsh installs of the same skill
+  payload; bash/pwsh update tests cover refuse-dirty, refuse-differing,
+  adopt-matching, and rewrite-stale; `test/run.sh`, `test/ps-parity.ps1`
+  (fetched pwsh), and `cargo test` green.
+- **Confidence:** high
+- **Dependencies:** INSTALL-019
+- **Files:** lib/scaffold.sh, lib/Scaffold.psm1, scaffold/install,
+  scaffold/install.ps1, test/run.sh, test/ps-parity.ps1, test/cli-parity.sh,
+  docs/installation.md
+- **Status:** Complete: 2026-07-20
+- **Results:** bash grew a managed core in `lib/scaffold.sh`
+  (`managed_manifest_json`, `managed_eval_skill_dir`,
+  `managed_reconcile_skill`) and both v2 skill installers
+  (`v2_install_skill`, `v2_install_agents_skill`) now reconcile instead of
+  blind-downloading, covering init, `aps setup`, and `aps update`. PowerShell
+  gained the same core (`Get-ApsManagedManifestJson`, `Get-ApsSkillDirState`,
+  `Invoke-ApsSkillReconcile`) plus a v2-layout `aps update` path
+  (`Update-ApsV2`: managed skill trees per config.yml tools, v2 plan
+  templates, `.aps/scripts/`, vendored-CLI refresh, config timestamp) —
+  previously the psm1 update re-scaffolded v2 projects as v1.
+  `Invoke-ApsDownload` learned bash's `APS_LOCAL` local mode so pwsh
+  scaffold tests run offline. Curl installers need no marker code: both
+  delegate tool-skill installs to `aps setup`. Canonical serialisation makes
+  cross-CLI equivalence a byte comparison; a semantically-equivalent but
+  non-canonical marker reads as stale and converges on update. Verified:
+  `test/run.sh` Test 57 (all seven bash reconcile outcomes),
+  `test/ps-parity.ps1` scenarios 9a–c (add/fresh/dirty via `aps.ps1
+  update`), a new `test/cli-parity.sh` leg asserting Rust = bash =
+  PowerShell marker byte-identity, `cargo test` (185 green). Discovered and
+  split out: the psm1 `Invoke-ApsInit` still scaffolds the full v1 layout —
+  INSTALL-023.
+
+### INSTALL-021: Rewrite curl updaters to deliver the current layout
+
+- **Intent:** D-043 — `scaffold/update` and `scaffold/update.ps1` still
+  install the v1 layout (root `aps-planning/`, `.claude/commands/`, repo-dev
+  skill copy, no marker, no `.aps/config.yml`), silently downgrading v2
+  projects and contradicting D-023/D-032.
+- **Expected Outcome:** Both curl updaters bring any project (v1 or v2) to
+  the current layout: packaged `scaffold/aps-planning/` payload into the
+  D-013 skill trees, hook scripts into `.aps/scripts/`, managed markers
+  written (INSTALL-020 contract), `.aps/config.yml` created or updated,
+  legacy v1 paths migrated per INSTALL-008/013 semantics. No root
+  `aps-planning/` or `.claude/commands/` remains after an update.
+- **Validation:** Updating a v1-layout fixture project yields the v2 layout
+  with markers; updating a v2 project refreshes in place; a static guard test
+  (Test 33 style) pins that the updaters fetch `scaffold/aps-planning/*` and
+  never write the legacy paths; `test/run.sh` green.
+- **Confidence:** medium — TTY prompting and `VERSION=` pinning paths in the
+  curl scripts need care; validate against both `main` and a tagged ref.
+- **Dependencies:** INSTALL-020
+- **Files:** scaffold/update, scaffold/update.ps1, test/run.sh,
+  docs/installation.md
+- **Status:** Ready
+
+### INSTALL-022: Retire `.aps-version`; single version surface
+
+- **Intent:** D-044 — three inconsistent version stamps confuse users and
+  agents: the skill text hardcodes "APS version 0.2.0", bash writes the CLI
+  semver to `plans/.aps-version`, the Rust binary writes nothing.
+- **Expected Outcome:** Nothing writes `plans/.aps-version`; updaters and
+  `aps upgrade` remove a stale one (backup-listed per D-033). The skill's
+  staleness step tells the agent to compare `.aps/config.yml` `cli_version`
+  against `aps --version` and run `aps update` on mismatch, with no hardcoded
+  version constant to go stale. Root `aps-planning/SKILL.md` and
+  `scaffold/aps-planning/SKILL.md` are re-synced (the stray "(This updates
+  templates…)" line drift is resolved) and the release-bump checklist loses
+  the `lib/scaffold.sh` hardcoded stamps.
+- **Validation:** Repo grep shows no `.aps-version` writes outside migration
+  removal; a fixture update removes a planted `plans/.aps-version`; SKILL.md
+  staleness text references `.aps/config.yml`; `test/run.sh` + `cargo test`
+  green.
+- **Confidence:** high
+- **Dependencies:** INSTALL-020 (marker supplies skill-tree freshness);
+  coordinate with INSTALL-021
+- **Files:** lib/scaffold.sh, aps-planning/SKILL.md,
+  scaffold/aps-planning/SKILL.md, scaffold/update, scaffold/update.ps1,
+  lib/rules/common.sh, docs/installation.md, test/run.sh
+- **Status:** Ready
+
+### INSTALL-023: Port `Invoke-ApsInit` (PowerShell) to the v2 minimal layout
+
+- **Intent:** Discovered during INSTALL-020 — the PowerShell CLI's `aps init`
+  still scaffolds the full v1 layout (root `aps-planning/`,
+  `.claude/commands/` against D-023, v1 `plans/aps-rules.md` list, no
+  `.aps/config.yml`), so a pwsh-CLI user who runs init gets a layout every
+  other surface has abandoned.
+- **Expected Outcome:** `Invoke-ApsInit` mirrors bash `cmd_init`'s minimal
+  default (INSTALL-011): plans templates + index + `.aps/config.yml` only,
+  hooks and tool skills opt-in via the managed-marker path from INSTALL-020.
+  The v1 init body is deleted, not gated.
+- **Validation:** `aps.ps1 init` on a fresh dir yields the INSTALL-011
+  minimal footprint (no root `aps-planning/`, no `.claude/commands/`,
+  `.aps/config.yml` present); `test/ps-parity.ps1` covers it;
+  `Update-ApsV2` accepts the result as a v2 layout.
+- **Confidence:** high
+- **Dependencies:** INSTALL-020
+- **Files:** lib/Scaffold.psm1, test/ps-parity.ps1, docs/installation.md
+- **Status:** Ready
+
 ## Execution Strategy
 
 ### Wave 1: Foundations (no dependencies)
@@ -772,6 +938,17 @@ Sequential cleanup:
 
 - INSTALL-018: Binary-first init (depends on 014, 015)
 - INSTALL-017: Migration path + `aps doctor` (depends on 013, 014, 015, 018)
+
+### Wave 7: Managed parity + updater convergence (v0.7.0 pre-cut)
+
+Sequential — each item builds on the previous contract:
+
+- INSTALL-019: Rust managed markers (Complete — retroactive record)
+- INSTALL-020: bash + PowerShell marker parity (D-042) (Complete)
+- INSTALL-021: curl updaters to current layout (D-043, depends on 020)
+- INSTALL-022: retire `.aps-version` (D-044, depends on 020; coordinate
+  with 021)
+- INSTALL-023: pwsh `Invoke-ApsInit` to v2 minimal layout (found during 020)
 
 ## Notes
 

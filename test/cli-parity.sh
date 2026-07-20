@@ -164,6 +164,62 @@ for fx in "${EXPORT_FIXTURES[@]}"; do
 done
 
 echo ""
+
+# Managed skill marker parity (INSTALL-020 / D-042): the `.aps-managed.json`
+# sidecar must be byte-identical no matter which CLI wrote it — same JSON
+# shape, same per-file hashes, same bundle digest, same cliVersion. Rust
+# writes from its embeds via `aps setup`; bash installs via `aps init
+# --tools`; PowerShell serialises the payload directly. A version bump or
+# payload change that reaches only one CLI diverges here.
+MARKER_TMP="$(mktemp -d)"
+trap 'rm -rf "$MARKER_TMP"' EXIT
+
+# The leg below cd's away from the repo root, so a relative APS_RUST_BIN
+# must be pinned to an absolute path first.
+RUST_APS_ABS="$(cd "$(dirname "$RUST_APS")" && pwd)/$(basename "$RUST_APS")"
+
+mkdir -p "$MARKER_TMP/rust"
+(cd "$MARKER_TMP/rust" && "$RUST_APS_ABS" init --non-interactive >/dev/null 2>&1 && "$RUST_APS_ABS" setup claude-code >/dev/null 2>&1)
+RUST_MARKER="$MARKER_TMP/rust/.claude/skills/aps-planning/.aps-managed.json"
+
+mkdir -p "$MARKER_TMP/bash"
+APS_LOCAL="$ROOT" "$BASH_APS" init "$MARKER_TMP/bash" --profile solo --scope small --tools claude-code >/dev/null 2>&1
+BASH_MARKER="$MARKER_TMP/bash/.claude/skills/aps-planning/.aps-managed.json"
+
+marker_fail=0
+if [[ ! -f "$RUST_MARKER" ]]; then
+  echo -e "${RED}MISSING${NC} Rust marker (setup claude-code wrote nothing)"; marker_fail=1
+fi
+if [[ ! -f "$BASH_MARKER" ]]; then
+  echo -e "${RED}MISSING${NC} bash marker (init --tools claude-code wrote nothing)"; marker_fail=1
+fi
+if (( marker_fail == 0 )) && ! cmp -s "$RUST_MARKER" "$BASH_MARKER"; then
+  echo -e "${RED}DIVERGE${NC} managed marker bash vs Rust:"
+  diff "$RUST_MARKER" "$BASH_MARKER" | sed 's/^/    /'
+  marker_fail=1
+fi
+
+if (( marker_fail == 0 )) && $HAVE_PWSH; then
+  APS_LOCAL="$ROOT" "$PWSH" -NoProfile -Command "
+    Import-Module '$ROOT/lib/Output.psm1' -Force
+    Import-Module '$ROOT/lib/Scaffold.psm1' -Force
+    \$json = Get-ApsManagedManifestJson -PayloadDir (Get-ApsSkillPayload)
+    [System.IO.File]::WriteAllText('$MARKER_TMP/marker-pwsh.json', \$json, [System.Text.UTF8Encoding]::new(\$false))
+  "
+  if ! cmp -s "$RUST_MARKER" "$MARKER_TMP/marker-pwsh.json"; then
+    echo -e "${RED}DIVERGE${NC} managed marker Rust vs PowerShell:"
+    diff "$RUST_MARKER" "$MARKER_TMP/marker-pwsh.json" | sed 's/^/    /'
+    marker_fail=1
+  fi
+fi
+
+if (( marker_fail == 0 )); then
+  echo -e "${GREEN}OK${NC} managed marker byte parity (Rust = bash$($HAVE_PWSH && echo ' = PowerShell'))"
+else
+  fail=1
+fi
+
+echo ""
 if [[ $fail -ne 0 ]]; then
   echo -e "${RED}Cross-CLI parity FAILED — the linters diverged (see above).${NC}"
   exit 1

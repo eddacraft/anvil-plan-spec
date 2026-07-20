@@ -156,6 +156,62 @@ if ($p17 -ge 0 -and $p02 -ge 0 -and $p17 -lt $p02) {
     Fail "expected W017 before W002 on active conductor (got: $out)"
 }
 
+# Scenario 9: managed skill markers (INSTALL-020 / D-042). `aps.ps1 update` on
+# a v2 project reconciles skill trees by marker state: absent -> added with a
+# canonical marker, fresh -> untouched, dirty -> refused with user content
+# preserved. Runs offline via APS_LOCAL against this repo's scaffold payload.
+$env:APS_LOCAL = $ProjectRoot
+$mng = Join-Path ([System.IO.Path]::GetTempPath()) ("aps-ps-managed-" + [System.Guid]::NewGuid().ToString('N'))
+New-Item -ItemType Directory -Path (Join-Path $mng "plans") -Force | Out-Null
+New-Item -ItemType Directory -Path (Join-Path $mng ".aps") -Force | Out-Null
+@"
+cli_version: "0.6.0"
+plans_dir: plans/
+tooling_root: .aps/
+
+aps:
+  updated: "2026-01-01"
+
+tools:
+  - name: claude-code
+    skill: .claude/skills/aps-planning
+"@ | Set-Content -LiteralPath (Join-Path $mng ".aps/config.yml")
+
+$skillDir = Join-Path $mng ".claude/skills/aps-planning"
+$marker = Join-Path $skillDir ".aps-managed.json"
+
+& pwsh -NoProfile -File $ApsPs1 update $mng *> $null
+$markerText = if (Test-Path -LiteralPath $marker) { Get-Content -LiteralPath $marker -Raw } else { "" }
+if ($markerText -match '"schemaVersion": 1' -and
+    $markerText -match '"kind": "skill"' -and
+    $markerText -match '"SKILL.md": "[0-9a-f]{64}"') {
+    Pass 'v2 update installs the skill with a canonical managed marker'
+} else {
+    Fail "managed marker missing or malformed after v2 update (got: $markerText)"
+}
+
+# Fresh: a second update must not rewrite the marker or files.
+$before = Get-Content -LiteralPath $marker -Raw
+& pwsh -NoProfile -File $ApsPs1 update $mng *> $null
+if ((Get-Content -LiteralPath $marker -Raw) -ceq $before) {
+    Pass 'fresh skill tree survives update byte-for-byte'
+} else {
+    Fail 'fresh update rewrote the managed marker'
+}
+
+# Dirty: a user edit is refused and preserved.
+Add-Content -LiteralPath (Join-Path $skillDir "SKILL.md") -Value "user edit"
+$out = (& pwsh -NoProfile -File $ApsPs1 update $mng 2>&1 | Out-String)
+$skillText = Get-Content -LiteralPath (Join-Path $skillDir "SKILL.md") -Raw
+if ($out -match 'local edits' -and $skillText -match 'user edit') {
+    Pass 'dirty skill tree is refused and user content preserved'
+} else {
+    Fail "dirty tree not protected (output: $out)"
+}
+
+Remove-Item -LiteralPath $mng -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item Env:APS_LOCAL -ErrorAction SilentlyContinue
+
 Write-Host ""
 if ($script:failed -gt 0) {
     Write-Host "$($script:failed) PowerShell parity test(s) failed" -ForegroundColor Red

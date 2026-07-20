@@ -252,6 +252,9 @@ Skill trees also carry a managed inventory sidecar (`.aps-managed.json`) next to
 will not overwrite skill files you have modified (dirty), and it can adopt a
 matching unmanaged install by writing the marker only. `aps doctor` reports each
 installed skill root as fresh, stale, dirty, unmanaged, broken, or absent (empty).
+All three CLIs — the native binary, the bash fallback, and the PowerShell
+fallback — write and honour the same marker byte-for-byte (D-042), so a tree
+installed by one can be verified and updated by any other.
 
 ## Project Config Contract (`.aps/config.yml`)
 

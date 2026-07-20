@@ -16,6 +16,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   unmanaged-differing trees are refused, and matching unmanaged installs are
   adopted with a marker only. `aps doctor` reports each skill root as
   Fresh/Stale/Dirty/Unmanaged/Broken/Absent. Agent inventory remains Phase 3.
+- **Managed markers in all three CLIs** (INSTALL-020, D-042) — the bash
+  (`lib/scaffold.sh`) and PowerShell (`lib/Scaffold.psm1`) CLIs now write and
+  reconcile the same `.aps-managed.json` byte-for-byte with the Rust binary;
+  a new `test/cli-parity.sh` leg pins the three-way byte identity. The
+  PowerShell `aps update` gained a v2-layout path (managed skill trees, v2
+  plan templates, `.aps/scripts/`, config timestamp) so v2 projects are no
+  longer re-scaffolded as v1, and both fallback CLIs refuse dirty or
+  unmanaged-differing skill trees instead of blind-overwriting.
 - **`aps export --json`** (INTEGRATIONS-001/002) — a compact, deterministic
   JSON snapshot of the plan tree (schema `aps-export/v1`): modules in file
   order, work items in document order, with statuses, dependency tokens,
