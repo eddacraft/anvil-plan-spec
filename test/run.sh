@@ -916,5 +916,71 @@ grep -q "custom skill" "$MNG_SKILL/SKILL.md" || fail "broken-marker tree was ove
 rm -rf "$MNG_DIR"
 pass
 
+# Test 58: INSTALL-021 / D-043 — the curl updater brings a v1-layout project
+# to the current v2 layout (config, managed skill trees with markers, no
+# legacy paths) and refreshes a v2 project in place on a second run. The
+# repo's bash CLI is put on PATH so the updater's delegation path is the one
+# under test.
+echo -n "Test: curl updater delivers the v2 layout (v1 migrate + v2 refresh)... "
+UPD_DIR=$(mktemp -d)
+mkdir -p "$UPD_DIR/plans/modules" "$UPD_DIR/aps-planning/scripts" "$UPD_DIR/.claude/commands"
+cp "$PROJECT_ROOT/scaffold/aps-planning/SKILL.md" \
+   "$PROJECT_ROOT/scaffold/aps-planning/reference.md" \
+   "$PROJECT_ROOT/scaffold/aps-planning/examples.md" \
+   "$PROJECT_ROOT/scaffold/aps-planning/hooks.md" \
+   "$UPD_DIR/aps-planning/"
+echo "legacy plan command" > "$UPD_DIR/.claude/commands/plan.md"
+echo "old v1 rules" > "$UPD_DIR/plans/aps-rules.md"
+printf '# My Plan\n\nUPD-CUSTOM-INDEX-SENTINEL\n' > "$UPD_DIR/plans/index.aps.md"
+(cd "$UPD_DIR" && APS_LOCAL="$PROJECT_ROOT" PATH="$PROJECT_ROOT/bin:$PATH" \
+  bash "$PROJECT_ROOT/scaffold/update" > /dev/null 2>&1) || fail "updater failed on v1 fixture"
+[[ -f "$UPD_DIR/.aps/config.yml" ]] || fail ".aps/config.yml not created"
+grep -q 'name: claude-code' "$UPD_DIR/.aps/config.yml" || fail "migrated config missing claude-code tool"
+[[ ! -d "$UPD_DIR/aps-planning" ]] || fail "root aps-planning/ still present"
+[[ ! -e "$UPD_DIR/.claude/commands" ]] || fail ".claude/commands still present"
+[[ -f "$UPD_DIR/.claude/skills/aps-planning/SKILL.md" ]] || fail "managed skill tree not installed"
+[[ -f "$UPD_DIR/.claude/skills/aps-planning/.aps-managed.json" ]] || fail "managed marker not written"
+grep -q "UPD-CUSTOM-INDEX-SENTINEL" "$UPD_DIR/plans/index.aps.md" || fail "user index.aps.md was modified"
+grep -q "APS Rules" "$UPD_DIR/plans/aps-rules.md" || fail "aps-rules.md not refreshed to v2"
+ls "$UPD_DIR/.aps/backup" | grep -q . || fail "no migration backup written"
+# Second run: project is now v2 — refresh in place, no duplication, no
+# legacy resurrection, marker stays canonical byte-for-byte.
+cp "$UPD_DIR/.claude/skills/aps-planning/.aps-managed.json" "$UPD_DIR/.marker-before"
+(cd "$UPD_DIR" && APS_LOCAL="$PROJECT_ROOT" PATH="$PROJECT_ROOT/bin:$PATH" \
+  bash "$PROJECT_ROOT/scaffold/update" > /dev/null 2>&1) || fail "updater failed on v2 refresh"
+cmp -s "$UPD_DIR/.claude/skills/aps-planning/.aps-managed.json" "$UPD_DIR/.marker-before" \
+  || fail "v2 refresh rewrote the marker"
+[[ ! -d "$UPD_DIR/aps-planning" ]] || fail "v2 refresh recreated root aps-planning/"
+[[ ! -e "$UPD_DIR/.claude/commands" ]] || fail "v2 refresh recreated .claude/commands"
+[[ "$(grep -c 'name: claude-code' "$UPD_DIR/.aps/config.yml")" == "1" ]] \
+  || fail "v2 refresh duplicated config tools"
+rm -rf "$UPD_DIR"
+pass
+
+# Test 59: INSTALL-021 / D-043 — static guard: the curl updaters never fetch
+# the legacy v1 payload (unprefixed aps-planning/* or commands/*) and never
+# create .claude/commands. They delegate the refresh to `aps update`, whose
+# skill payload both CLI libraries pin to the packaged scaffold/aps-planning/*.
+echo -n "Test: curl updater static guard (scaffold payload, no legacy paths)... "
+UPD_SH="$PROJECT_ROOT/scaffold/update"
+UPD_PS="$PROJECT_ROOT/scaffold/update.ps1"
+! grep -Eq 'download(_root)? "(aps-planning|commands)/' "$UPD_SH" \
+  || fail "bash updater fetches a legacy payload path"
+! grep -Eq '\-(Path|Source) "(aps-planning|commands)/' "$UPD_PS" \
+  || fail "PowerShell updater fetches a legacy payload path"
+! grep -Eq 'mkdir[^#]*\.claude/commands' "$UPD_SH" \
+  || fail "bash updater creates .claude/commands"
+! grep -Eq 'New-Item[^#]*\.claude[^#]*commands|New-Item[^#]*commands[^#]*\.claude' "$UPD_PS" \
+  || fail "PowerShell updater creates .claude/commands"
+grep -Fq '"$APS_BIN" update' "$UPD_SH" \
+  || fail "bash updater does not delegate to aps update"
+grep -Fq 'DelegateArgs @("update", $Target)' "$UPD_PS" \
+  || fail "PowerShell updater does not delegate to aps update"
+grep -Fq '"scaffold/aps-planning/SKILL.md"' "$PROJECT_ROOT/lib/scaffold.sh" \
+  || fail "bash CLI skill payload is not the packaged scaffold copy"
+grep -Fq '"scaffold/aps-planning/SKILL.md"' "$PROJECT_ROOT/lib/Scaffold.psm1" \
+  || fail "PowerShell CLI skill payload is not the packaged scaffold copy"
+pass
+
 echo ""
 echo -e "${GREEN}All tests passed!${NC}"
