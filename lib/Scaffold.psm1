@@ -423,19 +423,6 @@ function Install-ApsPlans {
     }
 }
 
-function Install-ApsIndex {
-    <#
-    .SYNOPSIS
-        Download the index template (init only, not update).
-    #>
-    param([string]$Target)
-    Invoke-ApsDownload -Source "scaffold/plans/index.aps.md" -Destination (Join-Path (Join-Path $Target "plans") "index.aps.md")
-    $gitkeep = Join-Path (Join-Path (Join-Path $Target "plans") "decisions") ".gitkeep"
-    if (-not (Test-Path -LiteralPath $gitkeep)) {
-        New-Item -ItemType File -Path $gitkeep -Force | Out-Null
-    }
-}
-
 function Install-ApsSkill {
     <#
     .SYNOPSIS
@@ -470,37 +457,6 @@ function Install-ApsCli {
     param([string]$Target)
     foreach ($f in $script:CliFilesPowerShell) {
         Invoke-ApsDownloadRoot -Source $f -Destination (Join-Path $Target $f)
-    }
-}
-
-function Install-ApsPath {
-    <#
-    .SYNOPSIS
-        Set up PATH so `aps` works without ./bin/ prefix (direnv integration).
-    #>
-    param([string]$Target)
-    Write-Host ""
-    $hasDirenv = Get-Command direnv -ErrorAction SilentlyContinue
-    if ($hasDirenv) {
-        $envrc = Join-Path $Target ".envrc"
-        if ((Test-Path -LiteralPath $envrc) -and ((Get-Content -LiteralPath $envrc -Raw -ErrorAction SilentlyContinue) -cmatch 'PATH_add bin')) {
-            Write-ApsInfo "PATH already configured in .envrc"
-        } elseif (Request-ApsYesNo -Prompt "Set up direnv so you can run 'aps' without ./bin/ prefix?" -Default "y") {
-            if (Test-Path -LiteralPath $envrc) {
-                Add-Content -LiteralPath $envrc -Value 'PATH_add bin'
-            } else {
-                Set-Content -LiteralPath $envrc -Value 'PATH_add bin'
-            }
-            Write-ApsInfo "Added 'PATH_add bin' to .envrc"
-            Write-Host "  Run 'direnv allow' to activate"
-        } else {
-            Write-ApsInfo "To run aps without the path prefix, add to your .envrc:"
-            Write-Host "  PATH_add bin"
-        }
-    } else {
-        Write-ApsInfo "To run 'aps' without ./bin/ prefix, either:"
-        Write-Host "  - Install direnv and add 'PATH_add bin' to .envrc"
-        Write-Host "  - Or add 'export PATH=`"./bin:`$PATH`"' to your shell config"
     }
 }
 
@@ -559,6 +515,106 @@ function Install-ApsPlansV2 {
         }
         Invoke-ApsDownload -Source $f -Destination $dest
     }
+}
+
+function Install-ApsIndexV2 {
+    <#
+    .SYNOPSIS
+        Seed plans/index.aps.md (init only, never update) and keep the empty
+        decisions/ and designs/ dirs in git. Mirrors v2_install_index in
+        lib/scaffold.sh.
+    #>
+    param([string]$Target)
+    $plansDir = Join-Path $Target "plans"
+    Invoke-ApsDownload -Source "scaffold/plans/index.aps.md" -Destination (Join-Path $plansDir "index.aps.md")
+    foreach ($sub in @("decisions", "designs")) {
+        $gitkeep = Join-Path (Join-Path $plansDir $sub) ".gitkeep"
+        if (-not (Test-Path -LiteralPath $gitkeep)) {
+            New-Item -ItemType File -Path $gitkeep -Force | Out-Null
+        }
+    }
+}
+
+function Write-ApsConfigV2 {
+    <#
+    .SYNOPSIS
+        Write .aps/config.yml + .aps/.gitignore (the per-project contract).
+        Mirrors write_config in lib/scaffold.sh: same key order and per-tool
+        subkeys, so any CLI's updater can read what this one installed.
+        LF + no BOM keeps the file byte-comparable across the three CLIs.
+    #>
+    param(
+        [string]$Target,
+        [string]$Profile = "solo",
+        [string[]]$Tools = @()
+    )
+    $apsDir = Join-Path $Target ".aps"
+    New-Item -ItemType Directory -Path $apsDir -Force | Out-Null
+
+    # Ignore ephemeral CLI-generated context regardless of whether a local CLI
+    # was vendored (the global binary writes here too).
+    $gitignore = Join-Path $apsDir ".gitignore"
+    $existing = if (Test-Path -LiteralPath $gitignore) { @(Get-Content -LiteralPath $gitignore -ErrorAction SilentlyContinue) } else { @() }
+    if ($existing -cnotcontains "context/") {
+        Add-Content -LiteralPath $gitignore -Value "context/"
+    }
+
+    $today = Get-Date -Format "yyyy-MM-dd"
+    $lines = @(
+        "# .aps/config.yml — written by installer, read by updater"
+        ""
+        "# Project contract (INSTALL-014 / D-035): toolchain pin + runtime path"
+        "# defaults the global 'aps' binary discovers by walking up from cwd."
+        "cli_version: `"$script:ApsCliVersion`""
+        "plans_dir: plans/"
+        "docs_dir: docs/"
+        "tooling_root: .aps/"
+        ""
+        "aps:"
+        "  version: `"0.6.0`""
+        "  config_schema: 1"
+        "  installed: `"$today`""
+        "  updated: `"$today`""
+        ""
+        "project:"
+        "  type: simple"
+        "  monorepo_tool: ~"
+        "  profile: $Profile"
+        ""
+        "tools:"
+    )
+    foreach ($tool in $Tools) {
+        $lines += "  - name: $tool"
+        switch ($tool) {
+            "claude-code" {
+                $lines += "    skill: .claude/skills/aps-planning"
+                $lines += "    hooks: full"
+                $lines += "    agents:"
+                $lines += "      - aps-planner"
+                $lines += "      - aps-librarian"
+                $lines += "      - aps-conductor"
+            }
+            "copilot" {
+                $lines += "    skill: .claude/skills/aps-planning"
+                $lines += "    instruction_file: AGENTS.md"
+            }
+            "codex" {
+                $lines += "    skill: .agents/skills/aps-planning"
+                $lines += "    instruction_file: AGENTS.md"
+            }
+            "opencode" {
+                $lines += "    skill: .claude/skills/aps-planning"
+            }
+            "grok" {
+                $lines += "    skill: .agents/skills/aps-planning"
+                $lines += "    instruction_file: AGENTS.md"
+            }
+            "generic" {
+                $lines += "    # No tool integration"
+            }
+        }
+    }
+    [System.IO.File]::WriteAllText((Join-Path $apsDir "config.yml"), (($lines -join "`n") + "`n"), [System.Text.UTF8Encoding]::new($false))
 }
 
 function Install-ApsScriptsV2 {
@@ -682,16 +738,49 @@ function Update-ApsV2 {
 function Invoke-ApsInit {
     <#
     .SYNOPSIS
-        Full init workflow — creates APS structure in a project.
+        Init workflow — scaffolds the v2 minimal layout (INSTALL-011 /
+        INSTALL-023): plans templates + seed index + .aps/config.yml only.
+        Hook scripts and tool skills are opt-in (--hooks / --tools); skills
+        land under managed markers (D-042) so `aps update` can refresh them.
     #>
     param([string[]]$Arguments)
     $target = "."
+    $optTools = $null
+    $installHooks = $false
+    # --non-interactive is accepted for bash-CLI flag parity; this port never
+    # prompts, so non-interactive defaults (solo/small/generic) always apply.
     if ($Arguments) {
-        foreach ($arg in $Arguments) {
-            switch ($arg) {
-                "--help" { Show-ApsInitHelp; return }
-                "-h"     { Show-ApsInitHelp; return }
-                default  { $target = $arg }
+        for ($i = 0; $i -lt $Arguments.Count; $i++) {
+            switch ($Arguments[$i]) {
+                "--help"            { Show-ApsInitHelp; return }
+                "-h"                { Show-ApsInitHelp; return }
+                "--non-interactive" { }
+                "--hooks"           { $installHooks = $true }
+                "--tools" {
+                    if ($i + 1 -ge $Arguments.Count) {
+                        Write-ApsError "--tools requires a value (e.g. --tools claude-code)"
+                        exit 1
+                    }
+                    $i++
+                    $optTools = $Arguments[$i]
+                }
+                default { $target = $Arguments[$i] }
+            }
+        }
+    }
+
+    $toolNames = @("claude-code", "copilot", "codex", "opencode", "grok", "generic")
+    $selectedTools = @("generic")
+    if ($optTools) {
+        $selectedTools = @($optTools -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+        foreach ($t in $selectedTools) {
+            if ($t -ceq "gemini") {
+                Write-ApsError "'gemini' was retired in v0.7 (D-040); supported tools: $($toolNames -join ' ')"
+                exit 1
+            }
+            if ($toolNames -cnotcontains $t) {
+                Write-ApsError "unknown tool '$t'; supported tools: $($toolNames -join ' ')"
+                exit 1
             }
         }
     }
@@ -702,94 +791,121 @@ function Invoke-ApsInit {
         Write-Host ""
         Write-Host "To update an existing project:"
         Write-Host "  aps update"
-        Write-Host ""
-        Write-Host "To reinstall from scratch:"
-        Write-Host "  rm -rf $plansDir && aps init"
         exit 1
     }
 
     Write-Host ""
-    Write-ApsInfo "Initialising APS in $target"
+    Write-ApsInfo "Initialising APS v2 in $target"
     Write-Host ""
 
-    # CLI (bin/aps.ps1 + lib/)
-    Install-ApsCli -Target $target
-    Write-ApsInfo "bin/aps.ps1 + lib/ (CLI)"
+    # Plans (always — the irreducible core of an APS project)
+    Install-ApsPlansV2 -Target $target
+    Install-ApsIndexV2 -Target $target
+    Write-ApsInfo "plans/ (templates, rules, project-context, designs)"
 
-    # Templates and rules
-    Install-ApsPlans -Target $target
-    Install-ApsIndex -Target $target
-    Write-ApsInfo "plans/ (templates, rules, index)"
+    # Hook scripts — opt-in only.
+    if ($installHooks) {
+        Install-ApsScriptsV2 -Target $target
+        Write-ApsInfo ".aps/scripts/ (hook scripts)"
+    }
 
-    # Skill
-    Install-ApsSkill -Target $target
-    Write-ApsInfo "aps-planning/ (skill, reference, examples, hooks, scripts)"
+    # Tool-specific files (skills/agents) — installed only for selected tools
+    foreach ($tool in $selectedTools) {
+        switch ($tool) {
+            "claude-code" {
+                Install-ApsSkillV2 -Target $target
+                Install-ApsToolAgents -Target $target -Tool "claude-code"
+                Write-ApsInfo ".claude/skills/aps-planning/ (skill)"
+                Write-ApsInfo ".claude/agents/ (planner, librarian, conductor)"
+            }
+            "copilot" {
+                Install-ApsSkillV2 -Target $target
+                Install-ApsToolAgents -Target $target -Tool "copilot"
+                Write-ApsInfo ".claude/skills/aps-planning/ (skill — Copilot auto-discovers)"
+                Write-ApsInfo ".github/agents/ (planner, librarian, conductor)"
+            }
+            "opencode" {
+                Install-ApsSkillV2 -Target $target
+                Install-ApsToolAgents -Target $target -Tool "opencode"
+                Write-ApsInfo ".claude/skills/aps-planning/ (skill — OpenCode auto-discovers)"
+                Write-ApsInfo ".opencode/agents/ (planner, librarian, conductor)"
+            }
+            "codex" {
+                Install-ApsToolAgents -Target $target -Tool "codex"
+                Install-ApsAgentsSkillV2 -Target $target
+                Write-ApsInfo ".codex/agents/ (planner, librarian, conductor TOML configs)"
+                Write-ApsInfo ".agents/skills/aps-planning/ (skill)"
+            }
+            "grok" {
+                Install-ApsAgentsSkillV2 -Target $target
+                Write-ApsInfo ".agents/skills/aps-planning/ (skill — Grok Build auto-discovers)"
+            }
+        }
+    }
 
-    # Commands
-    Install-ApsCommands -Target $target
-    Write-ApsInfo ".claude/commands/ (plan, plan-status)"
+    # Config (always — the per-project contract read by `aps update`)
+    Write-ApsConfigV2 -Target $target -Tools $selectedTools
+    Write-ApsInfo ".aps/config.yml (install configuration)"
 
+    # Print layout
     Write-Host ""
-    Write-Host "  bin/"
-    Write-Host "  +-- aps.ps1                          <- CLI (lint, init, update)"
+    Write-Host "  .aps/"
+    Write-Host "  +-- config.yml                       <- Project contract (cli_version, paths)"
+    if ($installHooks) {
+        Write-Host "  +-- scripts/                         <- Hook scripts"
+    }
     Write-Host ""
     Write-Host "  plans/"
-    Write-Host "  +-- aps-rules.md                     <- Agent guidance (READ THIS)"
+    Write-Host "  +-- aps-rules.md                     <- Agent guidance (APS-managed)"
+    Write-Host "  +-- project-context.md               <- Your project context (edit this)"
     Write-Host "  +-- index.aps.md                     <- Your main plan (edit this)"
-    Write-Host "  +-- modules/"
-    Write-Host "  |   +-- .module.template.md          <- Template for modules"
-    Write-Host "  |   +-- .simple.template.md          <- Template for small features"
-    Write-Host "  |   +-- .index-monorepo.template.md  <- Index for monorepos"
-    Write-Host "  +-- execution/"
-    Write-Host "  |   +-- .actions.template.md         <- Template for action plans"
-    Write-Host "  +-- decisions/"
-    Write-Host ""
-    Write-Host "  aps-planning/"
-    Write-Host "  +-- SKILL.md                         <- Planning skill (core rules)"
-    Write-Host "  +-- reference.md                     <- APS format reference"
-    Write-Host "  +-- examples.md                      <- Real-world examples"
-    Write-Host "  +-- hooks.md                         <- Hook configuration guide"
-    Write-Host "  +-- scripts/                         <- Hook install + session scripts"
-    Write-Host ""
-    Write-Host "  .claude/commands/"
-    Write-Host "  +-- plan.md                          <- legacy Claude command"
-    Write-Host "  +-- plan-status.md                   <- legacy Claude command"
-
-    # Hooks
-    Invoke-ApsHookPrompt -Target $target
-
-    # PATH setup
-    Install-ApsPath -Target $target
+    Write-Host "  +-- issues.md                        <- Issue & question tracker"
+    Write-Host "  +-- modules/                         <- Module specs"
+    Write-Host "  +-- execution/                       <- Action plans"
+    Write-Host "  +-- decisions/                       <- ADRs"
+    Write-Host "  +-- designs/                         <- Technical designs"
 
     Write-Host ""
-    Write-ApsInfo "Next steps:"
-    Write-Host "  1. Edit plans/index.aps.md to define your plan"
-    Write-Host "  2. Copy templates to create modules (remove leading dot)"
-    Write-Host "  3. Point your AI agent at plans\aps-rules.md, or run aps next"
+    if ($selectedTools -ccontains "claude-code") {
+        Write-ApsInfo "Next: point Claude Code at plans/aps-rules.md and edit plans/project-context.md"
+    } else {
+        Write-ApsInfo "Next: edit plans/project-context.md with your project details"
+    }
+    Write-Host ""
+    Write-ApsInfo "This repo uses the global 'aps' binary. Add hooks, agents, or a"
+    Write-Host "  vendored CLI later with: aps setup"
     Write-Host ""
 }
 
 function Show-ApsInitHelp {
     Write-Host @"
-aps init - Create APS structure in a new project
+aps init - Create APS structure in a new project (v2 layout)
 
 Usage:
-  aps init [target-dir]
+  aps.ps1 init [target-dir] [options]
 
-Creates bin/aps CLI, plans/, aps-planning/ skill, .claude/commands/,
-and optionally installs hooks and sets up PATH via direnv.
+Creates minimal planning content (plans/ + .aps/config.yml). By default it
+does NOT install hook scripts or tool skills — the global 'aps' binary on
+PATH drives the repo. Opt in with --hooks / --tools, or add them later
+with 'aps setup'.
 
 Refuses to run if plans/ already exists.
 
 Options:
-  --help    Show this help
+  --tools TOOLS       Comma-separated: claude-code,copilot,codex,opencode,grok,generic
+                      (default: generic — no tool integration)
+  --hooks             Also install hook scripts into .aps/scripts
+  --non-interactive   Accepted for bash-CLI parity (this port never prompts)
+  --help              Show this help
 
 Environment:
   APS_VERSION   Git ref to download from (default: main)
 
 Examples:
-  aps init              # Init in current directory
-  aps init ./my-project # Init in a subdirectory
+  .\bin\aps.ps1 init                             # Minimal layout in current directory
+  .\bin\aps.ps1 init .\my-project                # Init in a subdirectory
+  .\bin\aps.ps1 init --tools claude-code         # Also install the Claude Code skill + agents
+  .\bin\aps.ps1 init --non-interactive --hooks   # Minimal layout + hook scripts
 "@
 }
 
@@ -932,7 +1048,6 @@ Export-ModuleMember -Function @(
     'Invoke-ApsDownload'
     'Invoke-ApsDownloadRoot'
     'Install-ApsPlans'
-    'Install-ApsIndex'
     'Install-ApsSkill'
     'Install-ApsCommands'
     'Install-ApsCli'
