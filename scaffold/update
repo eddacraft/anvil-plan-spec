@@ -1,8 +1,20 @@
 #!/usr/bin/env bash
 #
 # APS Update Script
-# Updates templates, rules, and skill in an existing APS project.
+# Brings an existing APS project to the current (v2) layout — D-043.
 # Your specs (index.aps.md, modules/*.aps.md) are preserved.
+#
+# v2 projects (.aps/config.yml) are refreshed in place; v1 projects
+# (root aps-planning/, .claude/commands/, root bin/ + lib/) are migrated:
+# legacy trees are backed up to .aps/backup/<timestamp>/ and removed,
+# .aps/config.yml is created, and the packaged scaffold/aps-planning/
+# payload lands in the managed skill trees with `.aps-managed.json`
+# markers (D-042).
+#
+# The heavy lifting is delegated to a capable `aps` CLI (native binary on
+# PATH, or the project's vendored .aps/bin/aps). When neither is present,
+# the pinned bash CLI is fetched into a temp dir and used — the update
+# never silently skips managed markers.
 #
 # Usage:
 #   curl -fsSL https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/update | bash
@@ -14,7 +26,7 @@
 
 set -euo pipefail
 
-VERSION="${VERSION:-main}"
+VERSION="${VERSION:-${APS_VERSION:-main}}"
 GLOBAL_INSTALL=false
 TARGET="."
 
@@ -56,55 +68,82 @@ fi
 
 info()  { echo -e "${GREEN}>${NC} $1"; }
 warn()  { echo -e "${YELLOW}>${NC} $1"; }
-error() { echo -e "${RED}error:${NC} $1"; }
+error() { echo -e "${RED}error:${NC} $1" >&2; }
 step()  { echo -e "${BLUE}==>${NC} ${BOLD}$1${NC}"; }
 
-# Check if APS hooks are already configured in settings
-has_aps_hooks() {
-  local settings="$TARGET/.claude/settings.local.json"
-  [[ -f "$settings" ]] && grep -q 'aps-planning/scripts\|\[APS\]' "$settings" 2>/dev/null
-}
+# CLI runtime file lists (mirrors V2_CLI_FILES in lib/scaffold.sh plus the
+# PowerShell twins the global channel also carries).
+CLI_BASH_FILES=(
+  bin/aps
+  lib/output.sh lib/lint.sh lib/orchestrate.sh lib/audit.sh lib/export.sh
+  lib/scaffold.sh
+  lib/rules/common.sh lib/rules/module.sh lib/rules/index.sh
+  lib/rules/workitem.sh lib/rules/issues.sh lib/rules/design.sh
+)
+CLI_PS_FILES=(
+  bin/aps.ps1
+  lib/Output.psm1 lib/Lint.psm1 lib/Scaffold.psm1
+  lib/rules/Common.psm1 lib/rules/Module.psm1 lib/rules/Index.psm1
+  lib/rules/WorkItem.psm1 lib/rules/Issues.psm1 lib/rules/Design.psm1
+)
 
-# Prompt user with a yes/no question. Returns 0 for yes, 1 for no.
-ask_yn() {
-  local prompt="$1"
-  local default="${2:-n}"
+# Hook script basenames (both shells) as shipped into .aps/scripts/.
+HOOK_SCRIPT_NAMES=(
+  install-hooks init-session check-complete
+  pre-tool-check post-tool-nudge enforce-plan-update
+)
 
-  if [[ -t 0 ]]; then
-    local yn_hint
-    if [[ "$default" == "y" ]]; then yn_hint="Y/n"; else yn_hint="y/N"; fi
-    printf "%s [%s] " "$prompt" "$yn_hint"
-    read -r answer
-    answer="${answer:-$default}"
-    [[ "$answer" =~ ^[Yy] ]]
-  else
-    [[ "$default" == "y" ]]
-  fi
-}
-
+# Download a repo-root-relative file from GitHub, or copy it from a local
+# checkout when APS_LOCAL is set (mirrors lib/scaffold.sh download()).
 download() {
   local path="$1"
   local dest="$2"
-  local url="$BASE_URL/scaffold/$path"
   mkdir -p "$(dirname "$dest")"
+
+  if [[ -n "${APS_LOCAL:-}" ]]; then
+    if [[ -f "$APS_LOCAL/$path" ]]; then
+      cp "$APS_LOCAL/$path" "$dest"
+      return 0
+    fi
+    error "Local file not found: $APS_LOCAL/$path"
+    exit 1
+  fi
+
+  local url="$BASE_URL/$path"
   if ! curl -fsSL "$url" -o "$dest"; then
     error "Failed to download '$path' from $url"
-    echo "       Please check your network connectivity and ensure VERSION='$VERSION' is correct."
+    echo "       Please check your network connectivity and ensure VERSION='$VERSION' is correct." >&2
     exit 1
   fi
 }
 
-# Download from repo root (for non-scaffold files like bin/ and lib/)
-download_root() {
-  local path="$1"
-  local dest="$2"
-  local url="$BASE_URL/$path"
-  mkdir -p "$(dirname "$dest")"
-  if ! curl -fsSL "$url" -o "$dest"; then
-    error "Failed to download '$path' from $url"
-    echo "       Please check your network connectivity and ensure VERSION='$VERSION' is correct."
-    exit 1
-  fi
+# Check if APS hooks are configured in either Claude settings file
+# (mirrors has_aps_hooks in lib/scaffold.sh).
+has_aps_hooks() {
+  local f
+  for f in "$TARGET/.claude/settings.local.json" "$TARGET/.claude/settings.json"; do
+    if [[ -f "$f" ]] && grep -q 'aps-planning/scripts\|\.aps/scripts\|\[APS\]' "$f" 2>/dev/null; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+# Layout detection (mirrors is_v1_layout / is_v2_layout in lib/scaffold.sh)
+is_v2_layout() {
+  [[ -f "$TARGET/.aps/config.yml" ]]
+}
+
+is_v1_layout() {
+  # Same five marker classes as lib/scaffold.sh; bash/pwsh CLI file
+  # variants count once per class.
+  local markers=0
+  [[ -f "$TARGET/bin/aps" || -f "$TARGET/bin/aps.ps1" ]]           && ((markers++))
+  [[ -d "$TARGET/aps-planning" ]]                                  && ((markers++))
+  [[ -f "$TARGET/.claude/commands/plan.md" ]]                      && ((markers++))
+  [[ -f "$TARGET/lib/output.sh" || -f "$TARGET/lib/Output.psm1" ]] && ((markers++))
+  [[ -f "$TARGET/plans/aps-rules.md" ]]                            && ((markers++))
+  (( markers >= 2 ))
 }
 
 # Global update: CLI only
@@ -126,14 +165,15 @@ update_global() {
 
   step "Updating APS CLI at $aps_home"
 
-  for f in bin/aps bin/aps.ps1 lib/output.sh lib/Output.psm1 lib/lint.sh lib/Lint.psm1 lib/orchestrate.sh lib/audit.sh lib/export.sh lib/scaffold.sh lib/Scaffold.psm1 lib/rules/common.sh lib/rules/Common.psm1 lib/rules/module.sh lib/rules/Module.psm1 lib/rules/index.sh lib/rules/Index.psm1 lib/rules/workitem.sh lib/rules/WorkItem.psm1 lib/rules/issues.sh lib/rules/Issues.psm1; do
-    download_root "$f" "$aps_home/$f"
+  local f
+  for f in "${CLI_BASH_FILES[@]}" "${CLI_PS_FILES[@]}"; do
+    download "$f" "$aps_home/$f"
   done
   chmod +x "$aps_home/bin/aps"
 
   echo ""
   step "Global update complete"
-  info "bin/aps + lib/ updated at $aps_home"
+  info "bin/aps + bin/aps.ps1 + lib/ updated at $aps_home"
   echo ""
 }
 
@@ -143,7 +183,239 @@ if [[ "$GLOBAL_INSTALL" == true ]]; then
   exit 0
 fi
 
-# Header
+# --- Delegate resolution ---
+#
+# The updater does not embed the v2 refresh or the managed-marker logic; it
+# runs `aps update`, which owns both (cmd_update_v2 in lib/scaffold.sh).
+
+BOOTSTRAP_DIR=""
+cleanup_bootstrap() {
+  if [[ -n "$BOOTSTRAP_DIR" ]]; then
+    rm -rf "$BOOTSTRAP_DIR"
+  fi
+}
+trap cleanup_bootstrap EXIT
+
+# Fetch the pinned bash CLI into a temp dir and point APS_BIN at it.
+bootstrap_cli() {
+  BOOTSTRAP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/aps-update-cli.XXXXXX")"
+  local f
+  for f in "${CLI_BASH_FILES[@]}"; do
+    download "$f" "$BOOTSTRAP_DIR/$f"
+  done
+  chmod +x "$BOOTSTRAP_DIR/bin/aps"
+  APS_BIN="$BOOTSTRAP_DIR/bin/aps"
+  APS_BIN_DESC="bash CLI fetched at ref '$VERSION'"
+}
+
+APS_BIN=""
+APS_BIN_DESC=""
+resolve_aps() {
+  if command -v aps >/dev/null 2>&1 && aps update --help >/dev/null 2>&1; then
+    APS_BIN="aps"
+    APS_BIN_DESC="installed aps CLI ($(command -v aps))"
+    return 0
+  fi
+  if [[ -x "$TARGET/.aps/bin/aps" ]] && "$TARGET/.aps/bin/aps" update --help >/dev/null 2>&1; then
+    APS_BIN="$TARGET/.aps/bin/aps"
+    APS_BIN_DESC="vendored CLI (.aps/bin/aps)"
+    return 0
+  fi
+  bootstrap_cli
+}
+
+# --- Minimal project config (mirrors write_min_config in scaffold/install) ---
+
+write_min_config() {
+  local tool="$1"
+  local today cli_version
+  today="$(date +%Y-%m-%d)"
+  # VERSION is a git ref ("main") by default; only use it as the contract pin
+  # when it is an explicit semver. Otherwise fall back to the release version.
+  case "$VERSION" in
+    v[0-9]*|[0-9]*) cli_version="${VERSION#v}" ;;
+    *)              cli_version="0.6.0" ;;
+  esac
+  mkdir -p "$TARGET/.aps"
+  touch "$TARGET/.aps/.gitignore"
+  grep -qxF 'context/' "$TARGET/.aps/.gitignore" || printf 'context/\n' >> "$TARGET/.aps/.gitignore"
+  {
+    echo "# .aps/config.yml — written by updater (v1 migration), read by updater"
+    echo ""
+    echo "# Project contract (INSTALL-014 / D-035): toolchain pin + runtime path"
+    echo "# defaults the global 'aps' binary discovers by walking up from cwd."
+    echo "cli_version: \"$cli_version\""
+    echo "plans_dir: plans/"
+    echo "docs_dir: docs/"
+    echo "tooling_root: .aps/"
+    echo ""
+    echo "aps:"
+    echo "  version: \"0.6.0\""
+    echo "  config_schema: 1"
+    echo "  installed: \"$today\""
+    echo "  updated: \"$today\""
+    echo ""
+    echo "project:"
+    echo "  type: simple"
+    echo "  monorepo_tool: ~"
+    echo "  profile: solo"
+    echo ""
+    echo "tools:"
+    echo "  - name: $tool"
+    case "$tool" in
+      claude-code)
+        echo "    skill: .claude/skills/aps-planning"
+        echo "    hooks: full"
+        echo "    agents:"
+        echo "      - aps-planner"
+        echo "      - aps-librarian"
+        echo "      - aps-conductor"
+        ;;
+      *)
+        echo "    # No tool integration — run 'aps setup' to add one"
+        ;;
+    esac
+  } > "$TARGET/.aps/config.yml"
+}
+
+# --- v1 -> v2 migration (minimum footprint; deep cleanup is `aps upgrade`) ---
+#
+# D-033 safety: generated legacy trees are backed up to .aps/backup/<ts>/
+# before removal; anything ambiguous is left in place with a warning.
+
+MIGRATION_BACKUP=""
+
+migrate_v1() {
+  local ts backup
+  ts="$(date +%Y%m%d-%H%M%S)"
+  backup="$TARGET/.aps/backup/$ts"
+  MIGRATION_BACKUP=".aps/backup/$ts"
+
+  step "Migrating v1 layout to the current layout"
+  mkdir -p "$backup"
+
+  # Legacy skill dir: remove only when it is recognisably APS-generated.
+  if [[ -d "$TARGET/aps-planning" ]]; then
+    if [[ -f "$TARGET/aps-planning/SKILL.md" || -f "$TARGET/aps-planning/hooks.md" ]]; then
+      cp -a "$TARGET/aps-planning" "$backup/aps-planning"
+      rm -rf "$TARGET/aps-planning"
+      info "Backed up + removed legacy aps-planning/ (fresh skill goes to the managed trees)"
+    else
+      warn "aps-planning/ has unrecognised contents — left untouched, review manually"
+    fi
+  fi
+
+  # Legacy Claude commands (D-023: no shipped commands).
+  local cmd_file removed_cmd=false
+  for cmd_file in plan.md plan-status.md; do
+    if [[ -f "$TARGET/.claude/commands/$cmd_file" ]]; then
+      mkdir -p "$backup/commands"
+      cp -a "$TARGET/.claude/commands/$cmd_file" "$backup/commands/$cmd_file"
+      rm -f "$TARGET/.claude/commands/$cmd_file"
+      removed_cmd=true
+    fi
+  done
+  rmdir "$TARGET/.claude/commands" 2>/dev/null || true
+  if [[ "$removed_cmd" == true ]]; then
+    info "Backed up + removed legacy Claude commands"
+  fi
+
+  # Root vendored CLI (generated content; superseded by the global binary or
+  # the vendored .aps/bin runtime).
+  if [[ -f "$TARGET/bin/aps" || -f "$TARGET/bin/aps.ps1" ]]; then
+    rm -f "$TARGET/bin/aps" "$TARGET/bin/aps.ps1"
+    rmdir "$TARGET/bin" 2>/dev/null && info "Removed legacy bin/" || \
+      warn "bin/ contains non-APS files — removed only bin/aps"
+  fi
+  if [[ -d "$TARGET/lib" ]] && [[ -f "$TARGET/lib/output.sh" || -f "$TARGET/lib/Output.psm1" ]]; then
+    local f
+    for f in "${CLI_BASH_FILES[@]}" "${CLI_PS_FILES[@]}"; do
+      if [[ "$f" == lib/* ]]; then
+        rm -f "$TARGET/$f"
+      fi
+    done
+    rmdir "$TARGET/lib/rules" 2>/dev/null || true
+    rmdir "$TARGET/lib" 2>/dev/null && info "Removed legacy lib/" || \
+      warn "lib/ contains non-APS files — removed only APS files"
+  fi
+
+  # aps-rules.md is APS-managed and will be replaced with the v2 rules.
+  if [[ -f "$PLANS_DIR/aps-rules.md" ]]; then
+    cp -a "$PLANS_DIR/aps-rules.md" "$backup/aps-rules.md"
+    info "Backed up plans/aps-rules.md (replaced with the v2 rules)"
+  fi
+
+  # Hooks: keep them working only when the project had them wired up.
+  if [[ "$HOOKS_CONFIGURED" == true ]]; then
+    if [[ -f "$TARGET/.claude/settings.local.json" ]] && \
+       grep -q 'aps-planning/scripts' "$TARGET/.claude/settings.local.json" 2>/dev/null; then
+      sed -i.aps-bak 's|aps-planning/scripts|.aps/scripts|g' "$TARGET/.claude/settings.local.json"
+      rm -f "$TARGET/.claude/settings.local.json.aps-bak"
+      info "Rewrote hook paths (aps-planning/scripts -> .aps/scripts) in settings.local.json"
+    fi
+    mkdir -p "$TARGET/.aps/scripts"
+  fi
+
+  # Project contract. v1 installs were Claude Code integrations (skill +
+  # commands), so the migrated config keeps that tool enabled.
+  write_min_config claude-code
+  info "Created .aps/config.yml (claude-code)"
+}
+
+# --- Post-delegate pruning ---
+#
+# `aps update` (bash cmd_update_v2) refreshes the vendored CLI and hook
+# scripts unconditionally; this project only keeps what it already had
+# (or what the v1 migration carried over).
+
+prune_scripts() {
+  local d="$TARGET/.aps/scripts" name
+  [[ -d "$d" ]] || return 0
+  for name in "${HOOK_SCRIPT_NAMES[@]}"; do
+    rm -f "$d/$name.sh" "$d/$name.ps1"
+  done
+  rmdir "$d" 2>/dev/null || warn ".aps/scripts contains non-APS files — left in place"
+}
+
+prune_vendored_cli() {
+  local f
+  rm -f "$TARGET/.aps/bin/aps" "$TARGET/.aps/bin/aps.ps1"
+  rmdir "$TARGET/.aps/bin" 2>/dev/null || true
+  for f in "${CLI_BASH_FILES[@]}" "${CLI_PS_FILES[@]}"; do
+    if [[ "$f" == lib/* ]]; then
+      rm -f "$TARGET/.aps/$f"
+    fi
+  done
+  rmdir "$TARGET/.aps/lib/rules" 2>/dev/null || true
+  rmdir "$TARGET/.aps/lib" 2>/dev/null || true
+}
+
+run_update() {
+  step "Refreshing project via $APS_BIN_DESC"
+  if ! APS_VERSION="$VERSION" "$APS_BIN" update "$TARGET"; then
+    error "aps update failed"
+    exit 1
+  fi
+  [[ "$KEEP_SCRIPTS" == true ]] || prune_scripts
+  [[ "$KEEP_VENDORED_CLI" == true ]] || prune_vendored_cli
+}
+
+# True when a skill tree this run created is missing its managed marker —
+# the sign of a pre-D-042 delegate CLI. Pre-existing trees are exempt (the
+# reconcile may legitimately leave user-owned trees unmarked).
+markers_missing() {
+  local tree
+  for tree in ".claude/skills/aps-planning" ".agents/skills/aps-planning"; do
+    case " $PRE_EXISTING_TREES " in *" $tree "*) continue ;; esac
+    if [[ -f "$TARGET/$tree/SKILL.md" && ! -f "$TARGET/$tree/.aps-managed.json" ]]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+# --- Project update ---
+
 echo ""
 echo -e "${BOLD}Anvil Plan Spec (APS) Update${NC}"
 echo ""
@@ -163,101 +435,96 @@ mkdir -p "$PLANS_DIR/modules"
 mkdir -p "$PLANS_DIR/execution"
 mkdir -p "$PLANS_DIR/decisions"
 
-# Update CLI
-step "Updating APS CLI"
-for f in bin/aps bin/aps.ps1 lib/output.sh lib/Output.psm1 lib/lint.sh lib/Lint.psm1 lib/orchestrate.sh lib/audit.sh lib/export.sh lib/scaffold.sh lib/Scaffold.psm1 lib/rules/common.sh lib/rules/Common.psm1 lib/rules/module.sh lib/rules/Module.psm1 lib/rules/index.sh lib/rules/Index.psm1 lib/rules/workitem.sh lib/rules/WorkItem.psm1 lib/rules/issues.sh lib/rules/Issues.psm1 lib/rules/design.sh lib/rules/Design.psm1; do
-  download_root "$f" "$TARGET/$f"
+# Pre-state, recorded before migration can create any of it.
+HOOKS_CONFIGURED=false
+if has_aps_hooks; then HOOKS_CONFIGURED=true; fi
+HAD_SCRIPTS=false
+if [[ -d "$TARGET/.aps/scripts" ]]; then HAD_SCRIPTS=true; fi
+HAD_VENDORED_CLI=false
+if [[ -f "$TARGET/.aps/bin/aps" || -f "$TARGET/.aps/bin/aps.ps1" ]]; then HAD_VENDORED_CLI=true; fi
+PRE_EXISTING_TREES=""
+for tree in ".claude/skills/aps-planning" ".agents/skills/aps-planning"; do
+  if [[ -f "$TARGET/$tree/SKILL.md" ]]; then
+    PRE_EXISTING_TREES="$PRE_EXISTING_TREES $tree"
+  fi
 done
-chmod +x "$TARGET/bin/aps"
-info "bin/aps + lib/ (CLI)"
 
-# Update templates and rules
-step "Updating templates and rules"
+MODE="v2"
+if is_v2_layout; then
+  MODE="v2"
+elif is_v1_layout; then
+  MODE="v1"
+else
+  MODE="plans-only"
+fi
 
-download "plans/aps-rules.md" "$PLANS_DIR/aps-rules.md"
-info "aps-rules.md"
+KEEP_SCRIPTS=false
+if [[ "$HAD_SCRIPTS" == true || "$HOOKS_CONFIGURED" == true ]]; then
+  KEEP_SCRIPTS=true
+fi
+KEEP_VENDORED_CLI="$HAD_VENDORED_CLI"
+if [[ "$MODE" == "v1" && -f "$TARGET/bin/aps" ]]; then
+  # A v1 project vendored its CLI at the root; keep it vendored at .aps/bin.
+  KEEP_VENDORED_CLI=true
+fi
 
-download "plans/modules/.module.template.md" "$PLANS_DIR/modules/.module.template.md"
-info "modules/.module.template.md"
+case "$MODE" in
+  v1)
+    migrate_v1
+    ;;
+  plans-only)
+    step "Adopting the current layout (plans/ found, no .aps/config.yml)"
+    write_min_config generic
+    info "Created .aps/config.yml (generic — run 'aps setup' to add a tool)"
+    ;;
+esac
 
-download "plans/modules/.simple.template.md" "$PLANS_DIR/modules/.simple.template.md"
-info "modules/.simple.template.md"
+resolve_aps
+run_update
 
-download "plans/modules/.index-monorepo.template.md" "$PLANS_DIR/modules/.index-monorepo.template.md"
-info "modules/.index-monorepo.template.md"
-
-download "plans/execution/.actions.template.md" "$PLANS_DIR/execution/.actions.template.md"
-info "execution/.actions.template.md"
-
-# Update skill files
-step "Updating APS planning skill"
-
-SKILL_DIR="$TARGET/aps-planning"
-COMMANDS_DIR="$TARGET/.claude/commands"
-
-mkdir -p "$SKILL_DIR/scripts"
-download "aps-planning/SKILL.md" "$SKILL_DIR/SKILL.md"
-download "aps-planning/reference.md" "$SKILL_DIR/reference.md"
-download "aps-planning/examples.md" "$SKILL_DIR/examples.md"
-download "aps-planning/hooks.md" "$SKILL_DIR/hooks.md"
-download "aps-planning/scripts/install-hooks.sh" "$SKILL_DIR/scripts/install-hooks.sh"
-download "aps-planning/scripts/init-session.sh" "$SKILL_DIR/scripts/init-session.sh"
-download "aps-planning/scripts/check-complete.sh" "$SKILL_DIR/scripts/check-complete.sh"
-download "aps-planning/scripts/pre-tool-check.sh" "$SKILL_DIR/scripts/pre-tool-check.sh"
-download "aps-planning/scripts/post-tool-nudge.sh" "$SKILL_DIR/scripts/post-tool-nudge.sh"
-download "aps-planning/scripts/enforce-plan-update.sh" "$SKILL_DIR/scripts/enforce-plan-update.sh"
-download "aps-planning/scripts/install-hooks.ps1" "$SKILL_DIR/scripts/install-hooks.ps1"
-download "aps-planning/scripts/init-session.ps1" "$SKILL_DIR/scripts/init-session.ps1"
-download "aps-planning/scripts/check-complete.ps1" "$SKILL_DIR/scripts/check-complete.ps1"
-download "aps-planning/scripts/pre-tool-check.ps1" "$SKILL_DIR/scripts/pre-tool-check.ps1"
-download "aps-planning/scripts/post-tool-nudge.ps1" "$SKILL_DIR/scripts/post-tool-nudge.ps1"
-download "aps-planning/scripts/enforce-plan-update.ps1" "$SKILL_DIR/scripts/enforce-plan-update.ps1"
-chmod +x "$SKILL_DIR/scripts/"*.sh
-
-info "aps-planning/ (skill, reference, examples, hooks, scripts)"
-
-mkdir -p "$COMMANDS_DIR"
-download "commands/plan.md" "$COMMANDS_DIR/plan.md"
-download "commands/plan-status.md" "$COMMANDS_DIR/plan-status.md"
-
-info ".claude/commands/ (plan, plan-status)"
+# A delegate CLI that predates managed markers (D-042) would have installed
+# skill trees without them. Never leave that silent: redo the refresh with
+# the pinned CLI, which is marker-capable.
+if markers_missing; then
+  if [[ -z "$BOOTSTRAP_DIR" ]]; then
+    warn "$APS_BIN_DESC did not write managed skill markers — retrying with the pinned CLI"
+    APS_BIN="$(bootstrap_cli)"
+    APS_BIN_DESC="bash CLI fetched at ref '$VERSION'"
+    run_update
+  fi
+  if markers_missing; then
+    error "managed skill markers are still missing after the update"
+    echo "       Update your installed aps CLI and re-run:" >&2
+    echo "       curl -fsSL $BASE_URL/scaffold/install | bash -s -- --cli" >&2
+    exit 1
+  fi
+fi
 
 # Success
 echo ""
 step "Update complete"
 echo ""
 echo "  Updated:"
-echo "    - bin/aps + lib/ (CLI)"
-echo "    - aps-rules.md (agent guidance)"
-echo "    - modules/.module.template.md"
-echo "    - modules/.simple.template.md"
-echo "    - modules/.index-monorepo.template.md"
-echo "    - execution/.actions.template.md"
-echo "    - aps-planning/ (skill + scripts)"
-echo "    - .claude/commands/ (plan, plan-status)"
+echo "    - plans/ templates and aps-rules.md (your specs untouched)"
+echo "    - managed skill trees per .aps/config.yml (with .aps-managed.json markers)"
+if [[ "$KEEP_SCRIPTS" == true ]]; then
+  echo "    - .aps/scripts/ (hook scripts)"
+fi
+if [[ "$KEEP_VENDORED_CLI" == true ]]; then
+  echo "    - .aps/bin + .aps/lib (vendored CLI)"
+fi
+if [[ "$MODE" == "v1" ]]; then
+  echo ""
+  warn "v1 layout migrated — legacy files were backed up to $MIGRATION_BACKUP/"
+  echo "    Review .aps/config.yml and adjust tools/profile if needed."
+fi
 echo ""
 warn "Your specs were preserved:"
 echo "    - index.aps.md"
 echo "    - modules/*.aps.md"
 echo "    - execution/*.actions.md"
 echo ""
-# Prompt for hooks if not already configured
-if ! has_aps_hooks; then
+if [[ "$KEEP_SCRIPTS" != true ]]; then
+  info "Hooks are not installed. Add them any time with: aps setup hooks"
   echo ""
-  if ask_yn "Install APS hooks into .claude/settings.local.json?" "y"; then
-    (cd "$TARGET" && bash aps-planning/scripts/install-hooks.sh)
-  else
-    if ask_yn "Copy hook scripts for you to install/review later?" "y"; then
-      info "Hook scripts are at: aps-planning/scripts/"
-      echo "    Run ./aps-planning/scripts/install-hooks.sh when ready"
-      echo "    See aps-planning/hooks.md for what each hook does"
-    else
-      info "Skipping hooks. You can install them later:"
-      echo "    ./aps-planning/scripts/install-hooks.sh"
-    fi
-  fi
-else
-  warn "Hook configuration was NOT modified."
-  echo "    To update hooks: ./aps-planning/scripts/install-hooks.sh"
 fi
-echo ""

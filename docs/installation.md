@@ -228,6 +228,19 @@ Your specs are preserved -- the updater only replaces templates, rules,
 the CLI, and skill files. It does not touch your `index.aps.md`, module
 specs, or action steps.
 
+The updater always delivers the **current (v2) layout** (D-043). A v2
+project (one with `.aps/config.yml`) is refreshed in place. A legacy v1
+project (root `aps-planning/`, `.claude/commands/`, root `bin/` + `lib/`)
+is migrated on the spot: legacy trees are backed up to
+`.aps/backup/<timestamp>/` and removed, `.aps/config.yml` is created, and
+the packaged skill payload lands in the managed skill trees with
+`.aps-managed.json` markers. After an update no root `aps-planning/` or
+`.claude/commands/` remains. The refresh itself is delegated to a capable
+`aps` CLI (the native binary on PATH, or the project's vendored
+`.aps/bin` runtime); when neither is available the updater fetches the
+pinned CLI into a temp dir and uses that, so managed markers are never
+skipped.
+
 **Updated files** (only those a project actually has — a minimal install has no
 vendored CLI to refresh):
 
@@ -235,13 +248,14 @@ vendored CLI to refresh):
 - `plans/modules/.module.template.md`, `.simple.template.md`, `.index-monorepo.template.md`
 - `plans/execution/.actions.template.md`
 - The vendored CLI (`.aps/bin/aps` + `.aps/lib/`) **only if** you installed it
-  with `--local-cli`; otherwise the global `aps` binary is updated separately
+  with `--local-cli` (or your v1 project vendored one at the root); otherwise
+  the global `aps` binary is updated separately
   (see [Global Install](#global-install))
 - The planning skill (`.claude/skills/aps-planning/` and/or
-  `.agents/skills/aps-planning/`; a legacy root `aps-planning/` is refreshed in
-  place until you `aps migrate`), hook scripts (`.aps/scripts/`), and agent
-  definitions for any AI tools you added (`.claude/agents/`, `.github/agents/`,
-  `.opencode/agents/`, etc.) — only when present
+  `.agents/skills/aps-planning/`), hook scripts (`.aps/scripts/` — only when
+  already installed, or when a v1 migration found hooks wired into your Claude
+  settings), and agent definitions for any AI tools you added
+  (`.claude/agents/`, `.github/agents/`, `.opencode/agents/`, etc.)
 
 **Preserved:** your `plans/index.aps.md`, module specs, `plans/project-context.md`,
 `plans/issues.md`, action plans, and anything under `plans/decisions/` or
