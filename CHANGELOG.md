@@ -39,6 +39,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   bash config), with `--tools`/`--hooks` opting into managed skill trees,
   agents, and hook scripts. The retired `gemini` tool errors with a D-040
   pointer, matching the other CLIs.
+- **`plans/.aps-version` retired** (INSTALL-022, D-044) — `cli_version` in
+  `.aps/config.yml` is now the only on-disk version stamp. Nothing writes
+  `.aps-version` any more, `aps update` in all three CLIs removes a legacy
+  one, and the planning skill's staleness check compares the config pin
+  against `aps --version` instead of a hardcoded spec version that could
+  never fire.
 - **`aps export --json`** (INTEGRATIONS-001/002) — a compact, deterministic
   JSON snapshot of the plan tree (schema `aps-export/v1`): modules in file
   order, work items in document order, with statuses, dependency tokens,

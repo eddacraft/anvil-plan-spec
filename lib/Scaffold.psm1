@@ -699,6 +699,13 @@ function Update-ApsV2 {
     Install-ApsPlansV2 -Target $Target
     Write-ApsInfo "plans/ (templates, rules)"
 
+    # D-044: retire the legacy plans/.aps-version stamp on update.
+    $apsVersionFile = Join-Path (Join-Path $Target "plans") ".aps-version"
+    if (Test-Path -LiteralPath $apsVersionFile -PathType Leaf) {
+        Remove-Item -LiteralPath $apsVersionFile -Force
+        Write-ApsInfo "Removed legacy plans/.aps-version (superseded by .aps/config.yml)"
+    }
+
     # Hook scripts: refresh only when installed.
     if (Test-Path -LiteralPath (Join-Path $apsDir "scripts") -PathType Container) {
         Install-ApsScriptsV2 -Target $Target

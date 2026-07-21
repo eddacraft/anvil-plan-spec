@@ -58,9 +58,10 @@ Before planning, understand what exists:
 2. If plans/ does not exist → run: aps init
    (This bootstraps the APS structure. If aps is not on PATH, check bin/aps in the anvil-plan-spec repo or run: curl -fsSL https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/install.sh | sh)
    After init completes, continue to step 3.
-3. Check: Does plans/.aps-version exist?
-   If it exists, read the version. Current APS version is 0.2.0.
-   If the version in .aps-version is lower than 0.2.0 → run: aps update
+3. Check: Does .aps/config.yml exist?
+   If it exists, compare its cli_version with the installed CLI (aps --version).
+   If they differ → run: aps update
+   (This updates templates, the skill file, and tool files to the current version.)
    After update completes, continue to step 4.
 4. Check: Does plans/index.aps.md exist?
 5. Check: Are there module files in plans/modules/?

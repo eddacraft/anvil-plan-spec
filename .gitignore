@@ -141,8 +141,10 @@ vite.config.ts.timestamp-*
 .serena
 .clawpatch/
 
-# Local APS install artifacts (source lives under scaffold/)
-aps-planning/
+# Local APS install artifacts (source lives under scaffold/). Anchored to
+# the repo root: an unanchored `aps-planning/` also matched the canonical
+# scaffold/aps-planning/ source tree, hiding new payload files from git.
+/aps-planning/
 .aps/context/
 .claude/commands/
 .claude/settings.local.json
