@@ -272,7 +272,7 @@ function Write-MinConfig {
     $today = Get-Date -Format "yyyy-MM-dd"
     # $Version is a git ref ("main") by default; only use it as the contract
     # pin when it is an explicit semver. Otherwise fall back to the release.
-    $cliVersion = if ($Version -cmatch '^v?[0-9]') { $Version -creplace '^v', '' } else { "0.6.0" }
+    $cliVersion = if ($Version -cmatch '^v?[0-9]') { $Version -creplace '^v', '' } else { "0.7.0" }
     $apsDir = Join-Path $Target ".aps"
     New-Item -ItemType Directory -Path $apsDir -Force | Out-Null
     $gitignore = Join-Path $apsDir ".gitignore"
@@ -294,7 +294,7 @@ function Write-MinConfig {
         "tooling_root: .aps/"
         ""
         "aps:"
-        "  version: `"0.6.0`""
+        "  version: `"0.7.0`""
         "  config_schema: 1"
         "  installed: `"$today`""
         "  updated: `"$today`""

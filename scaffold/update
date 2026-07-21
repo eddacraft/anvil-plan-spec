@@ -234,7 +234,7 @@ write_min_config() {
   # when it is an explicit semver. Otherwise fall back to the release version.
   case "$VERSION" in
     v[0-9]*|[0-9]*) cli_version="${VERSION#v}" ;;
-    *)              cli_version="0.6.0" ;;
+    *)              cli_version="0.7.0" ;;
   esac
   mkdir -p "$TARGET/.aps"
   touch "$TARGET/.aps/.gitignore"
@@ -250,7 +250,7 @@ write_min_config() {
     echo "tooling_root: .aps/"
     echo ""
     echo "aps:"
-    echo "  version: \"0.6.0\""
+    echo "  version: \"0.7.0\""
     echo "  config_schema: 1"
     echo "  installed: \"$today\""
     echo "  updated: \"$today\""

@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+_Nothing yet._
+
+## [0.7.0] - 2026-07-21
+
 **Release narrative:** [plans/releases/v0.7.0.md](./plans/releases/v0.7.0.md).
 
 ### Added
@@ -424,7 +428,8 @@ First release of Anvil Plan Spec (APS).
 - Workflow guide with day-in-the-life scenarios
 - Monorepo support guide
 
-[Unreleased]: https://github.com/eddacraft/anvil-plan-spec/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/eddacraft/anvil-plan-spec/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/eddacraft/anvil-plan-spec/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/eddacraft/anvil-plan-spec/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/eddacraft/anvil-plan-spec/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/eddacraft/anvil-plan-spec/compare/v0.3.0...v0.4.0

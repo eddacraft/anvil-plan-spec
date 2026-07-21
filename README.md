@@ -172,26 +172,26 @@ don't need them.
 
 No plugins. No integrations. No configuration. It's just files.
 
-## What's in v0.6.0
+## What's in v0.7.0
 
-Released **2026-07-16** — the tagged monorepo tier gets first-class tooling.
+Released **2026-07-21** — making APS adoptable by a *team*, not just its author.
 
-- **`Packages:` tag validation (W022)** — a scope tag that resolves to no
-  workspace directory warns as a likely typo; silent in single-package
-  projects. All three CLIs.
-- **`aps next --package <name>` / `--by-package`** — the next ready item
-  within one package's scope (tags inherit from the module column), or the
-  whole ready queue grouped by package with an explicit `(untagged)` bucket.
-- **`aps rollup --by-package`** — the "Modules by Package" index view
-  generated from live metadata; generated views cannot drift.
-- See [docs/monorepo.md](docs/monorepo.md) for the tagged-tier guide, and
-  v0.5.0's federated nested plans for the multi-owner tier.
-- **Safer upgrades** — `aps update` reconciles the generated footprint and
-  `aps migrate` moves projects off vendored CLI files with a dry run and backup.
-- **Three-CLI parity** — Rust, bash, and PowerShell lint behavior is checked
-  byte-for-byte in CI, including conductor and federated-plan rules.
-- **Canonical APS development loop** — Claude and Codex skill bundles cover
-  planning, routing, safety, resume, escalation, and crash-safe landing.
+- **Managed skill installs** — every skill tree carries an `.aps-managed.json`
+  marker, so `aps update` refreshes APS-owned content without ever clobbering
+  your edits. Written and reconciled byte-for-byte by the Rust, bash, and
+  PowerShell CLIs; `aps doctor` reports each root as fresh/stale/dirty.
+- **v2 layout everywhere** — the curl updaters and PowerShell `aps init` now
+  deliver the current `.aps/`-based layout (and migrate v1 installs with a
+  backup); `cli_version` in `.aps/config.yml` is the single version stamp.
+- **`aps export --json`** — a deterministic `aps-export/v1` snapshot of the
+  plan tree for non-CLI stakeholders; byte-identical in Rust and bash.
+- **Composite GitHub Action** — `uses: eddacraft/anvil-plan-spec@<tag>` lints
+  a repo's plans in CI, with an opt-in sticky rollup PR comment.
+- **Harness set** — Gemini retires, Grok Build joins (Claude Code, Copilot,
+  Codex, OpenCode, Grok); fenced code blocks no longer produce phantom lint
+  findings.
+- **Team rollout guide + multi-owner example** — [docs/team-rollout.md](docs/team-rollout.md)
+  and `examples/team-payments/` cover ownership, review, and version pinning.
 
 Full notes: [CHANGELOG.md](CHANGELOG.md).
 
