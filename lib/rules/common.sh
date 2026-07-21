@@ -61,8 +61,8 @@ aps_check_cli_version() {
   cfgdir="$(aps_find_config)" || return 0
   pin="$(aps_config_get "$cfgdir/.aps/config.yml" cli_version)"
   [[ -z "$pin" ]] && return 0
-  if [[ "$pin" != "${APS_CLI_VERSION:-0.6.0}" ]]; then
-    warn "project pins cli_version $pin but this CLI is ${APS_CLI_VERSION:-0.6.0}"
+  if [[ "$pin" != "${APS_CLI_VERSION:-0.7.0}" ]]; then
+    warn "project pins cli_version $pin but this CLI is ${APS_CLI_VERSION:-0.7.0}"
     if [[ "$strict" == true ]]; then
       error "cli_version mismatch under --strict"
       exit 1

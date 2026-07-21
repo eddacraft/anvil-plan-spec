@@ -103,7 +103,7 @@ EOF
     return 1
   }
 
-  local json='{"schema":"aps-export/v1","generated_by":"aps '"${APS_CLI_VERSION:-0.6.0}"'","plans_dir":"'"$(export_json_escape "$plan_root")"'","modules":['
+  local json='{"schema":"aps-export/v1","generated_by":"aps '"${APS_CLI_VERSION:-0.7.0}"'","plans_dir":"'"$(export_json_escape "$plan_root")"'","modules":['
 
   local i cur_key="" first_module=true first_item=true
   for i in "${!ORCH_ITEM_IDS[@]}"; do
