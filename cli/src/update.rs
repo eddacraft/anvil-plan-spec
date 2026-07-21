@@ -160,6 +160,15 @@ pub fn cmd_update(start: &Path) -> i32 {
         reconcile(&plans.join(rel), rel, content, &mut tally);
     }
 
+    // D-044: plans/.aps-version is retired — .aps/config.yml cli_version is
+    // the only on-disk version surface. Remove the stamp legacy bash installs
+    // left behind.
+    let legacy_version = plans.join(".aps-version");
+    if legacy_version.is_file() && fs::remove_file(&legacy_version).is_ok() {
+        println!("  - .aps-version (removed: superseded by .aps/config.yml)");
+        tally.updated += 1;
+    }
+
     // Designs templates: reconcile when designs/ exists, else report skipped.
     println!("\nDesigns templates:");
     if plans.join("designs").is_dir() {
@@ -372,6 +381,23 @@ mod tests {
         assert_ne!(rules, "stale\n");
         // Designs/skill are gated off when not installed.
         assert!(!plans.join("designs/.design.template.md").exists());
+        fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn removes_legacy_aps_version_stamp() {
+        // D-044: legacy bash installs left plans/.aps-version behind; update
+        // retires it in favour of .aps/config.yml cli_version.
+        let root = scratch("apsversion");
+        let plans = root.join("plans");
+        fs::create_dir_all(plans.join("modules")).unwrap();
+        fs::create_dir_all(plans.join("execution")).unwrap();
+        fs::write(plans.join(".aps-version"), "0.6.0\n").unwrap();
+
+        assert_eq!(cmd_update(&root), 0);
+        assert!(!plans.join(".aps-version").exists());
+        // Idempotent: a second run with nothing to remove still succeeds.
+        assert_eq!(cmd_update(&root), 0);
         fs::remove_dir_all(&root).ok();
     }
 

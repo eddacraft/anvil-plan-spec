@@ -890,10 +890,24 @@ Notes on schema:
 - **Confidence:** high
 - **Dependencies:** INSTALL-020 (marker supplies skill-tree freshness);
   coordinate with INSTALL-021
-- **Files:** lib/scaffold.sh, aps-planning/SKILL.md,
-  scaffold/aps-planning/SKILL.md, scaffold/update, scaffold/update.ps1,
-  lib/rules/common.sh, docs/installation.md, test/run.sh
-- **Status:** Ready
+- **Files:** lib/scaffold.sh, lib/Scaffold.psm1, cli/src/update.rs,
+  aps-planning/SKILL.md, scaffold/aps-planning/SKILL.md, test/run.sh,
+  test/ps-parity.ps1
+- **Status:** Complete: 2026-07-21
+- **Results:** Both bash write sites removed (`v2_install_plans`, migrate);
+  all three CLIs' `aps update` now remove a legacy `plans/.aps-version`
+  (bash `cmd_update_v2`, pwsh `Update-ApsV2`, Rust `cmd_update`) — plain
+  removal, not backup: the stamp is a machine-written one-liner with no user
+  content, so D-033's backup requirement doesn't apply. Both SKILL.md copies
+  rewrote the staleness step to compare `.aps/config.yml` `cli_version`
+  against `aps --version` (no hardcoded "0.2.0" to go stale), which also
+  resolved the stray parenthetical drift between the root and scaffold
+  copies. The curl updaters and docs had no references (verified by grep).
+  Verified: `test/run.sh` Test 60 (init writes no stamp; update removes a
+  planted one; static guards pin no bash write path and config-bound SKILL
+  text), `test/ps-parity.ps1` scenario 9 asserts removal, a new cargo test
+  covers Rust removal + idempotence; all four suites green including the
+  three-way marker byte-parity leg over the changed skill payload.
 
 ### INSTALL-023: Port `Invoke-ApsInit` (PowerShell) to the v2 minimal layout
 
@@ -981,8 +995,7 @@ Sequential — each item builds on the previous contract:
 - INSTALL-019: Rust managed markers (Complete — retroactive record)
 - INSTALL-020: bash + PowerShell marker parity (D-042) (Complete)
 - INSTALL-021: curl updaters to current layout (D-043) (Complete)
-- INSTALL-022: retire `.aps-version` (D-044, depends on 020; coordinate
-  with 021)
+- INSTALL-022: retire `.aps-version` (D-044) (Complete)
 - INSTALL-023: pwsh `Invoke-ApsInit` to v2 minimal layout (Complete)
 
 ## Notes

@@ -596,7 +596,6 @@ v2_install_plans() {
   local plans_dir="$target/plans"
 
   mkdir -p "$plans_dir/modules" "$plans_dir/execution" "$plans_dir/decisions" "$plans_dir/designs"
-  echo "0.6.0" > "$plans_dir/.aps-version"
 
   for f in "${V2_PLAN_FILES[@]}"; do
     local rel="${f#scaffold/plans/}"
@@ -1223,6 +1222,12 @@ cmd_update_v2() {
   v2_install_plans "$target"
   info "plans/ (templates, rules)"
 
+  # D-044: retire the legacy plans/.aps-version stamp on update.
+  if [[ -f "$target/plans/.aps-version" ]]; then
+    rm -f "$target/plans/.aps-version"
+    info "Removed legacy plans/.aps-version (superseded by .aps/config.yml)"
+  fi
+
   # Scripts
   v2_install_scripts "$target"
   info ".aps/scripts/ (hook scripts)"
@@ -1521,8 +1526,12 @@ cmd_migrate() {
   fi
   download "scaffold/plans/aps-rules-v2.md" "$target/plans/aps-rules.md"
   info "Updated plans/aps-rules.md to v2"
-  echo "0.6.0" > "$target/plans/.aps-version"
-  info "Updated plans/.aps-version to 0.6.0"
+  # D-044: plans/.aps-version is retired — .aps/config.yml cli_version is the
+  # only on-disk version surface.
+  if [[ -f "$target/plans/.aps-version" ]]; then
+    rm -f "$target/plans/.aps-version"
+    info "Removed legacy plans/.aps-version (superseded by .aps/config.yml)"
+  fi
 
   # Infer config.yml
   local inferred_tools=()

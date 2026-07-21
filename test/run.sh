@@ -982,5 +982,24 @@ grep -Fq '"scaffold/aps-planning/SKILL.md"' "$PROJECT_ROOT/lib/Scaffold.psm1" \
   || fail "PowerShell CLI skill payload is not the packaged scaffold copy"
 pass
 
+# Test 60: INSTALL-022 / D-044 — plans/.aps-version is retired. Init never
+# writes it, update removes a legacy one, and the skill's staleness check is
+# bound to .aps/config.yml instead of a hardcoded version constant.
+echo -n "Test: .aps-version retired (init clean, update removes legacy)... "
+AV_DIR=$(mktemp -d)
+APS_LOCAL="$PROJECT_ROOT" $APS init "$AV_DIR" --profile solo --scope small --tools generic > /dev/null 2>&1 || fail "init failed"
+[[ ! -f "$AV_DIR/plans/.aps-version" ]] || fail "init wrote plans/.aps-version"
+echo "0.5.0" > "$AV_DIR/plans/.aps-version"
+APS_LOCAL="$PROJECT_ROOT" $APS update "$AV_DIR" > /dev/null 2>&1 || fail "update failed"
+[[ ! -f "$AV_DIR/plans/.aps-version" ]] || fail "update did not remove legacy .aps-version"
+# Static guards: no bash write path remains; both SKILL.md copies bind the
+# staleness check to the config contract, not a version stamp.
+grep -E '(echo|printf)[^#]*\.aps-version' "$PROJECT_ROOT/lib/scaffold.sh" > /dev/null && fail "lib/scaffold.sh still writes .aps-version"
+grep -q 'aps-version' "$PROJECT_ROOT/scaffold/aps-planning/SKILL.md" && fail "scaffold SKILL.md still references .aps-version"
+grep -q 'aps-version' "$PROJECT_ROOT/aps-planning/SKILL.md" && fail "root SKILL.md still references .aps-version"
+grep -q '\.aps/config\.yml' "$PROJECT_ROOT/scaffold/aps-planning/SKILL.md" || fail "scaffold SKILL.md staleness check not bound to config.yml"
+rm -rf "$AV_DIR"
+pass
+
 echo ""
 echo -e "${GREEN}All tests passed!${NC}"

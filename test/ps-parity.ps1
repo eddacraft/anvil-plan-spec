@@ -180,6 +180,9 @@ tools:
 $skillDir = Join-Path $mng ".claude/skills/aps-planning"
 $marker = Join-Path $skillDir ".aps-managed.json"
 
+# Plant a legacy version stamp: D-044 retires it, so update must remove it.
+Set-Content -LiteralPath (Join-Path $mng "plans/.aps-version") -Value "0.5.0"
+
 & pwsh -NoProfile -File $ApsPs1 update $mng *> $null
 $markerText = if (Test-Path -LiteralPath $marker) { Get-Content -LiteralPath $marker -Raw } else { "" }
 if ($markerText -match '"schemaVersion": 1' -and
@@ -188,6 +191,11 @@ if ($markerText -match '"schemaVersion": 1' -and
     Pass 'v2 update installs the skill with a canonical managed marker'
 } else {
     Fail "managed marker missing or malformed after v2 update (got: $markerText)"
+}
+if (-not (Test-Path -LiteralPath (Join-Path $mng "plans/.aps-version"))) {
+    Pass 'v2 update removes the retired plans/.aps-version stamp (D-044)'
+} else {
+    Fail 'plans/.aps-version survived the v2 update'
 }
 
 # Fresh: a second update must not rewrite the marker or files.
