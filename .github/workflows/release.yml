@@ -2,21 +2,37 @@ name: Release CLI
 
 # Release bump checklist (INSTALL-015 / D-036 — one semver across all channels):
 #
-#   1. Bump version in cli/Cargo.toml (and commit Cargo.lock).
+#   1. Bump the tag semver everywhere it is stamped, and commit Cargo.lock.
+#        Beyond cli/Cargo.toml: package.json; the CLI_VERSION defaults +
+#        emitted config version in lib/scaffold.sh, lib/Scaffold.psm1,
+#        lib/rules/common.sh, lib/export.sh; the curl install/update
+#        fallbacks (scaffold/{install,update}{,.ps1}); packaging/scoop/aps.json
+#        (version + asset URL — NOT the hash yet, see step 4); .aps/config.yml;
+#        and the README version badge. The prep sweep is easy to under-do — a
+#        stray file ships the old version. Confirm none remain (OLD = prior
+#        semver; the cli/src hits are test fixtures, not stamps):
+#          git grep -n 'OLD' -- ':!plans' ':!docs' ':!CHANGELOG.md' \
+#            ':!test' ':!cli/src' ':!*.lock' ':!pnpm-lock.yaml'
 #   2. Tag the release:  git tag vX.Y.Z && git push origin vX.Y.Z
 #        -> this workflow builds the five TUI-006 targets and publishes the
 #           GitHub release assets (aps-<target>.{tar.gz,zip} + SHA256SUMS).
 #   3. crates.io:  cd cli && cargo publish
 #        -> all deps carry crates.io versions (eddacraft-tui 0.4+). cargo-binstall
 #           also works via GitHub assets (see cli/Cargo.toml [package.metadata.binstall]).
-#   4. Scoop:  update packaging/scoop/aps.json for the new tag
-#        -> `scoop update aps` (or autoupdate) fills version from checkver and
-#           hash from the release SHA256SUMS. Push the manifest to the bucket.
-#   5. Verify:  smoke `aps --version` / `aps lint --help` on each target, and
-#        `VERSION=X.Y.Z curl .../scaffold/install | bash -s -- --cli` (binary).
+#   4. Scoop — two surfaces, both must carry the new version AND the real hash
+#      from the published SHA256SUMS (step 1 bumped version + URL only):
+#        a) packaging/scoop/aps.json in this repo — the direct-URL install
+#           documented in the README. Set architecture.64bit.hash to the
+#           aps-x86_64-pc-windows-gnu.zip line from SHA256SUMS; commit here.
+#        b) bucket/aps.json in eddacraft/scoop-bucket (direct commit to main;
+#           the bucket takes no PRs) — powers `scoop install eddacraft/aps`.
+#           Same version + hash. anvil is a separate tool in that bucket.
+#   5. Verify:  smoke `aps --version` / `aps lint --help` on each target;
+#        `VERSION=X.Y.Z curl .../scaffold/install | bash -s -- --cli` (binary);
+#        crates.io shows the new version; the bucket manifest is live.
 #
-# The install script, install.ps1, crates.io pin, and Scoop manifest all
-# reference the same semver as the tag.
+# The install script, install.ps1, crates.io pin, README badge, and both Scoop
+# manifests all reference the same semver as the tag.
 
 on:
   push:
