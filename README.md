@@ -1,7 +1,7 @@
 <!-- markdownlint-disable MD041 -->
 
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.6.0-green.svg)](https://github.com/EddaCraft/anvil-plan-spec/releases/tag/v0.6.0)
+[![Version](https://img.shields.io/badge/version-0.7.0-green.svg)](https://github.com/EddaCraft/anvil-plan-spec/releases/tag/v0.7.0)
 [![Made for AI agents](https://img.shields.io/badge/made%20for-AI%20agents-purple.svg)](docs/ai-agent-guide.md)
 
 <!-- markdownlint-enable MD041 -->
@@ -29,7 +29,14 @@ Windows PowerShell:
 & ([scriptblock]::Create((irm https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install.ps1)))
 ```
 
-Or install with Scoop:
+Or install with Scoop — add the EddaCraft bucket, then install by name:
+
+```powershell
+scoop bucket add eddacraft https://github.com/eddacraft/scoop-bucket
+scoop install eddacraft/aps
+```
+
+Or install the manifest directly, without adding the bucket:
 
 ```powershell
 scoop install https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/packaging/scoop/aps.json
