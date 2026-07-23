@@ -177,6 +177,12 @@ Change status to **Ready** when:
   cost if go. Candidates I could not confirm exist get a discovery step before commitment.
 - **Validation:** Evaluation linked from this module; a decision (D-045 below) records the approved set.
 - **Confidence:** low
+- **Evaluation:** [Harness-expansion spike](../research/2026-07-23-harness-expansion-spike.md) — 2026-07-23
+- **Status:** Spike complete — evaluation delivered with primary-source citations.
+  Six zero-asset GOs (Antigravity, Amp, Gemini CLI, Windsurf, Roo Code, OpenClaw),
+  two GO-WITH-ASSETS (Cursor, Hermes), the `AGENTS.md`-only crowd deferred. The
+  D-045 approved set (below) is **proposed, pending sign-off** — spike does not
+  self-authorise the harness set.
 - **Dependencies:** CLI-004, AGENT
 
 ### CLI-006: Add approved harnesses to init/setup/wizard
@@ -193,11 +199,21 @@ Change status to **Ready** when:
 
 ## Decisions
 
-- **D-045 (proposed):** Widen the harness set beyond the D-040 core — _pending
-  the CLI-005 spike. The native-discovery gate (reads `AGENTS.md` + `.agents/skills/`
-  natively → zero-asset add) is the criterion; harnesses that clear it are added,
-  harnesses needing bespoke assets are a case-by-case cost/benefit call. Candidate
-  list: Antigravity, Hermes, OpenClaw, others surfaced by the spike._
+- **D-045 (proposed — awaiting sign-off):** Widen the harness set beyond the
+  D-040 core. The native-discovery gate (reads `AGENTS.md` **and** auto-discovers
+  `.agents/skills/<name>/SKILL.md` → zero-asset add) is the criterion. The CLI-005
+  [spike](../research/2026-07-23-harness-expansion-spike.md) recommends:
+  - _Add as zero-asset (CLI-006):_ **Antigravity, Amp, Gemini CLI, Windsurf,
+    Roo Code** (Roo Code's `AGENTS.md` auto-load is a toggle — document it).
+  - _Add after a hands-on confirm:_ **OpenClaw**.
+  - _Separate GO-WITH-ASSETS decision (low cost, large user base):_ **Cursor** —
+    needs the skill mirrored into `.cursor/skills/` (or its `.claude/skills/` fallback).
+  - _Deprioritise:_ **Hermes** (global `~/.hermes/skills/` path + severe name collision).
+  - _Not now:_ the `AGENTS.md`-only crowd (Aider, Zed, Devin, Jules, Warp,
+    Continue, Factory, Junie, goose) — no shared `.agents/skills/` discovery yet.
+
+  Note: "zero-asset" bounds bespoke **scaffold** cost only; each add still carries
+  per-tool CLI plumbing + D-039 three-way parity + a real init smoke test in CLI-006.
 
 ## Notes
 
