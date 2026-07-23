@@ -45,3 +45,21 @@ reading every template or prompt.
 - **Validation:** `npx markdownlint-cli "**/*.md"`
 - **Files:** README.md, docs/
 - **Confidence:** high
+
+### DOCS-002: Reposition APS around intent-first planning — Complete 2026-07-23
+
+- **Intent:** Make APS's separation of planning intent and execution authority
+  immediately understandable to a new reader.
+- **Expected Outcome:** The README leads with intent-focused planning, explains
+  why specifications and work items have different responsibilities, and
+  shows how outcome-based authority lets implementation adapt without agent
+  scope drift.
+- **Validation:** `npx markdownlint-cli "README.md" "plans/modules/docs.aps.md"`
+- **Learning:** "Portability is a benefit; separating intent from execution
+  authority is the product idea."
+- **Files:** README.md, plans/modules/docs.aps.md
+- **Confidence:** high
+- **Results:** Reframed the README around the specification, work item, and
+  implementation boundary; replaced the implementation-led quick tour with an
+  intent and authority example; moved installation below the core concept;
+  retained the existing adoption, platform, template, and release references.
