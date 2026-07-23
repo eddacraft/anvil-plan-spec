@@ -103,6 +103,7 @@ Change status to **Ready** when:
 - **Validation:** Design reviewed and linked from this module; `aps lint` clean.
 - **Confidence:** medium
 - **Design:** [CLI command-surface redesign map](../designs/2026-07-22-cli-redesign.design.md) — approved 2026-07-23 (D-CLI-a…d accepted; OQ-1 routed to CLI-003/CLI-006)
+- **Status:** Complete — merged 2026-07-23 (PR #124, ancestor of `main` verified).
 - **Files:** `plans/designs/2026-07-22-cli-redesign.design.md`
 - **Dependencies:** _(none — this is the anchor)_
 
@@ -139,10 +140,29 @@ Change status to **Ready** when:
   `README.md`, `docs/installation.md`, or other prose (the `GEMINI.md`
   protected-migrate entry stays by design); `aps init` with `--tools grok`
   installs the Codex-shared assets and Grok discovers them.
-- **Validation:** `grep -ri gemini` over shipped docs shows only the intentional
+- **Validation:** `grep -ri gemini` over live user-facing docs (`README.md`,
+  `docs/**` excluding the historical `docs/plans/**` + `docs/release-notes/**`
+  archives that record the removal) shows only the intentional `GEMINI.md`
   protected-list mention; init smoke test with `grok` selected passes in all three CLIs.
 - **Confidence:** high
-- **Files:** `README.md`, `docs/installation.md`, `lib/scaffold.sh`, `lib/Scaffold.psm1`, `cli/src/config.rs`
+- **Status:** Complete (verification-only) — verified 2026-07-23; **no code or prose
+  changes needed**. Both halves were already delivered by D-040 (v0.7) and the
+  README reposition. Evidence:
+  - _Gemini prose:_ `grep -ri gemini` over `README.md` + `docs/**` (excluding the
+    historical `docs/plans/**` + `docs/release-notes/**` archives that record the
+    removal) yields **zero** live scaffolding references. Remaining Gemini mentions
+    are the intentional `GEMINI.md` protected-list entries and the D-040 retirement
+    **error messages** that reject `gemini` (`cli/src/config.rs:71`,
+    `lib/scaffold.sh:1010`, `lib/Scaffold.psm1:784`) — both stay by design.
+  - _Grok end-to-end:_ `aps init --tools grok` installs the Codex-shared
+    `.agents/skills/aps-planning/` payload — confirmed live for **Rust** and
+    **bash**; **PowerShell** confirmed statically (`lib/Scaffold.psm1:608,725,846`)
+    and via CI (`PowerShell parity` + `Native Windows PowerShell user journey`).
+    Grok is documented as a supported harness (`README.md:190,264,286`,
+    `docs/installation.md:208`); `cargo test config::` passes 16/16 (grok accepted,
+    gemini rejected).
+- **Files:** _(no changes — already satisfied on `main`)_ Verified against
+  `README.md`, `docs/installation.md`, `lib/scaffold.sh`, `lib/Scaffold.psm1`, `cli/src/config.rs`
 - **Dependencies:** _(none — completes prior D-040 work)_
 
 ### CLI-005: Harness-expansion research spike
