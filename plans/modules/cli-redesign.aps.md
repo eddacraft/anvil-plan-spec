@@ -6,7 +6,7 @@
 | --- | ------ | -------- | ------ |
 | CLI | @aneki | high     | Draft  |
 
-**Last reviewed:** 2026-07-22
+**Last reviewed:** 2026-07-23
 
 ## Purpose
 
@@ -84,7 +84,8 @@ three and the parity suite (`test/fixtures/**`) confirms identical behaviour.
 
 Change status to **Ready** when:
 
-- [ ] The command-redesign map (CLI-001) is drafted and reviewed
+- [x] The command-redesign map (CLI-001) is drafted and reviewed
+      ([design](../designs/2026-07-22-cli-redesign.design.md), approved 2026-07-23)
 - [ ] Profile semantics (solo vs team) are pinned with the TEAM module
 - [ ] Harness-expansion candidates have a go/no-go from the CLI-005 spike
 
@@ -101,6 +102,7 @@ Change status to **Ready** when:
   rename. No renames land without this map approved.
 - **Validation:** Design reviewed and linked from this module; `aps lint` clean.
 - **Confidence:** medium
+- **Design:** [CLI command-surface redesign map](../designs/2026-07-22-cli-redesign.design.md) — approved 2026-07-23 (D-CLI-a…d accepted; OQ-1 routed to CLI-003/CLI-006)
 - **Files:** `plans/designs/2026-07-22-cli-redesign.design.md`
 - **Dependencies:** _(none — this is the anchor)_
 
