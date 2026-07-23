@@ -178,42 +178,74 @@ Change status to **Ready** when:
 - **Validation:** Evaluation linked from this module; a decision (D-045 below) records the approved set.
 - **Confidence:** low
 - **Evaluation:** [Harness-expansion spike](../research/2026-07-23-harness-expansion-spike.md) — 2026-07-23
-- **Status:** Spike complete — evaluation delivered with primary-source citations.
-  Six zero-asset GOs (Antigravity, Amp, Gemini CLI, Windsurf, Roo Code, OpenClaw),
-  two GO-WITH-ASSETS (Cursor, Hermes), the `AGENTS.md`-only crowd deferred. The
-  D-045 approved set (below) is **proposed, pending sign-off** — spike does not
-  self-authorise the harness set.
+- **Status:** Complete — evaluation delivered with primary-source citations; the
+  D-045 set was **approved 2026-07-23** (below). Six zero-asset GOs (Antigravity,
+  Amp, Gemini CLI, Windsurf, Roo Code, OpenClaw), Cursor split to CLI-007, Hermes
+  deprioritised, the `AGENTS.md`-only crowd deferred.
 - **Dependencies:** CLI-004, AGENT
 
 ### CLI-006: Add approved harnesses to init/setup/wizard
 
 - **Intent:** Implement the harnesses approved by CLI-005 across the init/setup
   surface and scaffold asset install.
-- **Expected Outcome:** Each approved harness appears in the init/setup tool list,
-  the TUI wizard, and the installers, with any required assets under `scaffold/`;
-  landed in Rust, bash, and PowerShell with matching behaviour.
-- **Validation:** `cargo test` + parity suite; init smoke test selecting each new harness passes in all three CLIs.
+- **Expected Outcome:** The D-045-approved harnesses — **Antigravity, Amp,
+  Gemini CLI, Windsurf, Roo Code, OpenClaw** — appear in the init/setup tool list,
+  the TUI wizard, and the installers. Each is a **zero-asset add**: it reuses the
+  Codex-shared `.agents/skills/aps-planning/` payload (Grok precedent), so no new
+  per-harness generated assets. Landed in Rust, bash, and PowerShell with matching
+  behaviour. **OpenClaw** is used as an orchestrator, so its support must expose
+  plan management — the `aps` CLI reachable + the planning skill discoverable — not
+  just passive skill install; its smoke test verifies `aps next/start/complete`.
+- **Validation:** `cargo test` + parity suite; init smoke test selecting each new
+  harness passes in all three CLIs (Grok precedent, CLI-004). OpenClaw additionally
+  verified for a working plan-management path.
 - **Confidence:** medium
-- **Files:** `cli/src/config.rs`, `lib/scaffold.sh`, `lib/Scaffold.psm1`, `scaffold/agents/`
+- **Files:** `cli/src/config.rs`, `cli/src/scaffold.rs`, `cli/src/wizard.rs`,
+  `cli/src/{setup,update,doctor,main}.rs`, `lib/scaffold.sh`, `lib/Scaffold.psm1`,
+  `scaffold/install`, `scaffold/install.ps1`, docs, and `test/**` parity fixtures
+- **Dependencies:** CLI-005
+
+### CLI-007: Add Cursor (GO-WITH-ASSETS)
+
+- **Intent:** Add Cursor to init/setup as a supported harness. Cursor reads
+  `AGENTS.md` natively but does **not** scan the shared `.agents/skills/` path
+  (it discovers skills only from `.cursor/`, `.claude/`, `.codex/`), so unlike the
+  CLI-006 zero-asset set it needs a small bespoke asset.
+- **Expected Outcome:** `aps init --tools cursor` installs the planning skill where
+  Cursor discovers it — mirror/symlink the shared skill into `.cursor/skills/`, or
+  rely on Cursor's opportunistic `.claude/skills/` scan (decide during build).
+  Landed in Rust, bash, and PowerShell with matching behaviour + parity fixtures.
+- **Validation:** `cargo test` + parity suite; init smoke test with `cursor`
+  selected installs a Cursor-discoverable skill in all three CLIs.
+- **Confidence:** medium
+- **Files:** `cli/src/config.rs`, `cli/src/scaffold.rs`, `lib/scaffold.sh`,
+  `lib/Scaffold.psm1`, `scaffold/agents/`
 - **Dependencies:** CLI-005
 
 ## Decisions
 
-- **D-045 (proposed — awaiting sign-off):** Widen the harness set beyond the
-  D-040 core. The native-discovery gate (reads `AGENTS.md` **and** auto-discovers
-  `.agents/skills/<name>/SKILL.md` → zero-asset add) is the criterion. The CLI-005
-  [spike](../research/2026-07-23-harness-expansion-spike.md) recommends:
+- **D-045 (accepted 2026-07-23):** Widen the harness set beyond the D-040 core.
+  The native-discovery gate (reads `AGENTS.md` **and** auto-discovers
+  `.agents/skills/<name>/SKILL.md` → zero-asset add) is the criterion. Per the
+  CLI-005 [spike](../research/2026-07-23-harness-expansion-spike.md), the
+  **approved set** is:
   - _Add as zero-asset (CLI-006):_ **Antigravity, Amp, Gemini CLI, Windsurf,
     Roo Code** (Roo Code's `AGENTS.md` auto-load is a toggle — document it).
-  - _Add after a hands-on confirm:_ **OpenClaw**.
-  - _Separate GO-WITH-ASSETS decision (low cost, large user base):_ **Cursor** —
-    needs the skill mirrored into `.cursor/skills/` (or its `.claude/skills/` fallback).
-  - _Deprioritise:_ **Hermes** (global `~/.hermes/skills/` path + severe name collision).
+  - _Add (CLI-006), as an orchestrator:_ **OpenClaw** — regularly used to drive
+    plan management, so its support must expose the `aps` plan-management path
+    (`next`/`start`/`complete`) + the discoverable planning skill, not just passive
+    skill install. Confirm the plan-management path in its smoke test.
+  - _Separate item **CLI-007** (GO-WITH-ASSETS, low cost, large user base):_
+    **Cursor** — reads `AGENTS.md` but scans only `.cursor/.claude/.codex` skills
+    dirs, so it needs the skill mirrored into `.cursor/skills/` (or its
+    `.claude/skills/` fallback).
+  - _Deprioritise (not approved):_ **Hermes** (global `~/.hermes/skills/` path +
+    severe name collision).
   - _Not now:_ the `AGENTS.md`-only crowd (Aider, Zed, Devin, Jules, Warp,
     Continue, Factory, Junie, goose) — no shared `.agents/skills/` discovery yet.
 
   Note: "zero-asset" bounds bespoke **scaffold** cost only; each add still carries
-  per-tool CLI plumbing + D-039 three-way parity + a real init smoke test in CLI-006.
+  per-tool CLI plumbing + D-039 three-way parity + a real init smoke test.
 
 ## Notes
 
