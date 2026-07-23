@@ -152,3 +152,6 @@ vite.config.ts.timestamp-*
 
 # Local git worktrees
 .worktrees/
+
+# dev-loop orchestration state (checkpoints) — local, not tracked
+.dev-loop/
