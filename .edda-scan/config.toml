@@ -1,0 +1,29 @@
+schema_version = 1
+state_dir = ".edda-scan"
+
+[repository]
+include = ["**"]
+exclude = ["**/node_modules/**", "**/dist/**", "**/.next/**", "**/.edda-scan/**", "**/.clawpatch/**"]
+
+[provider]
+name = "codex"
+model = ""
+reasoning = ""
+timeout_seconds = 600
+max_retries = 2
+
+[review]
+jobs = 4
+max_context_files = 24
+max_context_bytes = 400000
+max_findings_per_feature = 8
+
+[verification]
+required_severities = ["critical", "high"]
+jobs = 1
+
+[security]
+inherit_environment = false
+network = false
+follow_symlinks = false
+
