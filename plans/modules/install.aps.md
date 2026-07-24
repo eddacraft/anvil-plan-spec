@@ -978,7 +978,8 @@ Notes on schema:
   Managed upgrades remove retired flat reference files only when the previous
   marker proves APS owned them. Rust, bash integration, Markdown, APS,
   formatting, source-projection, and generated-agent checks pass; live
-  PowerShell execution is unavailable because `pwsh` is not installed.
+  PowerShell execution is unavailable because `pwsh` is not installed. Review:
+  [anvil-plan-spec#131](https://github.com/eddacraft/anvil-plan-spec/pull/131).
 
 ## Execution Strategy
 
