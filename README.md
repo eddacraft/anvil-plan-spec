@@ -263,6 +263,7 @@ need one.
 | **Codex / OpenCode** | Use the agent definitions shipped in `agents/` |
 | **Grok Build** | Let it discover `AGENTS.md` and `.agents/skills/` |
 | **Antigravity** | Let it discover `AGENTS.md` and `.agents/skills/` |
+| **Amp / Gemini CLI / Windsurf / Roo Code / OpenClaw** | Let them discover `AGENTS.md` and `.agents/skills/` |
 | **Jira / Linear / Notion** | Track delivery there while linking to durable APS intent |
 | **Code review** | Review plan authority and implementation evidence together |
 | **Team planning** | Discuss the same human-readable contract agents execute |
@@ -284,8 +285,9 @@ its original author.
   non-CLI stakeholders and other tools a stable view of the plan tree.
 - **Composite GitHub Action:** `uses: eddacraft/anvil-plan-spec@<tag>` lints
   plans in CI, with an optional sticky pull request roll-up comment.
-- **Expanded harness set:** Claude Code, Copilot, Codex, OpenCode, Grok, and
-  Antigravity consume the same planning contract.
+- **Expanded harness set:** Claude Code, Copilot, Codex, OpenCode, Grok,
+  Antigravity, Amp, Gemini CLI, Windsurf, Roo Code, and OpenClaw consume the
+  same planning contract.
 - **Team rollout guidance:** [docs/team-rollout.md](docs/team-rollout.md) and
   `examples/team-payments/` cover ownership, review, and version pinning.
 

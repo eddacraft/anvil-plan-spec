@@ -251,5 +251,6 @@ bash scaffold/agents/build.sh
 ```
 
 This regenerates Claude Code, Copilot, OpenCode, and Codex trees under
-`scaffold/agents/`. Grok Build and Antigravity consume the shared
+`scaffold/agents/`. The native-discovery harnesses — Grok Build, Antigravity,
+Amp, Gemini CLI, Windsurf, Roo Code, and OpenClaw — consume the shared
 `.agents/skills/` payload directly, so they have no agent variant.

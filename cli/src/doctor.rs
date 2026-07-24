@@ -226,6 +226,11 @@ fn config_expects_skill(root: &Path) -> bool {
                 | AiTool::OpenCode
                 | AiTool::Grok
                 | AiTool::Antigravity
+                | AiTool::Amp
+                | AiTool::GeminiCli
+                | AiTool::Windsurf
+                | AiTool::RooCode
+                | AiTool::OpenClaw
         )
     })
 }
@@ -243,7 +248,7 @@ fn skill_freshness_findings(root: &Path) -> Vec<Finding> {
             vec![Finding::new(
                 Level::Warn,
                 "planning skill",
-                "not installed — run `aps setup claude-code` (or codex/grok/antigravity)"
+                "not installed — run `aps setup <your-tool>` (e.g. claude-code, codex, grok) to install it"
                     .to_string(),
             )]
         } else {
@@ -356,7 +361,16 @@ mod tests {
         // Every tool whose init installs the shared .agents/skills payload must be
         // recognised by config_expects_skill, else `aps doctor` gives a false
         // all-clear (regression guard for the D-045 harness adds).
-        for tool in ["codex", "grok", "antigravity"] {
+        for tool in [
+            "codex",
+            "grok",
+            "antigravity",
+            "amp",
+            "gemini-cli",
+            "windsurf",
+            "roo-code",
+            "openclaw",
+        ] {
             let root = scratch(&format!("skill-{tool}"));
             let home = scratch(&format!("skill-{tool}-home"));
             fs::create_dir_all(root.join(".aps")).unwrap();

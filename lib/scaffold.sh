@@ -110,7 +110,7 @@ CLI_FILES=(
 )
 
 # Canonical tool identifiers
-TOOL_NAMES=("claude-code" "copilot" "codex" "opencode" "grok" "antigravity" "generic")
+TOOL_NAMES=("claude-code" "copilot" "codex" "opencode" "grok" "antigravity" "amp" "gemini-cli" "windsurf" "roo-code" "openclaw" "generic")
 TOOL_LABELS=("Claude Code" "GitHub Copilot" "Codex" "OpenCode" "Grok" "None / manual only")
 
 # --- Utility functions ---
@@ -586,6 +586,10 @@ write_config() {
           echo "    skill: .agents/skills/aps-planning"
           echo "    instruction_file: AGENTS.md"
           ;;
+        amp | gemini-cli | windsurf | roo-code | openclaw)
+          echo "    skill: .agents/skills/aps-planning"
+          echo "    instruction_file: AGENTS.md"
+          ;;
         generic)
           echo "    # No tool integration"
           ;;
@@ -814,6 +818,11 @@ v2_install_tools() {
         # Antigravity discovers .agents/skills/ and the AGENTS.md family natively (D-045)
         v2_install_agents_skill "$target"
         info ".agents/skills/aps-planning/ (skill — Antigravity auto-discovers)"
+        ;;
+      amp | gemini-cli | windsurf | roo-code | openclaw)
+        # D-045 native-discovery harnesses: read AGENTS.md + auto-discover .agents/skills/
+        v2_install_agents_skill "$target"
+        info ".agents/skills/aps-planning/ (skill — auto-discovered)"
         ;;
       generic)
         info "No tool integration (plans/ and CLI only)"
@@ -1166,7 +1175,7 @@ later with 'aps setup'. Non-interactive mode available via flags.
 Options:
   --profile PROFILE     solo | team | agent
   --scope SCOPE         small | module | multi | monorepo | nested
-  --tools TOOLS         Comma-separated: claude-code,copilot,codex,opencode,grok,antigravity,generic
+  --tools TOOLS         Comma-separated: claude-code,copilot,codex,opencode,grok,antigravity,amp,gemini-cli,windsurf,roo-code,openclaw,generic
   --local-cli, --bash   Also vendor the bash CLI into .aps/bin + .aps/lib
                         (for air-gapped or pinned-toolchain projects)
   --hooks               Also install hook scripts into .aps/scripts
@@ -1262,6 +1271,7 @@ cmd_update_v2() {
         codex) v2_install_codex "$target" ;;
         grok) v2_install_agents_skill "$target" ;;
         antigravity) v2_install_agents_skill "$target" ;;
+        amp | gemini-cli | windsurf | roo-code | openclaw) v2_install_agents_skill "$target" ;;
       esac
     done <<< "$tools"
     info "Tool-specific files refreshed per config.yml"

@@ -69,8 +69,14 @@ pub fn tool_from_key(key: &str) -> Result<AiTool, String> {
         "opencode" => Ok(AiTool::OpenCode),
         "grok" => Ok(AiTool::Grok),
         "antigravity" => Ok(AiTool::Antigravity),
-        "gemini" => Err("'gemini' was retired in v0.7 (D-040); supported tools: \
-             claude-code, copilot, codex, opencode, grok, antigravity, generic"
+        "amp" => Ok(AiTool::Amp),
+        "gemini-cli" => Ok(AiTool::GeminiCli),
+        "windsurf" => Ok(AiTool::Windsurf),
+        "roo-code" => Ok(AiTool::RooCode),
+        "openclaw" => Ok(AiTool::OpenClaw),
+        "gemini" => Err("'gemini' was retired in v0.7 (D-040); did you mean \
+             'gemini-cli'? supported tools: claude-code, copilot, codex, opencode, \
+             grok, antigravity, amp, gemini-cli, windsurf, roo-code, openclaw, generic"
             .to_string()),
         "generic" => Ok(AiTool::Generic),
         other => Err(format!("unknown tool '{other}'")),
