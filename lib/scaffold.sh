@@ -27,8 +27,12 @@ V2_PLAN_FILES=(
 # Skill files for .claude/skills/aps-planning/
 V2_SKILL_FILES=(
   "scaffold/aps-planning/SKILL.md"
-  "scaffold/aps-planning/reference.md"
-  "scaffold/aps-planning/examples.md"
+  "scaffold/aps-planning/references/commit-pr-integration.md"
+  "scaffold/aps-planning/references/reconciliation-report.md"
+)
+
+V2_PLAN_DOCTOR_FILES=(
+  "scaffold/plan-doctor/SKILL.md"
 )
 
 # Hook scripts for .aps/scripts/
@@ -77,9 +81,8 @@ PLAN_FILES=(
 
 SKILL_FILES=(
   "scaffold/aps-planning/SKILL.md"
-  "scaffold/aps-planning/reference.md"
-  "scaffold/aps-planning/examples.md"
-  "scaffold/aps-planning/hooks.md"
+  "scaffold/aps-planning/references/commit-pr-integration.md"
+  "scaffold/aps-planning/references/reconciliation-report.md"
   "scaffold/aps-planning/scripts/install-hooks.sh"
   "scaffold/aps-planning/scripts/init-session.sh"
   "scaffold/aps-planning/scripts/check-complete.sh"
@@ -281,8 +284,9 @@ detect_monorepo_tool() {
 # The JSON shape, per-file SHA-256 hashes, and bundle digest are
 # byte-identical with the Rust implementation (cli/src/managed.rs) and the
 # PowerShell port (lib/Scaffold.psm1): any CLI can verify a tree written by
-# any other. Phase 1 covers the planning skill (SKILL.md, reference.md,
-# examples.md); agent inventory is Phase 3.
+# any other. Managed-marker safety currently covers aps-planning; plan-doctor
+# is installed from the same canonical APS package and will join the generic
+# managed inventory in a later schema phase. Agent inventory is Phase 3.
 
 APS_MANAGED_MARKER=".aps-managed.json"
 
@@ -445,8 +449,18 @@ managed_copy_files() {
   mkdir -p "$skill_dir"
   for f in "${V2_SKILL_FILES[@]}"; do
     rel="${f#scaffold/aps-planning/}"
+    mkdir -p "$(dirname "$skill_dir/$rel")"
     cp "$payload/$rel" "$skill_dir/$rel"
   done
+}
+
+managed_remove_retired_files() {
+  local skill_dir="$1" name hash
+  while IFS=$'\t' read -r name hash; do
+    case "$name" in
+      reference.md | examples.md | hooks.md) rm -f "$skill_dir/$name" ;;
+    esac
+  done < <(managed_parse_marker "$skill_dir/$APS_MANAGED_MARKER")
 }
 
 # Reconcile one skill tree with managed-marker safety. Prints the outcome:
@@ -466,6 +480,8 @@ managed_reconcile_skill() {
       ;;
     fresh) printf 'unchanged\n' ;;
     stale)
+      # Remove renamed files only when the valid marker proves APS owned them.
+      managed_remove_retired_files "$skill_dir"
       # Content may already match the payload (only the marker drifted) —
       # avoid needless rewrites/mtime churn.
       managed_files_match "$skill_dir" "$payload" || managed_copy_files "$skill_dir" "$payload"
@@ -676,6 +692,16 @@ v2_install_cli() {
 v2_install_skill() {
   local target="$1"
   v2_reconcile_skill_tree "$target/.claude/skills/aps-planning" ".claude/skills/aps-planning"
+  v2_install_plan_doctor "$target/.claude/skills/plan-doctor"
+}
+
+v2_install_plan_doctor() {
+  local skill_dir="$1" f rel
+  mkdir -p "$skill_dir"
+  for f in "${V2_PLAN_DOCTOR_FILES[@]}"; do
+    rel="${f#scaffold/plan-doctor/}"
+    download "$f" "$skill_dir/$rel"
+  done
 }
 
 # Install v2 hook scripts to .aps/scripts/
@@ -745,6 +771,7 @@ v2_install_codex() {
 v2_install_agents_skill() {
   local target="$1"
   v2_reconcile_skill_tree "$target/.agents/skills/aps-planning" ".agents/skills/aps-planning"
+  v2_install_plan_doctor "$target/.agents/skills/plan-doctor"
 }
 
 # Set up PATH for .aps/bin

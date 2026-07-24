@@ -25,9 +25,8 @@ $script:PlanFiles = @(
 # Files to download for the planning skill
 $script:SkillFiles = @(
     "scaffold/aps-planning/SKILL.md"
-    "scaffold/aps-planning/reference.md"
-    "scaffold/aps-planning/examples.md"
-    "scaffold/aps-planning/hooks.md"
+    "scaffold/aps-planning/references/commit-pr-integration.md"
+    "scaffold/aps-planning/references/reconciliation-report.md"
     "scaffold/aps-planning/scripts/install-hooks.ps1"
     "scaffold/aps-planning/scripts/init-session.ps1"
     "scaffold/aps-planning/scripts/check-complete.ps1"
@@ -61,8 +60,12 @@ $script:CliFilesPowerShell = @(
 # Managed skill payload for .claude/skills/ and .agents/skills/ (D-042)
 $script:SkillFilesV2 = @(
     "scaffold/aps-planning/SKILL.md"
-    "scaffold/aps-planning/reference.md"
-    "scaffold/aps-planning/examples.md"
+    "scaffold/aps-planning/references/commit-pr-integration.md"
+    "scaffold/aps-planning/references/reconciliation-report.md"
+)
+
+$script:PlanDoctorFilesV2 = @(
+    "scaffold/plan-doctor/SKILL.md"
 )
 
 # Plan templates and rules for plans/
@@ -184,8 +187,8 @@ function Test-ApsHooksConfigured {
 # The JSON shape, per-file SHA-256 hashes, and bundle digest are
 # byte-identical with the Rust implementation (cli/src/managed.rs) and the
 # bash port (lib/scaffold.sh): any CLI can verify a tree written by any
-# other. Phase 1 covers the planning skill (SKILL.md, reference.md,
-# examples.md); agent inventory is Phase 3.
+# other. Managed-marker safety currently covers aps-planning; plan-doctor is
+# installed from the same canonical APS package. Agent inventory is Phase 3.
 
 $script:ManagedMarkerName = ".aps-managed.json"
 $script:SkillPayloadDir = $null
@@ -338,7 +341,10 @@ function Copy-ApsSkillFiles {
     New-Item -ItemType Directory -Path $SkillDir -Force | Out-Null
     foreach ($f in $script:SkillFilesV2) {
         $rel = $f -creplace '^scaffold/aps-planning/', ''
-        Copy-Item -LiteralPath (Join-Path $PayloadDir $rel) -Destination (Join-Path $SkillDir $rel) -Force
+        $destination = Join-Path $SkillDir $rel
+        $parent = Split-Path $destination
+        if ($parent) { New-Item -ItemType Directory -Path $parent -Force | Out-Null }
+        Copy-Item -LiteralPath (Join-Path $PayloadDir $rel) -Destination $destination -Force
     }
 }
 
@@ -361,6 +367,13 @@ function Invoke-ApsSkillReconcile {
         }
         "fresh" { return "unchanged" }
         "stale" {
+            # Remove renamed files only when the valid marker proves APS owned them.
+            $entries = Get-ApsMarkerEntries -MarkerPath (Join-Path $SkillDir $script:ManagedMarkerName)
+            foreach ($retired in @("reference.md", "examples.md", "hooks.md")) {
+                if ($entries.ContainsKey($retired)) {
+                    Remove-Item -LiteralPath (Join-Path $SkillDir $retired) -Force
+                }
+            }
             # Content may already match the payload (only the marker drifted)
             # — avoid needless rewrites/mtime churn.
             if (-not (Test-ApsSkillFilesMatch -SkillDir $SkillDir -PayloadDir $payload)) {
@@ -643,12 +656,22 @@ function Install-ApsSkillV2 {
     param([string]$Target)
     $skillDir = Join-Path $Target (Join-Path ".claude" (Join-Path "skills" "aps-planning"))
     Install-ApsManagedSkill -SkillDir $skillDir -Label ".claude/skills/aps-planning" | Out-Null
+    Install-ApsPlanDoctorV2 -SkillDir (Join-Path $Target (Join-Path ".claude" (Join-Path "skills" "plan-doctor")))
+}
+
+function Install-ApsPlanDoctorV2 {
+    param([string]$SkillDir)
+    foreach ($f in $script:PlanDoctorFilesV2) {
+        $rel = $f -creplace '^scaffold/plan-doctor/', ''
+        Invoke-ApsDownload -Source $f -Destination (Join-Path $SkillDir $rel)
+    }
 }
 
 function Install-ApsAgentsSkillV2 {
     param([string]$Target)
     $skillDir = Join-Path $Target (Join-Path ".agents" (Join-Path "skills" "aps-planning"))
     Install-ApsManagedSkill -SkillDir $skillDir -Label ".agents/skills/aps-planning" | Out-Null
+    Install-ApsPlanDoctorV2 -SkillDir (Join-Path $Target (Join-Path ".agents" (Join-Path "skills" "plan-doctor")))
 }
 
 function Install-ApsToolAgents {

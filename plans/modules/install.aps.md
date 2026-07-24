@@ -4,7 +4,7 @@
 | ------- | ------ | -------- | ----------------------- |
 | INSTALL | @aneki | high     | Complete |
 
-**Last reviewed:** 2026-06-22
+**Last reviewed:** 2026-07-24
 
 ## Purpose
 
@@ -176,6 +176,12 @@ picker so users do not have to read documentation before choosing the safe path.
   spec-version constant. Kills the current three-way confusion where the
   skill says "APS version 0.2.0", bash writes the CLI semver into
   `.aps-version`, and the Rust binary writes nothing._
+- **D-046:** Canonical APS assistant assets are vendored from
+  `eddacraft-skills` — _decided 2026-07-24: the `aps-packaging` vend target
+  owns the planning and plan-doctor skill payloads plus the neutral agent
+  cores. APS owns runtime-specific emission, embedded Rust wiring, managed
+  markers, and compatibility installers. Generated payloads must not be
+  maintained independently in this repository._
 
 **D-013 Detail: Multi-Tool Skill Compatibility (Researched 2026-02-19)**
 
@@ -945,6 +951,35 @@ Notes on schema:
   marker), full pwsh suite and `test/run.sh` green. Deferred: interactive
   wizard and `--profile`/`--scope`/`--local-cli` flags; post-init lint step.
 
+### INSTALL-024: Refresh embedded assistant assets from canonical packaging
+
+- **Intent:** Consume the `aps-packaging` vend target from `eddacraft-skills`
+  so released binaries and compatibility installers carry the current APS
+  planning family and agent instructions without hand-maintained drift.
+- **Expected Outcome:** `scaffold/aps-planning/` uses the current reference
+  filenames, `scaffold/plan-doctor/` is installed beside it, neutral agent
+  cores are refreshed before runtime emission, and the Rust binary embeds and
+  reconciles both skills through independent managed markers. Bash and
+  PowerShell compatibility paths install the same payload family.
+- **Validation:** Canonical vend check is clean; generated agents reproduce
+  from their cores; Rust tests, shell integration tests, Markdown lint, APS
+  lint, formatting, and shell syntax checks pass. PowerShell parity runs when
+  `pwsh` is available and is otherwise recorded as unavailable.
+- **Confidence:** high
+- **Dependencies:** INSTALL-019, INSTALL-020, D-046
+- **Files:** cli/src/{doctor,managed,scaffold,update}.rs,
+  scaffold/{aps-planning,plan-doctor,agents}/**, lib/{scaffold.sh,Scaffold.psm1},
+  scaffold/init.sh, test/run.sh, docs/{agents,installation}.md
+- **Status:** In Progress: 2026-07-24
+- **Results:** Vended from eddacraft/skills PR #51 (`aps-packaging`), embedded
+  both skills in Rust with independent markers and doctor diagnostics, updated
+  compatibility installers for the renamed references and companion skill,
+  and regenerated every runtime agent envelope from the refreshed cores.
+  Managed upgrades remove retired flat reference files only when the previous
+  marker proves APS owned them. Rust, bash integration, Markdown, APS,
+  formatting, source-projection, and generated-agent checks pass; live
+  PowerShell execution is unavailable because `pwsh` is not installed.
+
 ## Execution Strategy
 
 ### Wave 1: Foundations (no dependencies)
@@ -997,14 +1032,14 @@ Sequential — each item builds on the previous contract:
 - INSTALL-021: curl updaters to current layout (D-043) (Complete)
 - INSTALL-022: retire `.aps-version` (D-044) (Complete)
 - INSTALL-023: pwsh `Invoke-ApsInit` to v2 minimal layout (Complete)
+- INSTALL-024: canonical APS planning family + agent refresh (In Progress)
 
 ## Notes
 
-- The current `aps-planning/` contains: SKILL.md, reference.md, examples.md,
-  hooks.md, and scripts/. Under the new layout:
-  - SKILL.md + reference.md + examples.md → `.claude/skills/aps-planning/`
-  - scripts/ → `.aps/scripts/`
-  - hooks.md → repo docs (human reference, not installed to projects)
+- The current `aps-planning/` payload contains `SKILL.md`, focused files under
+  `references/`, and compatibility hook installers under `scripts/`.
+  `plan-doctor/` is a separate companion skill. Runtime-specific copies are
+  generated from the canonical `eddacraft-skills` packaging target.
 - Skills go to `.claude/skills/` (not `.aps/`) because that's the cross-tool
   compatible path (Claude Code, Copilot, OpenCode all check it). Codex users
   get an additional copy at `.agents/skills/`.

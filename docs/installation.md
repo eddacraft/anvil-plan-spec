@@ -252,8 +252,8 @@ vendored CLI to refresh):
   with `--local-cli` (or your v1 project vendored one at the root); otherwise
   the global `aps` binary is updated separately
   (see [Global Install](#global-install))
-- The planning skill (`.claude/skills/aps-planning/` and/or
-  `.agents/skills/aps-planning/`), hook scripts (`.aps/scripts/` — only when
+- The APS skills (`aps-planning` and `plan-doctor` under `.claude/skills/`
+  and/or `.agents/skills/`), hook scripts (`.aps/scripts/` — only when
   already installed, or when a v1 migration found hooks wired into your Claude
   settings), and agent definitions for any AI tools you added
   (`.claude/agents/`, `.github/agents/`, `.opencode/agents/`, etc.)

@@ -11,14 +11,18 @@ use std::path::Path;
 
 use sha2::{Digest, Sha256};
 
-use crate::scaffold::{CLI_VERSION, SKILL_FILES};
+use crate::scaffold::CLI_VERSION;
+#[cfg(test)]
+use crate::scaffold::SKILL_FILES;
 
 /// Sidecar filename written next to managed skill content.
 pub const MANIFEST_NAME: &str = ".aps-managed.json";
 
 const SCHEMA_VERSION: u32 = 1;
 const KIND_SKILL: &str = "skill";
+#[cfg(test)]
 const SKILL_NAME: &str = "aps-planning";
+const RETIRED_SKILL_FILES: [&str; 3] = ["reference.md", "examples.md", "hooks.md"];
 
 /// Inventory sidecar for a managed skill install (camelCase JSON on disk).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -83,16 +87,22 @@ pub fn bundle_digest(files: &BTreeMap<String, String>) -> String {
 }
 
 /// Expected skill manifest for this binary's embedded `SKILL_FILES`.
+#[cfg(test)]
 pub fn expected_skill_manifest() -> SkillManifest {
+    expected_skill_manifest_for(SKILL_NAME, &SKILL_FILES)
+}
+
+/// Expected manifest for any embedded skill in the standalone APS family.
+pub fn expected_skill_manifest_for(name: &str, embedded: &[(&str, &str)]) -> SkillManifest {
     let mut files = BTreeMap::new();
-    for (name, content) in SKILL_FILES {
-        files.insert(name.to_string(), sha256_hex(content.as_bytes()));
+    for (path, content) in embedded {
+        files.insert(path.to_string(), sha256_hex(content.as_bytes()));
     }
     let digest = bundle_digest(&files);
     SkillManifest {
         schema_version: SCHEMA_VERSION,
         kind: KIND_SKILL.to_string(),
-        name: SKILL_NAME.to_string(),
+        name: name.to_string(),
         cli_version: CLI_VERSION.to_string(),
         bundle_digest: digest,
         files,
@@ -168,9 +178,10 @@ pub fn evaluate_skill_dir(skill_dir: &Path, expected: &SkillManifest) -> SkillSt
 
     let marker_path = skill_dir.join(MANIFEST_NAME);
     if !marker_path.is_file() {
-        let any_skill_file = SKILL_FILES
-            .iter()
-            .any(|(name, _)| skill_dir.join(name).is_file());
+        let any_skill_file = expected
+            .files
+            .keys()
+            .any(|name| skill_dir.join(name).is_file());
         return if any_skill_file {
             SkillState::Unmanaged
         } else {
@@ -228,6 +239,7 @@ pub fn reconcile_managed_skill(
         }
         SkillState::Fresh => Ok(ReconcileResult::Unchanged),
         SkillState::Stale => {
+            remove_retired_skill_files(skill_dir)?;
             // Content may already match embeds (e.g. only cliVersion in the
             // marker drifted). Avoid needless file rewrites/mtime churn.
             if !skill_files_match(skill_dir, files) {
@@ -249,10 +261,25 @@ pub fn reconcile_managed_skill(
     }
 }
 
+fn remove_retired_skill_files(skill_dir: &Path) -> Result<(), String> {
+    let marker = fs::read_to_string(skill_dir.join(MANIFEST_NAME)).map_err(|e| e.to_string())?;
+    let manifest = SkillManifest::from_json(&marker)?;
+    for name in RETIRED_SKILL_FILES {
+        if manifest.files.contains_key(name) {
+            fs::remove_file(skill_dir.join(name)).map_err(|e| e.to_string())?;
+        }
+    }
+    Ok(())
+}
+
 fn write_skill_files(skill_dir: &Path, files: &[(&str, &str)]) -> Result<(), String> {
     fs::create_dir_all(skill_dir).map_err(|e| e.to_string())?;
     for (name, content) in files {
-        fs::write(skill_dir.join(name), content).map_err(|e| e.to_string())?;
+        let path = skill_dir.join(name);
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+        }
+        fs::write(path, content).map_err(|e| e.to_string())?;
     }
     Ok(())
 }
@@ -432,9 +459,7 @@ mod tests {
 
     fn install_expected(dir: &Path) {
         let expected = expected_skill_manifest();
-        for (name, content) in SKILL_FILES {
-            fs::write(dir.join(name), content).unwrap();
-        }
+        write_skill_files(dir, &SKILL_FILES).unwrap();
         write_skill_marker(dir, &expected).unwrap();
     }
 
@@ -509,6 +534,8 @@ mod tests {
             fs::read_to_string(dir.join("SKILL.md")).unwrap(),
             SKILL_FILES[0].1
         );
+        assert!(!dir.join("reference.md").exists());
+        assert!(!dir.join("examples.md").exists());
         fs::remove_dir_all(&dir).ok();
     }
 
@@ -535,9 +562,7 @@ mod tests {
     #[test]
     fn matching_embeds_without_marker_are_adopted() {
         let dir = scratch("adopt");
-        for (name, content) in SKILL_FILES {
-            fs::write(dir.join(name), content).unwrap();
-        }
+        write_skill_files(&dir, &SKILL_FILES).unwrap();
         let expected = expected_skill_manifest();
         assert_eq!(evaluate_skill_dir(&dir, &expected), SkillState::Unmanaged);
         assert_eq!(
@@ -598,9 +623,7 @@ mod tests {
     #[test]
     fn broken_marker_is_skipped() {
         let dir = scratch("broken");
-        for (name, content) in SKILL_FILES {
-            fs::write(dir.join(name), content).unwrap();
-        }
+        write_skill_files(&dir, &SKILL_FILES).unwrap();
         fs::write(dir.join(MANIFEST_NAME), "{not json\n").unwrap();
         let expected = expected_skill_manifest();
         assert_eq!(evaluate_skill_dir(&dir, &expected), SkillState::Broken);
