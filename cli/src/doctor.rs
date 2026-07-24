@@ -10,7 +10,10 @@ use std::path::{Path, PathBuf};
 
 use crate::config::{self, parse_config};
 use crate::managed::{self, SkillState};
-use crate::scaffold::{AGENTS_SKILL_DIR, CLAUDE_SKILL_DIR, CLI_VERSION};
+use crate::scaffold::{
+    AGENTS_PLAN_DOCTOR_DIR, AGENTS_SKILL_DIR, CLAUDE_PLAN_DOCTOR_DIR, CLAUDE_SKILL_DIR,
+    CLI_VERSION, PLAN_DOCTOR_FILES, SKILL_FILES,
+};
 use crate::wizard::AiTool;
 
 /// Files a complete vendored/global bash `lib/` runtime must contain. Used to
@@ -237,12 +240,46 @@ fn config_expects_skill(root: &Path) -> bool {
 }
 
 fn skill_freshness_findings(root: &Path) -> Vec<Finding> {
-    let expected = managed::expected_skill_manifest();
     let roots = [
-        (CLAUDE_SKILL_DIR, root.join(CLAUDE_SKILL_DIR)),
-        (AGENTS_SKILL_DIR, root.join(AGENTS_SKILL_DIR)),
+        (
+            "planning skill",
+            "aps-planning",
+            CLAUDE_SKILL_DIR,
+            SKILL_FILES.as_slice(),
+        ),
+        (
+            "plan doctor",
+            "plan-doctor",
+            CLAUDE_PLAN_DOCTOR_DIR,
+            PLAN_DOCTOR_FILES.as_slice(),
+        ),
+        (
+            "planning skill",
+            "aps-planning",
+            AGENTS_SKILL_DIR,
+            SKILL_FILES.as_slice(),
+        ),
+        (
+            "plan doctor",
+            "plan-doctor",
+            AGENTS_PLAN_DOCTOR_DIR,
+            PLAN_DOCTOR_FILES.as_slice(),
+        ),
     ];
-    let present: Vec<_> = roots.iter().filter(|(_, path)| path.is_dir()).collect();
+    let claude_skills_present =
+        root.join(CLAUDE_SKILL_DIR).is_dir() || root.join(CLAUDE_PLAN_DOCTOR_DIR).is_dir();
+    let agents_skills_present =
+        root.join(AGENTS_SKILL_DIR).is_dir() || root.join(AGENTS_PLAN_DOCTOR_DIR).is_dir();
+    let present: Vec<_> = roots
+        .iter()
+        .filter(|(_, _, path, _)| {
+            if path.starts_with(".claude/") {
+                claude_skills_present
+            } else {
+                agents_skills_present
+            }
+        })
+        .collect();
 
     if present.is_empty() {
         return if config_expects_skill(root) {
@@ -263,25 +300,27 @@ fn skill_freshness_findings(root: &Path) -> Vec<Finding> {
 
     present
         .into_iter()
-        .map(|(label, path)| {
-            let state = managed::evaluate_skill_dir(path, &expected);
+        .map(|(finding_name, skill_name, label, files)| {
+            let path = root.join(label);
+            let expected = managed::expected_skill_manifest_for(skill_name, files);
+            let state = managed::evaluate_skill_dir(&path, &expected);
             match state {
                 SkillState::Fresh => {
-                    Finding::new(Level::Ok, "planning skill", format!("{label}: fresh"))
+                    Finding::new(Level::Ok, *finding_name, format!("{label}: fresh"))
                 }
                 SkillState::Stale => Finding::new(
                     Level::Warn,
-                    "planning skill",
+                    *finding_name,
                     format!("{label}: stale — run `aps update`"),
                 ),
                 SkillState::Dirty => Finding::new(
                     Level::Warn,
-                    "planning skill",
+                    *finding_name,
                     format!("{label}: dirty (user modified) — not overwritten by `aps update`"),
                 ),
                 SkillState::Unmanaged => Finding::new(
                     Level::Warn,
-                    "planning skill",
+                    *finding_name,
                     format!(
                         "{label}: unmanaged (no {}) — run `aps update` to adopt if content matches",
                         managed::MANIFEST_NAME
@@ -289,7 +328,7 @@ fn skill_freshness_findings(root: &Path) -> Vec<Finding> {
                 ),
                 SkillState::Broken => Finding::new(
                     Level::Problem,
-                    "planning skill",
+                    *finding_name,
                     format!(
                         "{label}: broken managed marker — fix or remove {}",
                         managed::MANIFEST_NAME
@@ -297,7 +336,7 @@ fn skill_freshness_findings(root: &Path) -> Vec<Finding> {
                 ),
                 SkillState::Absent => Finding::new(
                     Level::Warn,
-                    "planning skill",
+                    *finding_name,
                     format!("{label}: empty — run `aps update` to install"),
                 ),
             }
@@ -529,13 +568,26 @@ mod tests {
         let skill = root.join(CLAUDE_SKILL_DIR);
         let expected = managed::expected_skill_manifest();
         for (name, content) in crate::scaffold::SKILL_FILES {
-            fs::create_dir_all(&skill).unwrap();
-            fs::write(skill.join(name), content).unwrap();
+            let path = skill.join(name);
+            fs::create_dir_all(path.parent().unwrap()).unwrap();
+            fs::write(path, content).unwrap();
         }
         managed::write_skill_marker(&skill, &expected).unwrap();
+        let plan_doctor = root.join(CLAUDE_PLAN_DOCTOR_DIR);
+        let plan_doctor_expected = managed::expected_skill_manifest_for(
+            "plan-doctor",
+            crate::scaffold::PLAN_DOCTOR_FILES.as_slice(),
+        );
+        for (name, content) in crate::scaffold::PLAN_DOCTOR_FILES {
+            let path = plan_doctor.join(name);
+            fs::create_dir_all(path.parent().unwrap()).unwrap();
+            fs::write(path, content).unwrap();
+        }
+        managed::write_skill_marker(&plan_doctor, &plan_doctor_expected).unwrap();
 
         let report = diagnose(&root, &home, Some(Path::new("/usr/bin/aps")));
         assert_eq!(level_of(&report, "planning skill"), Level::Ok);
+        assert_eq!(level_of(&report, "plan doctor"), Level::Ok);
         assert!(
             report
                 .findings
@@ -545,6 +597,27 @@ mod tests {
                 .detail
                 .contains("fresh")
         );
+
+        fs::remove_dir_all(&root).ok();
+        fs::remove_dir_all(&home).ok();
+    }
+
+    #[test]
+    fn missing_plan_doctor_warns_when_planning_skill_is_installed() {
+        let root = scratch("plan-doctor-missing");
+        let home = scratch("plan-doctor-missing-home");
+        let skill = root.join(CLAUDE_SKILL_DIR);
+        let expected = managed::expected_skill_manifest();
+        for (name, content) in crate::scaffold::SKILL_FILES {
+            let path = skill.join(name);
+            fs::create_dir_all(path.parent().unwrap()).unwrap();
+            fs::write(path, content).unwrap();
+        }
+        managed::write_skill_marker(&skill, &expected).unwrap();
+
+        let report = diagnose(&root, &home, Some(Path::new("/usr/bin/aps")));
+        assert_eq!(level_of(&report, "planning skill"), Level::Ok);
+        assert_eq!(level_of(&report, "plan doctor"), Level::Warn);
 
         fs::remove_dir_all(&root).ok();
         fs::remove_dir_all(&home).ok();
@@ -563,8 +636,9 @@ mod tests {
         let skill = root.join(CLAUDE_SKILL_DIR);
         let expected = managed::expected_skill_manifest();
         for (name, content) in crate::scaffold::SKILL_FILES {
-            fs::create_dir_all(&skill).unwrap();
-            fs::write(skill.join(name), content).unwrap();
+            let path = skill.join(name);
+            fs::create_dir_all(path.parent().unwrap()).unwrap();
+            fs::write(path, content).unwrap();
         }
         managed::write_skill_marker(&skill, &expected).unwrap();
         fs::write(skill.join("SKILL.md"), "edited\n").unwrap();

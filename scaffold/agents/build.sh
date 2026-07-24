@@ -22,9 +22,9 @@ for core in planner-core.md librarian-core.md conductor-core.md; do
   fi
 done
 
-PLANNER_DESC="Create, manage, execute, and review plans following the Anvil Plan Spec (APS) format, including initializing projects, modules, work items, action plans, validation, status tracking, and wave-based parallel execution"
-LIBRARIAN_DESC="Repository organizing, cleanup, documentation filing, archiving stale specs, detecting orphaned files, cross-reference maintenance, and general repo hygiene"
-CONDUCTOR_DESC="Coordinate APS execution through CLI-backed next-work selection, context packaging, dependency checks, validation, and learning capture"
+PLANNER_DESC="Shape and maintain Anvil Plan Spec indexes, modules, work items, action plans, and plan status without implementing the work"
+LIBRARIAN_DESC="Audit and maintain APS plan organisation, references, completed-work roll-ups, and repository planning hygiene"
+CONDUCTOR_DESC="Coordinate authorised APS work items through selection, start, dispatch, validation, completion, and learning capture"
 
 # --- Claude Code (.claude/agents/) ---
 CC_DIR="$SCRIPT_DIR/claude-code"

@@ -1,285 +1,273 @@
+---
+name: aps-planning
+description: >-
+  APS awareness, truth validation, and reconciliation. Loads plan context,
+  validates selected work against current project truth before implementation,
+  and reconciles plan state at task boundaries.
+---
+
 # APS Planning Skill
 
-> Persistent, structured planning for AI agents using Anvil Plan Spec.
+## Activation Guard
 
-## What This Skill Does
+If `plans/index.aps.md` does not exist in the current project, do nothing.
+This skill is inert in projects without APS plans. Do not mention APS, do not
+offer to create plans, do not load any context. Silently skip all sections
+below.
 
-This skill teaches you to use **APS (Anvil Plan Spec)** — a markdown-based
-planning format — as persistent memory for complex tasks. APS files live in
-`plans/` and survive context resets, session clears, and handoffs.
+## Session Start -- Load Context
 
-**Core insight:** Your context window is RAM (volatile, limited). The filesystem
-is disk (persistent, unlimited). Anything important gets written to APS files.
+When a session begins and `plans/index.aps.md` exists, build APS awareness in
+working memory. Do this quietly -- do not print output to the user unless they
+ask about plan status.
 
-## Hard Rules
+### Step 1: Read the index
 
-1. **Plan before building.** Never start a complex task without an APS file.
-   If `plans/` doesn't exist, create it. If no spec covers this work, create
-   one before writing code.
+Read `plans/index.aps.md`. Extract the Modules table. Identify active modules
+-- those whose status is NOT `Done`, `Complete`, `Merged`, `Released`, `Shipped`,
+`Released/Shipped`, or `Archived`. Note the plan title and any current-window
+notes.
 
-2. **Read before deciding.** Before any major implementation decision, re-read
-   the relevant APS spec. After many tool calls, your original goals drift out
-   of your attention window. Re-reading brings them back.
+### Step 2: Read active modules
 
-3. **Update as you go.** After completing a work item or discovering something
-   important, update the APS file immediately. Stale specs lose trust.
+For each active module, read its `.aps.md` file from `plans/modules/`. Extract
+all work items with their fields:
 
-4. **Never skip validation.** Every work item has a Validation field. Run it
-   before marking anything complete.
+- **ID** (e.g., `AUTH-001`)
+- **Title**
+- **Status** (the native APS CLI currently transitions `Draft`, `Ready`,
+  `In Progress`, `Complete`, and `Blocked`; it recognises `Proposed` as `Draft`
+  and `Done` as `Complete`. This catalogue additionally follows ADR-0013:
+  `Merged` / `Released` / `Shipped` / `Released/Shipped` are post-merge
+  lifecycle states — not selectable for implementation; `Merged` is interim
+  and advances to `Complete` only on release or ship evidence)
+- **Files** (from the `Files:` field, if present)
+- **Validation** (from the `Validation:` field)
+- **Priority** (if specified)
+- **Dependencies** (if specified)
 
-5. **Specs describe intent, not implementation.** Write *what* and *why*, never
-   *how*. Implementation emerges from code patterns and agent judgment.
+Skip work items with inactive/completed statuses: `Done`, `Complete`, `Merged`,
+`Released`, `Shipped`, `Released/Shipped`, or `Archived`.
 
-## When to Trigger APS Planning
+### Step 3: Build the file-to-item map
 
-Use APS when the user asks you to:
+From all non-Complete work items that have a `Files:` field, build a mapping of
+file paths to work item IDs. This map is used during passive awareness to
+recognise when edited files relate to planned work.
 
-- Build a new feature with multiple parts
-- Plan, design, or architect something
-- Work on something that spans multiple files or domains
-- Execute work that needs coordination or sequencing
-- Pick up where a previous session left off
-
-**Don't use APS for:** Quick one-off fixes, single-file edits, questions, or
-trivial changes.
-
-## The APS Workflow
-
-```
-Assess → Plan → Execute → Validate → Update
-```
-
-### 1. Assess
-
-Before planning, understand what exists:
+Example:
 
 ```
-1. Check: Does plans/ directory exist?
-2. If plans/ does not exist → run: aps init
-   (This bootstraps the APS structure. If aps is not on PATH, check bin/aps in the anvil-plan-spec repo or run: curl -fsSL https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/install.sh | sh)
-   After init completes, continue to step 3.
-3. Check: Does .aps/config.yml exist?
-   If it exists, compare its cli_version with the installed CLI (aps --version).
-   If they differ → run: aps update
-   (This updates templates, the skill file, and tool files to the current version.)
-   After update completes, continue to step 4.
-4. Check: Does plans/index.aps.md exist?
-5. Check: Are there module files in plans/modules/?
-6. Check: Are there design docs in designs/?
-7. Read plans/aps-rules.md if present (agent guidance)
-8. Identify: Is this new work or continuing existing work?
+src/auth/login.ts -> AUTH-001, AUTH-003
+src/db/migrations/ -> DB-002
+packages/core/src/policy.ts -> POL-001
 ```
 
-### 2. Plan (pick the right template)
+### Step 4: Check for cached context
 
-| Situation | Action |
-|-----------|--------|
-| Complex architecture needing review | Create a Design doc in `designs/` |
-| Quick feature (1-3 items) | Create a Simple spec |
-| Bounded work area with interfaces | Create a Module spec |
-| Multi-module initiative | Create an Index + Modules |
-| Complex work item needing breakdown | Create an Action Plan |
+Look for `plans/aps-project.md` in the project (the primary, harness-neutral
+location per ADR-0008; a per-harness binding may map it to a harness-specific
+path). If it exists, read it for additional project-specific APS context
+(module relationships, conventions, recent decisions). If missing, note its
+absence but do not block on it.
 
-**Simple spec** — for self-contained features:
+### Step 5: Store APS Context Block
+
+Hold this compact summary in working memory (not displayed to user):
+
+```
+## APS Context
+Active: [MODULE_ID (X/Y items done), ...]
+In-progress: [ITEM-NNN: title, ...] or (none)
+File map: [N tracked paths]
+Next suggested: [ITEM-NNN (reason)]
+```
+
+Where:
+
+- **Active** lists each active module with completion ratio
+- **In-progress** lists work items currently being worked on
+- **File map** is the count of tracked file paths
+- **Next suggested** is the highest-priority Ready item with no unmet
+  dependencies, or the most impactful Draft item if nothing is Ready
+
+## APS Truth Validation
+
+Run this mode when `dev-loop` asks for an APS gate, when
+`planning-workflow` needs a readiness decision, when the user asks if a plan is
+current, or when scope appears stale, ambiguous, or cross-cutting.
+
+Steps:
+
+1. Confirm the user goal maps to exactly one primary APS work item. If not,
+   return `needs-plan-update` and hand off to `planning-workflow`.
+2. If ownership, scope, behaviour, or architecture is unclear, hand off to
+   `planning-workflow`.
+3. Confirm the module and work item status allow implementation.
+4. Check dependencies and cross-reference callouts.
+5. Read referenced files from `Files:` plus directly related tests, schemas,
+   docs, ADRs, workflows, and feature flag definitions.
+6. Compare expected outcome and validation commands against current project
+   truth.
+7. Identify drift: already-completed work, stale assumptions, moved files,
+   changed APIs, invalid commands, missing dependencies, release-state mismatch,
+   documentation authority conflicts, or scope conflicts.
+
+Return this report before branch or code:
 
 ```markdown
-# [Feature Name]
+## APS Truth Validation
 
-| ID | Owner | Status |
-|----|-------|--------|
-| FEAT | @user | Draft |
-
-## Purpose
-[What problem this solves]
-
-## Work Items
-
-### FEAT-001: [Title]
-- **Intent:** [What this achieves]
-- **Expected Outcome:** [Testable result]
-- **Validation:** `[command]`
+- Module:
+- Work item:
+- Status:
+- Project truth checked:
+- Drift found:
+- Decision: valid | needs-plan-update | blocked
+- Required APS updates:
+- Implementation notes:
 ```
 
-**Module spec** — for bounded areas with interfaces:
+Implementation MUST NOT begin from a stale, ambiguous, unauthorised, or blocked
+APS item.
 
-```markdown
-# [Module Title]
+## During Work -- Passive Awareness
 
-| ID | Owner | Priority | Status |
-|----|-------|----------|--------|
-| AUTH | @user | medium | Draft |
+While the user works on code, maintain quiet awareness of APS relevance
+without interrupting their flow.
 
-## Purpose
-[Why this module exists]
+### Recognise Relevance
 
-## In Scope
-- [What this module handles]
+When the user edits, reads, or discusses a file that appears in the
+file-to-item map:
 
-## Work Items
+- Note the matching work item(s) internally
+- Do NOT announce the match unprompted
+- If the user asks "what item is this for?" or similar, cite the work item ID,
+  title, and status
+- If the user's changes clearly advance a work item's Expected Outcome, note
+  this in working memory for later reconciliation
 
-### AUTH-001: [Title]
-- **Intent:** [One sentence]
-- **Expected Outcome:** [Observable result]
-- **Validation:** `[command]`
-- **Confidence:** medium
-```
+### Flag Completion Opportunities
 
-**Index** — for multi-module initiatives:
+At natural pauses -- after a commit, after completing a logical chunk of work,
+or when the user asks "what's next?" -- you may surface a brief suggestion if
+a work item appears to be complete:
 
-```markdown
-# [Plan Title]
+> It looks like AUTH-001 (Add login endpoint) may be done -- the validation
+> command is `pnpm vitest run src/auth/__tests__/login.test.ts`. Want me to
+> run it and mark it complete?
 
-## Overview
-[What this plan covers]
+Rules:
 
-## Problem & Success Criteria
-**Problem:** [What we're solving]
-**Success Criteria:**
-- [ ] [Measurable outcome]
+- **Never auto-update** work item status. Always ask first.
+- Keep suggestions to one sentence plus the validation command.
+- Do not repeat a suggestion the user has already declined or deferred.
+- Maximum one suggestion per natural pause.
 
-## Modules
-| Module | Purpose | Status |
-|--------|---------|--------|
-| [auth](./modules/auth.aps.md) | Authentication | Draft |
-```
+### Track Unplanned Work
 
-### 3. Execute
+If the user creates or modifies files within an active module's scope but those
+files are not tracked by any work item:
 
-For each work item:
+- Note the untracked work internally
+- At a natural pause, offer to add it as a new work item:
 
-1. Confirm the work item has **Ready** status
-2. Re-read the work item's Intent and Expected Outcome
-3. If complex, create an Action Plan in `plans/execution/`
-4. Implement one work item at a time
-5. Run the Validation command
+> You've added `src/auth/mfa.ts` which is in the AUTH module scope but isn't
+> covered by any work item. Want me to draft a work item for MFA support?
 
-### 4. Validate
+Rules:
 
-- Run every work item's Validation command
-- Check: Does the outcome match Expected Outcome?
-- If it diverged, update the spec to reflect reality
+- Only offer for files clearly within an active module's scope
+- Do not offer for test files, config files, or minor refactors
+- One offer per untracked cluster of changes, not per file
 
-### 5. Update
+## Commit and PR Integration
 
-After completing work:
+Read `references/commit-pr-integration.md` when writing a commit or PR for
+APS-tracked work — it holds the `APS:` commit-trailer and PR-section rules.
+This is passive -- only add references when the file-to-item map produces
+matches.
 
-- Mark work items complete: add `- **Status:** Complete` or checkmark
-- Capture any new work discovered as Draft items
-- Update the module/index status if all items are done
-- Brief note on what completed and what's next
+## Session Boundaries -- Reconciliation
 
-## Behavioral Reinforcement
+Reconciliation syncs the APS plan files with actual project state.
 
-### The 5-Operation Rule
+### Triggers
 
-After every 5 tool operations (Read, Write, Edit, Bash), pause and ask:
+Run reconciliation when any of these occur:
 
-- Am I still working toward the current work item's Intent?
-- Have I discovered something that should be captured in the spec?
-- Should I re-read the plan to refresh my goals?
+- A commit touches files in the file-to-item map
+- A PR is created from a branch with tracked changes
+- A branch is completed (merged or closed)
+- The user explicitly requests it ("reconcile plan", "update plan status", "plan status")
 
-If the answer to any is "yes" or "maybe", update or re-read the APS file.
+### Reconciliation Steps
 
-### Goal Drift Prevention
+Perform reconciliation inline (foreground). This means:
 
-When you notice yourself:
+1. For each recently changed file, check if its work item's Expected Outcome
+   and Validation are now satisfied.
+2. For work items that appear complete, verify by running the Validation
+   command if one exists.
+3. Draft status updates -- do NOT write them until the user approves, unless a
+   currently active loop skill (`dev-loop` or `land-branch`)
+   has already granted explicit authority to reconcile the current work item.
+4. Identify any new files that should be added to existing work items' Files fields.
+5. Identify any unplanned work that warrants new Draft work items.
+6. Check for dependency changes -- are any Blocked items now unblocked?
 
-- Making changes not described in any work item → Stop. Check the spec.
-- Unsure what to do next → Re-read the module's Work Items section.
-- Discovering scope creep → Add a new Draft work item, don't expand current one.
-- Hitting a blocker → Update the work item with `Blocked: [reason]`.
+Read `references/reconciliation-report.md` when producing a reconciliation
+report — it holds the report format and the optional background-reconciliation
+recipe. After presenting the report, ask if the user wants to apply the
+proposed changes.
 
-### Session Continuity
+Exception: when called by `dev-loop` / `land-branch` for the current
+ReadyItem after verified PR/merge evidence, apply only that item's status,
+`Files:`, and evidence updates under the loop's authority. Broader plan, module,
+ADR, dependency, or new-work changes still require a user checkpoint.
 
-**Starting a session:**
+## Plan Status Query
 
-1. Read `plans/index.aps.md` (or the relevant module)
-2. Find work items with Ready or In Progress status
-3. Declare: "Working on [ID]: [title]"
-4. Resume from where the spec says work left off
+When the user asks for plan status ("what's the plan?", "plan status", "what's next?", "show plan"):
 
-**Ending a session:**
+1. Run reconciliation inline (see above)
+2. Produce the full APS status report
+3. Ask if they want to apply proposed changes
 
-1. Update all work item statuses
-2. Add any discovered work as Draft items
-3. Commit APS changes to git so the next session picks up cleanly
+When the installed CLI is current for the project, prefer its read-only
+surfaces over reimplementing them:
 
-## File Layout
+- `aps next` for selection;
+- `aps graph` for dependencies;
+- `aps audit` for validation-backed reconciliation; and
+- `aps doctor` for project/toolchain health.
 
-```
-designs/                          # Technical designs (optional, project root)
-└── YYYY-MM-DD-slug.design.md     # Architecture/approach documents
+Use `--strict` when version-pin drift must block the operation.
 
-plans/
-├── aps-rules.md              # Agent guidance (read first)
-├── index.aps.md              # Root plan (if multi-module)
-├── modules/                  # Module specs
-│   ├── 01-core.aps.md
-│   └── 02-auth.aps.md
-├── execution/                # Action plans for complex items
-│   └── AUTH-001.actions.md
-└── decisions/                # Architecture decisions (optional)
-```
+For authorised canonical transitions, prefer `aps start <ID>` and `aps complete
+<ID>`. ADR-0013's post-merge states remain direct, evidence-backed plan
+bookkeeping until the CLI ships equivalent merge/release transitions; do not
+force them through `aps complete`.
 
-## Design Document Normalisation
+## Plan Creation / Modification
 
-When you encounter a design doc in `designs/` that's missing standard sections:
+When the user asks to create or modify a plan:
 
-1. Don't reject it — any markdown in `designs/` is a valid design
-2. Add the minimum fields: `## Problem`, `## Design`, and Status metadata table
-3. Don't rewrite the author's content — append missing sections or infer from
-   existing content
-4. This can happen in the background, after the main planning/execution work
+1. If `plans/index.aps.md` does not exist, prefer `aps init` so the current APS
+   release writes the project contract and canonical templates. If the CLI is
+   unavailable, point the user to the current APS installer; only hand-create
+   a minimal `plans/` tree when they explicitly want a tool-free bootstrap.
+2. If plans exist, help the user add modules, work items, or update existing entries
+3. Always ask before writing — show proposed content first
 
-## Work Item Format
+## What This Skill Does NOT Do
 
-Every work item must have these three fields:
-
-- **Intent:** What outcome this achieves (one sentence)
-- **Expected Outcome:** Observable/testable result
-- **Validation:** Command to verify completion
-
-Optional fields: Confidence, Dependencies, Files, Non-scope, Status.
-
-## Action Plan Format (for complex work items)
-
-```markdown
-# Action Plan: AUTH-001
-
-## Actions
-
-### Action 1 — [Verb] [target]
-**Purpose:** [Why]
-**Produces:** [Artefacts]
-**Checkpoint:** [Observable state — max 12 words]
-**Validate:** `[command]`
-```
-
-Checkpoints are lean: max 12 words, no implementation detail.
-
-## Naming Conventions
-
-- Module files: `NN-name.aps.md` (e.g., `01-core.aps.md`)
-- Work item IDs: `PREFIX-NNN` (e.g., `AUTH-001`, `CORE-002`)
-- Action plans: `WORK-ITEM-ID.actions.md` or `MODULE.actions.md`
-- Simple specs: `feature-name.aps.md`
-
-## Validation CLI
-
-If the `aps` CLI is available, validate your specs:
-
-```bash
-./bin/aps lint              # Lint all plans/
-./bin/aps lint plans/modules/auth.aps.md  # Lint one file
-```
-
-## Anti-Patterns
-
-| Don't | Do |
-|-------|-----|
-| Start coding without a spec | Create at least a Simple spec first |
-| Write implementation details in specs | Write intent and outcomes only |
-| Forget to update status after completing work | Update immediately |
-| Expand scope mid-work-item | Add a new Draft item instead |
-| Skip validation commands | Always run them before marking complete |
-| Stuff everything in context | Write findings to APS files |
+- **Interrupt mid-flow** -- never break the user's concentration with APS info
+- **Auto-edit plan files** -- always ask before writing status changes, except
+  current-item reconciliation explicitly delegated by an active loop skill
+- **Run validation during active work** -- validation runs only at session
+  boundaries or on explicit request
+- **Slow down the commit/PR workflow** -- reconciliation never gates commits or pushes
+- **Activate on projects without `plans/index.aps.md`** -- the activation
+  guard ensures complete silence in non-APS projects

@@ -14,8 +14,8 @@ use std::path::Path;
 use crate::config::{self, parse_config};
 use crate::managed::{self, ReconcileResult};
 use crate::scaffold::{
-    AGENTS_SKILL_DIR, CLAUDE_SKILL_DIR, HOOK_SCRIPTS, SKILL_FILES, agent_files, agent_paths,
-    mark_executable,
+    AGENTS_PLAN_DOCTOR_DIR, AGENTS_SKILL_DIR, CLAUDE_PLAN_DOCTOR_DIR, CLAUDE_SKILL_DIR,
+    HOOK_SCRIPTS, PLAN_DOCTOR_FILES, SKILL_FILES, agent_files, agent_paths, mark_executable,
 };
 use crate::wizard::{AiTool, ModelPreference};
 
@@ -54,24 +54,7 @@ const DESIGNS: &[(&str, &str)] = &[(
 // Legacy v1 skill files (relative to a root aps-planning/ tree). Projects
 // that still carry the v1 layout get refreshed in place; `aps migrate`
 // is what moves them to the v2 roots.
-const LEGACY_SKILL: &[(&str, &str)] = &[
-    (
-        "SKILL.md",
-        include_str!("../scaffold/aps-planning/SKILL.md"),
-    ),
-    (
-        "reference.md",
-        include_str!("../scaffold/aps-planning/reference.md"),
-    ),
-    (
-        "examples.md",
-        include_str!("../scaffold/aps-planning/examples.md"),
-    ),
-    (
-        "hooks.md",
-        include_str!("../scaffold/aps-planning/hooks.md"),
-    ),
-];
+const LEGACY_SKILL: &[(&str, &str)] = &SKILL_FILES;
 
 #[derive(Default)]
 struct Tally {
@@ -188,47 +171,55 @@ pub fn cmd_update(start: &Path) -> i32 {
     // content from user edits — dirty trees are refused, not overwritten.
     // Legacy root aps-planning/ stays on string reconcile until migrate.
     // Agents remain on string reconcile (managed inventory is Phase 3).
-    println!("\nPlanning skill:");
+    println!("\nAPS skills:");
     let mut skill_roots = 0;
-    let expected_skill = managed::expected_skill_manifest();
-    for dir in [CLAUDE_SKILL_DIR, AGENTS_SKILL_DIR] {
-        let skill_dir = root.join(dir);
-        if !skill_dir.is_dir() {
+    for (planning_dir, doctor_dir) in [
+        (CLAUDE_SKILL_DIR, CLAUDE_PLAN_DOCTOR_DIR),
+        (AGENTS_SKILL_DIR, AGENTS_PLAN_DOCTOR_DIR),
+    ] {
+        if !root.join(planning_dir).is_dir() && !root.join(doctor_dir).is_dir() {
             continue;
         }
-        skill_roots += 1;
-        match managed::reconcile_managed_skill(&skill_dir, &SKILL_FILES, &expected_skill) {
-            Ok(ReconcileResult::Unchanged) => {
-                println!("  = {dir} (unchanged)");
-                tally.unchanged += 1;
-            }
-            Ok(ReconcileResult::Updated) => {
-                println!("  ~ {dir} (updated)");
-                tally.updated += 1;
-            }
-            Ok(ReconcileResult::Added) => {
-                println!("  + {dir} (added)");
-                tally.added += 1;
-            }
-            Ok(ReconcileResult::DirtySkipped) => {
-                println!("  ! {dir} (dirty: user modified; not updated)");
-                tally.skipped += 1;
-            }
-            Ok(ReconcileResult::UnmanagedSkipped) => {
-                println!("  ! {dir} (unmanaged: differs from embeds; not updated)");
-                tally.skipped += 1;
-            }
-            Ok(ReconcileResult::Adopted) => {
-                println!("  ~ {dir} (adopted managed marker)");
-                tally.updated += 1;
-            }
-            Ok(ReconcileResult::BrokenSkipped) => {
-                println!("  ! {dir} (broken managed marker; not updated)");
-                tally.skipped += 1;
-            }
-            Err(err) => {
-                println!("  ! {dir} (failed: {err})");
-                tally.failed += 1;
+        for (skill_name, dir, files) in [
+            ("aps-planning", planning_dir, SKILL_FILES.as_slice()),
+            ("plan-doctor", doctor_dir, PLAN_DOCTOR_FILES.as_slice()),
+        ] {
+            skill_roots += 1;
+            let skill_dir = root.join(dir);
+            let expected = managed::expected_skill_manifest_for(skill_name, files);
+            match managed::reconcile_managed_skill(&skill_dir, files, &expected) {
+                Ok(ReconcileResult::Unchanged) => {
+                    println!("  = {dir} (unchanged)");
+                    tally.unchanged += 1;
+                }
+                Ok(ReconcileResult::Updated) => {
+                    println!("  ~ {dir} (updated)");
+                    tally.updated += 1;
+                }
+                Ok(ReconcileResult::Added) => {
+                    println!("  + {dir} (added)");
+                    tally.added += 1;
+                }
+                Ok(ReconcileResult::DirtySkipped) => {
+                    println!("  ! {dir} (dirty: user modified; not updated)");
+                    tally.skipped += 1;
+                }
+                Ok(ReconcileResult::UnmanagedSkipped) => {
+                    println!("  ! {dir} (unmanaged: differs from embeds; not updated)");
+                    tally.skipped += 1;
+                }
+                Ok(ReconcileResult::Adopted) => {
+                    println!("  ~ {dir} (adopted managed marker)");
+                    tally.updated += 1;
+                }
+                Ok(ReconcileResult::BrokenSkipped) => {
+                    println!("  ! {dir} (broken managed marker; not updated)");
+                    tally.skipped += 1;
+                }
+                Err(err) => {
+                    println!("  ! {dir} (failed: {err})");
+                    tally.failed += 1;
+                }
             }
         }
     }
@@ -242,9 +233,14 @@ pub fn cmd_update(start: &Path) -> i32 {
         println!("  ! aps-planning/ is the v1 location — run `aps migrate` to move it");
     }
     if skill_roots == 0 {
-        for (name, _) in SKILL_FILES {
-            println!("  - {name} (skipped: skill not installed)");
-            tally.skipped += 1;
+        for (skill_name, files) in [
+            ("aps-planning", SKILL_FILES.as_slice()),
+            ("plan-doctor", PLAN_DOCTOR_FILES.as_slice()),
+        ] {
+            for (name, _) in files {
+                println!("  - {skill_name}/{name} (skipped: skill not installed)");
+                tally.skipped += 1;
+            }
         }
     }
 
@@ -410,14 +406,19 @@ mod tests {
         assert_eq!(cmd_update(&root), 0);
         assert!(plans.join("designs/.design.template.md").is_file());
         assert!(root.join(".claude/skills/aps-planning/SKILL.md").is_file());
+        assert!(root.join(".claude/skills/plan-doctor/SKILL.md").is_file());
         // Empty skill dir is installed with content + managed marker.
         assert!(
             root.join(".claude/skills/aps-planning")
                 .join(crate::managed::MANIFEST_NAME)
                 .is_file()
         );
-        // The v2 skill is three files — hooks.md is v1-only.
+        // Canonical v2 references replace the legacy flat reference files.
         assert!(!root.join(".claude/skills/aps-planning/hooks.md").exists());
+        assert!(
+            root.join(".claude/skills/aps-planning/references/reconciliation-report.md")
+                .is_file()
+        );
         // No other skill root is invented.
         assert!(!root.join(".agents").exists());
         assert!(!root.join("aps-planning").exists());
@@ -434,10 +435,13 @@ mod tests {
 
         assert_eq!(cmd_update(&root), 0);
 
-        // Refreshed in place (v1 set, including hooks.md); migrate moves it.
+        // Refreshed in place from the current canonical skill; migrate moves it.
         let skill = fs::read_to_string(root.join("aps-planning/SKILL.md")).unwrap();
         assert_ne!(skill, "stale\n");
-        assert!(root.join("aps-planning/hooks.md").is_file());
+        assert!(
+            root.join("aps-planning/references/commit-pr-integration.md")
+                .is_file()
+        );
         assert!(!root.join(".claude").exists());
         fs::remove_dir_all(&root).ok();
     }
@@ -559,7 +563,9 @@ mod tests {
         fs::create_dir_all(plans.join("modules")).unwrap();
         fs::create_dir_all(&skill).unwrap();
         for (name, content) in SKILL_FILES {
-            fs::write(skill.join(name), content).unwrap();
+            let path = skill.join(name);
+            fs::create_dir_all(path.parent().unwrap()).unwrap();
+            fs::write(path, content).unwrap();
         }
 
         assert_eq!(cmd_update(&root), 0);

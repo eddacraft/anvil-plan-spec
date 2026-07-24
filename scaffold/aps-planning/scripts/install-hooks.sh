@@ -51,7 +51,7 @@ error() { echo -e "${RED}[aps]${NC} $1"; }
 # Check for python3
 if ! command -v python3 &>/dev/null; then
   error "python3 is required for JSON manipulation."
-  echo "  Install it or manually copy hook config from aps-planning/hooks.md"
+  echo "  Install it or inspect this script for the hook configuration"
   exit 1
 fi
 
@@ -219,5 +219,5 @@ else
     echo "    SessionStart        — Writes session baseline for change detection"
   fi
   echo ""
-  info "See aps-planning/hooks.md for details on each hook."
+  info "Inspect this script for details on each hook."
 fi

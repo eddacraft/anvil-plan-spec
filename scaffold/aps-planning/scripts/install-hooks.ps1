@@ -274,4 +274,4 @@ if ($Mode -ceq "full") {
 }
 
 Write-Host ""
-Write-Info "See aps-planning/hooks.md for details on each hook."
+Write-Info "Inspect this script for details on each hook."

@@ -41,29 +41,33 @@ const CHILD_MODULE_TEMPLATE: &str = include_str!("../templates/module.template.m
 /// work-item prefix so bare IDs stay unique across trees (W020-clean).
 const NESTED_CHILDREN: &[(&str, &str)] = &[("core", "CORE"), ("api", "API")];
 
-// v2 skill: three files (hooks.md is v1-only), installed under the
-// per-tool skill roots — never at the repo root (that's the v1 layout
-// `aps migrate` removes).
+// Standalone APS skill family, vended from eddacraft-skills' `aps-packaging`
+// bundle. Runtime roots and managed markers remain APS-owned.
 pub const SKILL_FILES: [(&str, &str); 3] = [
     (
         "SKILL.md",
         include_str!("../scaffold/aps-planning/SKILL.md"),
     ),
     (
-        "reference.md",
-        include_str!("../scaffold/aps-planning/reference.md"),
+        "references/commit-pr-integration.md",
+        include_str!("../scaffold/aps-planning/references/commit-pr-integration.md"),
     ),
     (
-        "examples.md",
-        include_str!("../scaffold/aps-planning/examples.md"),
+        "references/reconciliation-report.md",
+        include_str!("../scaffold/aps-planning/references/reconciliation-report.md"),
     ),
 ];
 
+pub const PLAN_DOCTOR_FILES: [(&str, &str); 1] =
+    [("SKILL.md", include_str!("../scaffold/plan-doctor/SKILL.md"))];
+
 /// Skill root read by Claude Code, Copilot, OpenCode, and Cursor (`.claude/skills/` scan).
 pub const CLAUDE_SKILL_DIR: &str = ".claude/skills/aps-planning";
+pub const CLAUDE_PLAN_DOCTOR_DIR: &str = ".claude/skills/plan-doctor";
 /// Skill root discovered by Codex and the D-045 native-discovery harnesses
 /// (Grok, Antigravity, Amp, Gemini CLI, Windsurf, Roo Code, OpenClaw).
 pub const AGENTS_SKILL_DIR: &str = ".agents/skills/aps-planning";
+pub const AGENTS_PLAN_DOCTOR_DIR: &str = ".agents/skills/plan-doctor";
 
 /// Hook scripts live under `.aps/scripts/` (v2), not `aps-planning/scripts/`.
 pub const HOOK_SCRIPTS: [(&str, &str); 12] = [
@@ -123,9 +127,9 @@ const PLANNER_CORE: &str = include_str!("../scaffold/agents/core/planner-core.md
 const LIBRARIAN_CORE: &str = include_str!("../scaffold/agents/core/librarian-core.md");
 const CONDUCTOR_CORE: &str = include_str!("../scaffold/agents/core/conductor-core.md");
 
-const PLANNER_DESC: &str = "Create, manage, execute, and review plans following the Anvil Plan Spec (APS) format, including initializing projects, modules, work items, action plans, validation, status tracking, and wave-based parallel execution";
-const LIBRARIAN_DESC: &str = "Repository organizing, cleanup, documentation filing, archiving stale specs, detecting orphaned files, cross-reference maintenance, and general repo hygiene";
-const CONDUCTOR_DESC: &str = "Coordinate APS execution through CLI-backed next-work selection, context packaging, dependency checks, validation, and learning capture";
+const PLANNER_DESC: &str = "Shape and maintain Anvil Plan Spec indexes, modules, work items, action plans, and plan status without implementing the work";
+const LIBRARIAN_DESC: &str = "Audit and maintain APS plan organisation, references, completed-work roll-ups, and repository planning hygiene";
+const CONDUCTOR_DESC: &str = "Coordinate authorised APS work items through selection, start, dispatch, validation, completion, and learning capture";
 
 /// APS agent roles installed for tools that support agents.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -755,28 +759,32 @@ pub fn skill_step(tools: &[ToolConfig]) -> Option<ScaffoldStep> {
     });
 
     let mut ops = Vec::new();
-    let marker_json = managed::expected_skill_manifest().to_json();
-    for (dir, wanted) in [
-        (CLAUDE_SKILL_DIR, claude_root),
-        (AGENTS_SKILL_DIR, agents_root),
+    for (planning_dir, doctor_dir, wanted) in [
+        (CLAUDE_SKILL_DIR, CLAUDE_PLAN_DOCTOR_DIR, claude_root),
+        (AGENTS_SKILL_DIR, AGENTS_PLAN_DOCTOR_DIR, agents_root),
     ] {
         if !wanted {
             continue;
         }
-        for (name, content) in SKILL_FILES {
-            ops.push(FileOp::Write {
-                path: PathBuf::from(dir).join(name),
-                content,
+        for (skill_name, dir, files) in [
+            ("aps-planning", planning_dir, SKILL_FILES.as_slice()),
+            ("plan-doctor", doctor_dir, PLAN_DOCTOR_FILES.as_slice()),
+        ] {
+            for (name, content) in files {
+                ops.push(FileOp::Write {
+                    path: PathBuf::from(dir).join(name),
+                    content,
+                });
+            }
+            // Managed inventory sidecar so `aps update` can refuse dirty trees.
+            ops.push(FileOp::WriteOwned {
+                path: PathBuf::from(dir).join(MANIFEST_NAME),
+                content: managed::expected_skill_manifest_for(skill_name, files).to_json(),
             });
         }
-        // Managed inventory sidecar so `aps update` can refuse dirty trees.
-        ops.push(FileOp::WriteOwned {
-            path: PathBuf::from(dir).join(MANIFEST_NAME),
-            content: marker_json.clone(),
-        });
     }
     (!ops.is_empty()).then(|| ScaffoldStep {
-        label: "Install planning skill".to_string(),
+        label: "Install APS skills".to_string(),
         ops,
     })
 }
@@ -1499,6 +1507,11 @@ mod tests {
             };
             (has(CLAUDE_SKILL_DIR), has(AGENTS_SKILL_DIR))
         }
+        fn has_plan_doctor(step: &ScaffoldStep, dir: &str) -> bool {
+            step.ops
+                .iter()
+                .any(|op| matches!(op, FileOp::Write { path, .. } if path.starts_with(dir)))
+        }
         let cfg = ToolConfig::default_for;
 
         // Claude Code, Copilot, OpenCode, and Cursor share .claude/skills/.
@@ -1510,6 +1523,7 @@ mod tests {
         ] {
             let step = skill_step(&[cfg(tool)]).expect("skill installed");
             assert_eq!(roots(&step), (true, false), "{tool:?}");
+            assert!(has_plan_doctor(&step, CLAUDE_PLAN_DOCTOR_DIR));
         }
         // Codex + the D-045 native-discovery harnesses discover .agents/skills/.
         for tool in [
@@ -1524,6 +1538,7 @@ mod tests {
         ] {
             let step = skill_step(&[cfg(tool)]).expect("skill installed");
             assert_eq!(roots(&step), (false, true), "{tool:?}");
+            assert!(has_plan_doctor(&step, AGENTS_PLAN_DOCTOR_DIR));
         }
         // Mixed selection installs both roots.
         let step = skill_step(&[cfg(AiTool::OpenCode), cfg(AiTool::Codex)]).unwrap();
@@ -1533,11 +1548,17 @@ mod tests {
         // Tool-agnostic (setup all) defaults to the shared .claude/skills root.
         let step = skill_step(&[]).unwrap();
         assert_eq!(roots(&step), (true, false));
-        // hooks.md is v1-only; the v2 skill is three content files + managed marker.
-        assert_eq!(step.ops.len(), SKILL_FILES.len() + 1);
-        assert!(step.ops.iter().any(|op| {
-            matches!(op, FileOp::WriteOwned { path, .. } if path.ends_with(MANIFEST_NAME))
-        }));
+        assert_eq!(
+            step.ops.len(),
+            SKILL_FILES.len() + PLAN_DOCTOR_FILES.len() + 2
+        );
+        assert_eq!(
+            step.ops
+                .iter()
+                .filter(|op| matches!(op, FileOp::WriteOwned { path, .. } if path.ends_with(MANIFEST_NAME)))
+                .count(),
+            2
+        );
     }
 
     #[test]

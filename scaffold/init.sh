@@ -143,11 +143,10 @@ install_skill() {
   step "Installing APS planning skill"
 
   # Skill files
-  mkdir -p "$skill_dir/scripts"
+  mkdir -p "$skill_dir/scripts" "$skill_dir/references"
   copy_or_download "scaffold/aps-planning/SKILL.md" "$skill_dir/SKILL.md"
-  copy_or_download "scaffold/aps-planning/reference.md" "$skill_dir/reference.md"
-  copy_or_download "scaffold/aps-planning/examples.md" "$skill_dir/examples.md"
-  copy_or_download "scaffold/aps-planning/hooks.md" "$skill_dir/hooks.md"
+  copy_or_download "scaffold/aps-planning/references/commit-pr-integration.md" "$skill_dir/references/commit-pr-integration.md"
+  copy_or_download "scaffold/aps-planning/references/reconciliation-report.md" "$skill_dir/references/reconciliation-report.md"
   copy_or_download "scaffold/aps-planning/scripts/install-hooks.sh" "$skill_dir/scripts/install-hooks.sh"
   copy_or_download "scaffold/aps-planning/scripts/init-session.sh" "$skill_dir/scripts/init-session.sh"
   copy_or_download "scaffold/aps-planning/scripts/check-complete.sh" "$skill_dir/scripts/check-complete.sh"
@@ -156,7 +155,7 @@ install_skill() {
   copy_or_download "scaffold/aps-planning/scripts/post-tool-nudge.sh" "$skill_dir/scripts/post-tool-nudge.sh"
   chmod +x "$skill_dir/scripts/"*.sh
 
-  info "aps-planning/ (skill, reference, examples, hooks, scripts)"
+  info "aps-planning/ (skill, references, scripts)"
 
   # Slash commands
   mkdir -p "$commands_dir"
@@ -213,7 +212,7 @@ prompt_hooks() {
     if ask_yn "Copy hook scripts for you to install/review later?" "y"; then
       info "Hook scripts are at: aps-planning/scripts/"
       echo "  Run ./aps-planning/scripts/install-hooks.sh when ready"
-      echo "  See aps-planning/hooks.md for what each hook does"
+      echo "  Inspect aps-planning/scripts/install-hooks.sh for the installed hook set"
     else
       info "Skipping hooks. You can install them later:"
       echo "  ./aps-planning/scripts/install-hooks.sh"

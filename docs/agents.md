@@ -60,18 +60,20 @@ the repo feels disorganized.
 
 ## Agents vs Skill
 
-APS includes both **agents** (active dispatch) and a **skill** (passive
-guidance):
+APS includes both **agents** (active dispatch) and **skills** (passive
+guidance and diagnostics):
 
 - **Skill** (`aps-planning/SKILL.md`) — teaches the agent APS conventions.
   Always active. Provides behavioral nudges (plan before building, update
   specs as you work). Lightweight, no model cost.
+- **Skill** (`plan-doctor/SKILL.md`) — checks structural plan health and reports
+  malformed or contradictory planning state without changing it.
 - **Agents** (`aps-planner`, `aps-conductor`, `aps-librarian`) — perform
   specific APS tasks when dispatched. Use tool calls and reasoning. Consume
   model tokens.
 
-Use the skill for day-to-day guidance. Use agents when you need active help
-with planning or cleanup.
+Use the skills for day-to-day guidance and diagnostics. Use agents when you
+need active help with planning or cleanup.
 
 ## Installation
 

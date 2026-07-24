@@ -924,11 +924,10 @@ pass
 echo -n "Test: curl updater delivers the v2 layout (v1 migrate + v2 refresh)... "
 UPD_DIR=$(mktemp -d)
 mkdir -p "$UPD_DIR/plans/modules" "$UPD_DIR/aps-planning/scripts" "$UPD_DIR/.claude/commands"
-cp "$PROJECT_ROOT/scaffold/aps-planning/SKILL.md" \
-   "$PROJECT_ROOT/scaffold/aps-planning/reference.md" \
-   "$PROJECT_ROOT/scaffold/aps-planning/examples.md" \
-   "$PROJECT_ROOT/scaffold/aps-planning/hooks.md" \
-   "$UPD_DIR/aps-planning/"
+cp "$PROJECT_ROOT/scaffold/aps-planning/SKILL.md" "$UPD_DIR/aps-planning/"
+printf 'legacy reference\n' > "$UPD_DIR/aps-planning/reference.md"
+printf 'legacy examples\n' > "$UPD_DIR/aps-planning/examples.md"
+printf 'legacy hooks\n' > "$UPD_DIR/aps-planning/hooks.md"
 echo "legacy plan command" > "$UPD_DIR/.claude/commands/plan.md"
 echo "old v1 rules" > "$UPD_DIR/plans/aps-rules.md"
 printf '# My Plan\n\nUPD-CUSTOM-INDEX-SENTINEL\n' > "$UPD_DIR/plans/index.aps.md"
@@ -940,6 +939,7 @@ grep -q 'name: claude-code' "$UPD_DIR/.aps/config.yml" || fail "migrated config 
 [[ ! -e "$UPD_DIR/.claude/commands" ]] || fail ".claude/commands still present"
 [[ -f "$UPD_DIR/.claude/skills/aps-planning/SKILL.md" ]] || fail "managed skill tree not installed"
 [[ -f "$UPD_DIR/.claude/skills/aps-planning/.aps-managed.json" ]] || fail "managed marker not written"
+[[ -f "$UPD_DIR/.claude/skills/plan-doctor/SKILL.md" ]] || fail "plan-doctor skill not installed"
 grep -q "UPD-CUSTOM-INDEX-SENTINEL" "$UPD_DIR/plans/index.aps.md" || fail "user index.aps.md was modified"
 grep -q "APS Rules" "$UPD_DIR/plans/aps-rules.md" || fail "aps-rules.md not refreshed to v2"
 ls "$UPD_DIR/.aps/backup" | grep -q . || fail "no migration backup written"
@@ -983,8 +983,8 @@ grep -Fq '"scaffold/aps-planning/SKILL.md"' "$PROJECT_ROOT/lib/Scaffold.psm1" \
 pass
 
 # Test 60: INSTALL-022 / D-044 — plans/.aps-version is retired. Init never
-# writes it, update removes a legacy one, and the skill's staleness check is
-# bound to .aps/config.yml instead of a hardcoded version constant.
+# writes it and update removes a legacy one. Skill freshness is owned by the
+# managed marker and CLI rather than duplicated in the skill prose.
 echo -n "Test: .aps-version retired (init clean, update removes legacy)... "
 AV_DIR=$(mktemp -d)
 APS_LOCAL="$PROJECT_ROOT" $APS init "$AV_DIR" --profile solo --scope small --tools generic > /dev/null 2>&1 || fail "init failed"
@@ -992,12 +992,10 @@ APS_LOCAL="$PROJECT_ROOT" $APS init "$AV_DIR" --profile solo --scope small --too
 echo "0.5.0" > "$AV_DIR/plans/.aps-version"
 APS_LOCAL="$PROJECT_ROOT" $APS update "$AV_DIR" > /dev/null 2>&1 || fail "update failed"
 [[ ! -f "$AV_DIR/plans/.aps-version" ]] || fail "update did not remove legacy .aps-version"
-# Static guards: no bash write path remains; both SKILL.md copies bind the
-# staleness check to the config contract, not a version stamp.
+# Static guards: no bash write path or packaged skill version stamp remains.
 grep -E '(echo|printf)[^#]*\.aps-version' "$PROJECT_ROOT/lib/scaffold.sh" > /dev/null && fail "lib/scaffold.sh still writes .aps-version"
 grep -q 'aps-version' "$PROJECT_ROOT/scaffold/aps-planning/SKILL.md" && fail "scaffold SKILL.md still references .aps-version"
 grep -q 'aps-version' "$PROJECT_ROOT/aps-planning/SKILL.md" && fail "root SKILL.md still references .aps-version"
-grep -q '\.aps/config\.yml' "$PROJECT_ROOT/scaffold/aps-planning/SKILL.md" || fail "scaffold SKILL.md staleness check not bound to config.yml"
 rm -rf "$AV_DIR"
 pass
 
