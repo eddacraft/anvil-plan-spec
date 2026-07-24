@@ -42,6 +42,11 @@ pub enum AiTool {
     OpenCode,
     Grok,
     Antigravity,
+    Amp,
+    GeminiCli,
+    Windsurf,
+    RooCode,
+    OpenClaw,
     Generic,
 }
 
@@ -196,13 +201,18 @@ impl WizardState {
         WorkspaceTool::Nx,
         WorkspaceTool::Lerna,
     ];
-    const AI_TOOLS: [AiTool; 7] = [
+    const AI_TOOLS: [AiTool; 12] = [
         AiTool::ClaudeCode,
         AiTool::Copilot,
         AiTool::Codex,
         AiTool::OpenCode,
         AiTool::Grok,
         AiTool::Antigravity,
+        AiTool::Amp,
+        AiTool::GeminiCli,
+        AiTool::Windsurf,
+        AiTool::RooCode,
+        AiTool::OpenClaw,
         AiTool::Generic,
     ];
     const TEMPLATES: [Template; 5] = [
@@ -1505,6 +1515,11 @@ impl AiTool {
             Self::OpenCode => "OpenCode",
             Self::Grok => "Grok",
             Self::Antigravity => "Antigravity",
+            Self::Amp => "Amp",
+            Self::GeminiCli => "Gemini CLI",
+            Self::Windsurf => "Windsurf",
+            Self::RooCode => "Roo Code",
+            Self::OpenClaw => "OpenClaw",
             Self::Generic => "Generic",
         }
     }
@@ -1517,14 +1532,30 @@ impl AiTool {
             Self::OpenCode => "skills and subagents",
             Self::Grok => "AGENTS.md + auto-discovered skills",
             Self::Antigravity => "AGENTS.md + auto-discovered skills",
+            Self::Amp => "AGENTS.md + auto-discovered skills",
+            Self::GeminiCli => "AGENTS.md + auto-discovered skills",
+            Self::Windsurf => "AGENTS.md + auto-discovered skills",
+            Self::RooCode => "AGENTS.md + auto-discovered skills",
+            Self::OpenClaw => "AGENTS.md + auto-discovered skills",
             Self::Generic => "plain APS files only",
         }
     }
 
     fn supports_agents(self) -> bool {
-        // Grok Build and Antigravity ship no bespoke agent files — they discover
-        // the Codex-shared .agents/skills/ and the AGENTS.md family (D-040/D-045).
-        !matches!(self, Self::Generic | Self::Grok | Self::Antigravity)
+        // The D-045 native-discovery harnesses ship no bespoke agent files — they
+        // discover the Codex-shared .agents/skills/ and the AGENTS.md family
+        // (D-040 Grok; D-045 Antigravity, Amp, Gemini CLI, Windsurf, Roo Code, OpenClaw).
+        !matches!(
+            self,
+            Self::Generic
+                | Self::Grok
+                | Self::Antigravity
+                | Self::Amp
+                | Self::GeminiCli
+                | Self::Windsurf
+                | Self::RooCode
+                | Self::OpenClaw
+        )
     }
 
     /// Whether install-time agent generation applies a model field for this tool.

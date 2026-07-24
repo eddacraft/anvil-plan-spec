@@ -207,7 +207,15 @@ pub fn resolve_model(
             ModelPreference::Opus => "gpt-5.6-sol",
             ModelPreference::Sonnet => "gpt-5.6-terra",
         }),
-        AiTool::Copilot | AiTool::Grok | AiTool::Antigravity | AiTool::Generic => None,
+        AiTool::Copilot
+        | AiTool::Grok
+        | AiTool::Antigravity
+        | AiTool::Amp
+        | AiTool::GeminiCli
+        | AiTool::Windsurf
+        | AiTool::RooCode
+        | AiTool::OpenClaw
+        | AiTool::Generic => None,
     }
 }
 
@@ -312,7 +320,17 @@ fn agent_dest(tool: AiTool, role: AgentRole) -> Option<&'static str> {
         (AiTool::OpenCode, AgentRole::Planner) => Some(".opencode/agent/aps-planner.md"),
         (AiTool::OpenCode, AgentRole::Librarian) => Some(".opencode/agent/aps-librarian.md"),
         (AiTool::OpenCode, AgentRole::Conductor) => Some(".opencode/agent/aps-conductor.md"),
-        (AiTool::Grok | AiTool::Antigravity | AiTool::Generic, _) => None,
+        (
+            AiTool::Grok
+            | AiTool::Antigravity
+            | AiTool::Amp
+            | AiTool::GeminiCli
+            | AiTool::Windsurf
+            | AiTool::RooCode
+            | AiTool::OpenClaw
+            | AiTool::Generic,
+            _,
+        ) => None,
     }
 }
 
@@ -331,7 +349,14 @@ fn render_agent(tool: AiTool, role: AgentRole, preference: ModelPreference) -> O
             Some(render_codex(role, model))
         }
         AiTool::Copilot => Some(render_copilot(role)),
-        AiTool::Grok | AiTool::Antigravity | AiTool::Generic => None,
+        AiTool::Grok
+        | AiTool::Antigravity
+        | AiTool::Amp
+        | AiTool::GeminiCli
+        | AiTool::Windsurf
+        | AiTool::RooCode
+        | AiTool::OpenClaw
+        | AiTool::Generic => None,
     }
 }
 
@@ -380,6 +405,21 @@ pub fn post_install_note(tool: AiTool) -> Option<&'static str> {
         AiTool::Antigravity => {
             Some("Antigravity: reads AGENTS.md and auto-discovers .agents/skills/ automatically")
         }
+        AiTool::Amp => {
+            Some("Amp: reads AGENTS.md and auto-discovers .agents/skills/ automatically")
+        }
+        AiTool::GeminiCli => {
+            Some("Gemini CLI: reads AGENTS.md and auto-discovers .agents/skills/ automatically")
+        }
+        AiTool::Windsurf => {
+            Some("Windsurf: reads AGENTS.md and auto-discovers .agents/skills/ automatically")
+        }
+        AiTool::RooCode => {
+            Some("Roo Code: enable AGENTS.md auto-load; discovers .agents/skills/ automatically")
+        }
+        AiTool::OpenClaw => Some(
+            "OpenClaw: injects AGENTS.md and auto-discovers .agents/skills/; drive plans with `aps next/start/complete`",
+        ),
         AiTool::Generic => None,
     }
 }
@@ -691,9 +731,19 @@ pub fn skill_step(tools: &[ToolConfig]) -> Option<ScaffoldStep> {
                 AiTool::ClaudeCode | AiTool::Copilot | AiTool::OpenCode
             )
         });
-    let agents_root = tools
-        .iter()
-        .any(|c| matches!(c.tool, AiTool::Codex | AiTool::Grok | AiTool::Antigravity));
+    let agents_root = tools.iter().any(|c| {
+        matches!(
+            c.tool,
+            AiTool::Codex
+                | AiTool::Grok
+                | AiTool::Antigravity
+                | AiTool::Amp
+                | AiTool::GeminiCli
+                | AiTool::Windsurf
+                | AiTool::RooCode
+                | AiTool::OpenClaw
+        )
+    });
 
     let mut ops = Vec::new();
     let marker_json = managed::expected_skill_manifest().to_json();
@@ -865,6 +915,11 @@ pub fn tool_key(tool: AiTool) -> &'static str {
         AiTool::OpenCode => "opencode",
         AiTool::Grok => "grok",
         AiTool::Antigravity => "antigravity",
+        AiTool::Amp => "amp",
+        AiTool::GeminiCli => "gemini-cli",
+        AiTool::Windsurf => "windsurf",
+        AiTool::RooCode => "roo-code",
+        AiTool::OpenClaw => "openclaw",
         AiTool::Generic => "generic",
     }
 }
@@ -1441,8 +1496,17 @@ mod tests {
             let step = skill_step(&[cfg(tool)]).expect("skill installed");
             assert_eq!(roots(&step), (true, false), "{tool:?}");
         }
-        // Codex, Grok, and Antigravity discover .agents/skills/.
-        for tool in [AiTool::Codex, AiTool::Grok, AiTool::Antigravity] {
+        // Codex + the D-045 native-discovery harnesses discover .agents/skills/.
+        for tool in [
+            AiTool::Codex,
+            AiTool::Grok,
+            AiTool::Antigravity,
+            AiTool::Amp,
+            AiTool::GeminiCli,
+            AiTool::Windsurf,
+            AiTool::RooCode,
+            AiTool::OpenClaw,
+        ] {
             let step = skill_step(&[cfg(tool)]).expect("skill installed");
             assert_eq!(roots(&step), (false, true), "{tool:?}");
         }
