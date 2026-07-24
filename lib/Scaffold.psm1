@@ -609,6 +609,10 @@ function Write-ApsConfigV2 {
                 $lines += "    skill: .agents/skills/aps-planning"
                 $lines += "    instruction_file: AGENTS.md"
             }
+            "antigravity" {
+                $lines += "    skill: .agents/skills/aps-planning"
+                $lines += "    instruction_file: AGENTS.md"
+            }
             "generic" {
                 $lines += "    # No tool integration"
             }
@@ -723,6 +727,7 @@ function Update-ApsV2 {
             "opencode"    { Install-ApsSkillV2 -Target $Target; Install-ApsToolAgents -Target $Target -Tool "opencode" }
             "codex"       { Install-ApsToolAgents -Target $Target -Tool "codex"; Install-ApsAgentsSkillV2 -Target $Target }
             "grok"        { Install-ApsAgentsSkillV2 -Target $Target }
+            "antigravity" { Install-ApsAgentsSkillV2 -Target $Target }
         }
     }
     if ($tools.Count -gt 0) {
@@ -776,7 +781,7 @@ function Invoke-ApsInit {
         }
     }
 
-    $toolNames = @("claude-code", "copilot", "codex", "opencode", "grok", "generic")
+    $toolNames = @("claude-code", "copilot", "codex", "opencode", "grok", "antigravity", "generic")
     $selectedTools = @("generic")
     if ($optTools) {
         $selectedTools = @($optTools -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
@@ -847,6 +852,10 @@ function Invoke-ApsInit {
                 Install-ApsAgentsSkillV2 -Target $target
                 Write-ApsInfo ".agents/skills/aps-planning/ (skill — Grok Build auto-discovers)"
             }
+            "antigravity" {
+                Install-ApsAgentsSkillV2 -Target $target
+                Write-ApsInfo ".agents/skills/aps-planning/ (skill — Antigravity auto-discovers)"
+            }
         }
     }
 
@@ -899,7 +908,7 @@ with 'aps setup'.
 Refuses to run if plans/ already exists.
 
 Options:
-  --tools TOOLS       Comma-separated: claude-code,copilot,codex,opencode,grok,generic
+  --tools TOOLS       Comma-separated: claude-code,copilot,codex,opencode,grok,antigravity,generic
                       (default: generic — no tool integration)
   --hooks             Also install hook scripts into .aps/scripts
   --non-interactive   Accepted for bash-CLI parity (this port never prompts)

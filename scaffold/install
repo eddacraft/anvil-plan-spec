@@ -655,7 +655,7 @@ pick_mode() {
     4) MODE="upgrade" ;;
     5)
       MODE="setup"
-      printf "Tool (claude-code, copilot, codex, opencode, grok): " > /dev/tty
+      printf "Tool (claude-code, copilot, codex, opencode, grok, antigravity): " > /dev/tty
       read -r SETUP_TARGET < /dev/tty
       if [[ -z "$SETUP_TARGET" ]]; then
         error "no tool given"
