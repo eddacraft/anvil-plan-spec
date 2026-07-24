@@ -220,7 +220,12 @@ fn config_expects_skill(root: &Path) -> bool {
     selections.tools.iter().any(|c| {
         matches!(
             c.tool,
-            AiTool::ClaudeCode | AiTool::Copilot | AiTool::Codex | AiTool::OpenCode | AiTool::Grok
+            AiTool::ClaudeCode
+                | AiTool::Copilot
+                | AiTool::Codex
+                | AiTool::OpenCode
+                | AiTool::Grok
+                | AiTool::Antigravity
         )
     })
 }
@@ -238,7 +243,8 @@ fn skill_freshness_findings(root: &Path) -> Vec<Finding> {
             vec![Finding::new(
                 Level::Warn,
                 "planning skill",
-                "not installed — run `aps setup claude-code` (or codex/grok)".to_string(),
+                "not installed — run `aps setup claude-code` (or codex/grok/antigravity)"
+                    .to_string(),
             )]
         } else {
             vec![Finding::new(
@@ -343,6 +349,32 @@ mod tests {
             .find(|f| f.label == label)
             .unwrap_or_else(|| panic!("no finding labelled {label}"))
             .level
+    }
+
+    #[test]
+    fn agents_skill_tools_warn_when_skill_missing() {
+        // Every tool whose init installs the shared .agents/skills payload must be
+        // recognised by config_expects_skill, else `aps doctor` gives a false
+        // all-clear (regression guard for the D-045 harness adds).
+        for tool in ["codex", "grok", "antigravity"] {
+            let root = scratch(&format!("skill-{tool}"));
+            let home = scratch(&format!("skill-{tool}-home"));
+            fs::create_dir_all(root.join(".aps")).unwrap();
+            fs::write(
+                root.join(".aps/config.yml"),
+                format!(
+                    "cli_version: {CLI_VERSION}\nplans_dir: plans/\ntools:\n  - name: {tool}\n"
+                ),
+            )
+            .unwrap();
+            // No skill dir on disk → doctor must WARN (not the optional all-clear).
+            let report = diagnose(&root, &home, Some(Path::new("/usr/bin/aps")));
+            assert_eq!(
+                level_of(&report, "planning skill"),
+                Level::Warn,
+                "tool {tool} should warn when its skill is missing"
+            );
+        }
     }
 
     #[test]

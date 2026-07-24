@@ -251,5 +251,5 @@ bash scaffold/agents/build.sh
 ```
 
 This regenerates Claude Code, Copilot, OpenCode, and Codex trees under
-`scaffold/agents/`. Grok Build consumes the shared `.agents/skills/` payload
-directly, so it has no agent variant.
+`scaffold/agents/`. Grok Build and Antigravity consume the shared
+`.agents/skills/` payload directly, so they have no agent variant.

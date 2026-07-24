@@ -359,12 +359,13 @@ impl Default for SetupState {
 }
 
 impl SetupState {
-    const TOOLS: [AiTool; 6] = [
+    const TOOLS: [AiTool; 7] = [
         AiTool::ClaudeCode,
         AiTool::Copilot,
         AiTool::Codex,
         AiTool::OpenCode,
         AiTool::Grok,
+        AiTool::Antigravity,
         AiTool::Generic,
     ];
 
@@ -800,6 +801,27 @@ fn render_summary(frame: &mut Frame<'_>, area: Rect, state: &SetupState) {
 mod tests {
     use super::*;
     use std::fs;
+
+    #[test]
+    fn setup_menu_offers_every_supported_tool() {
+        // The interactive `aps setup` tool menu must list each supported harness,
+        // else it is selectable via `aps init` but not `aps setup` (regression
+        // guard for the D-045 harness adds).
+        for tool in [
+            AiTool::ClaudeCode,
+            AiTool::Copilot,
+            AiTool::Codex,
+            AiTool::OpenCode,
+            AiTool::Grok,
+            AiTool::Antigravity,
+            AiTool::Generic,
+        ] {
+            assert!(
+                SetupState::TOOLS.contains(&tool),
+                "setup menu missing {tool:?}"
+            );
+        }
+    }
 
     fn temp_root(tag: &str) -> PathBuf {
         let root =

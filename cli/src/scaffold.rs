@@ -207,7 +207,7 @@ pub fn resolve_model(
             ModelPreference::Opus => "gpt-5.6-sol",
             ModelPreference::Sonnet => "gpt-5.6-terra",
         }),
-        AiTool::Copilot | AiTool::Grok | AiTool::Generic => None,
+        AiTool::Copilot | AiTool::Grok | AiTool::Antigravity | AiTool::Generic => None,
     }
 }
 
@@ -312,7 +312,7 @@ fn agent_dest(tool: AiTool, role: AgentRole) -> Option<&'static str> {
         (AiTool::OpenCode, AgentRole::Planner) => Some(".opencode/agent/aps-planner.md"),
         (AiTool::OpenCode, AgentRole::Librarian) => Some(".opencode/agent/aps-librarian.md"),
         (AiTool::OpenCode, AgentRole::Conductor) => Some(".opencode/agent/aps-conductor.md"),
-        (AiTool::Grok | AiTool::Generic, _) => None,
+        (AiTool::Grok | AiTool::Antigravity | AiTool::Generic, _) => None,
     }
 }
 
@@ -331,7 +331,7 @@ fn render_agent(tool: AiTool, role: AgentRole, preference: ModelPreference) -> O
             Some(render_codex(role, model))
         }
         AiTool::Copilot => Some(render_copilot(role)),
-        AiTool::Grok | AiTool::Generic => None,
+        AiTool::Grok | AiTool::Antigravity | AiTool::Generic => None,
     }
 }
 
@@ -376,6 +376,9 @@ pub fn post_install_note(tool: AiTool) -> Option<&'static str> {
         AiTool::OpenCode => Some("OpenCode: agents installed under .opencode/agent"),
         AiTool::Grok => {
             Some("Grok: Grok Build discovers AGENTS.md and installed skills automatically")
+        }
+        AiTool::Antigravity => {
+            Some("Antigravity: reads AGENTS.md and auto-discovers .agents/skills/ automatically")
         }
         AiTool::Generic => None,
     }
@@ -690,7 +693,7 @@ pub fn skill_step(tools: &[ToolConfig]) -> Option<ScaffoldStep> {
         });
     let agents_root = tools
         .iter()
-        .any(|c| matches!(c.tool, AiTool::Codex | AiTool::Grok));
+        .any(|c| matches!(c.tool, AiTool::Codex | AiTool::Grok | AiTool::Antigravity));
 
     let mut ops = Vec::new();
     let marker_json = managed::expected_skill_manifest().to_json();
@@ -861,6 +864,7 @@ pub fn tool_key(tool: AiTool) -> &'static str {
         AiTool::Codex => "codex",
         AiTool::OpenCode => "opencode",
         AiTool::Grok => "grok",
+        AiTool::Antigravity => "antigravity",
         AiTool::Generic => "generic",
     }
 }
@@ -1437,8 +1441,8 @@ mod tests {
             let step = skill_step(&[cfg(tool)]).expect("skill installed");
             assert_eq!(roots(&step), (true, false), "{tool:?}");
         }
-        // Codex and Grok discover .agents/skills/.
-        for tool in [AiTool::Codex, AiTool::Grok] {
+        // Codex, Grok, and Antigravity discover .agents/skills/.
+        for tool in [AiTool::Codex, AiTool::Grok, AiTool::Antigravity] {
             let step = skill_step(&[cfg(tool)]).expect("skill installed");
             assert_eq!(roots(&step), (false, true), "{tool:?}");
         }

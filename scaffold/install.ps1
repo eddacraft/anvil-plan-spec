@@ -456,7 +456,7 @@ function Select-ApsMode {
         "4" { $script:Mode = "upgrade" }
         "5" {
             $script:Mode = "setup"
-            $script:SetupTarget = Read-Host "Tool (claude-code, copilot, codex, opencode, grok)"
+            $script:SetupTarget = Read-Host "Tool (claude-code, copilot, codex, opencode, grok, antigravity)"
             if (-not $script:SetupTarget) { Write-Err "no tool given"; exit 1 }
         }
         default { Write-Err "invalid choice: $choice"; exit 1 }

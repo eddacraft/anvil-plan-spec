@@ -41,6 +41,7 @@ pub enum AiTool {
     Codex,
     OpenCode,
     Grok,
+    Antigravity,
     Generic,
 }
 
@@ -195,12 +196,13 @@ impl WizardState {
         WorkspaceTool::Nx,
         WorkspaceTool::Lerna,
     ];
-    const AI_TOOLS: [AiTool; 6] = [
+    const AI_TOOLS: [AiTool; 7] = [
         AiTool::ClaudeCode,
         AiTool::Copilot,
         AiTool::Codex,
         AiTool::OpenCode,
         AiTool::Grok,
+        AiTool::Antigravity,
         AiTool::Generic,
     ];
     const TEMPLATES: [Template; 5] = [
@@ -1502,6 +1504,7 @@ impl AiTool {
             Self::Codex => "Codex",
             Self::OpenCode => "OpenCode",
             Self::Grok => "Grok",
+            Self::Antigravity => "Antigravity",
             Self::Generic => "Generic",
         }
     }
@@ -1513,14 +1516,15 @@ impl AiTool {
             Self::Codex => "skills plus agent role config",
             Self::OpenCode => "skills and subagents",
             Self::Grok => "AGENTS.md + auto-discovered skills",
+            Self::Antigravity => "AGENTS.md + auto-discovered skills",
             Self::Generic => "plain APS files only",
         }
     }
 
     fn supports_agents(self) -> bool {
-        // Grok Build ships no bespoke agent files — it discovers the
-        // Codex-shared .agents/skills/ and the AGENTS.md family (D-040).
-        !matches!(self, Self::Generic | Self::Grok)
+        // Grok Build and Antigravity ship no bespoke agent files — they discover
+        // the Codex-shared .agents/skills/ and the AGENTS.md family (D-040/D-045).
+        !matches!(self, Self::Generic | Self::Grok | Self::Antigravity)
     }
 
     /// Whether install-time agent generation applies a model field for this tool.
