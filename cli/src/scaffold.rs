@@ -59,9 +59,10 @@ pub const SKILL_FILES: [(&str, &str); 3] = [
     ),
 ];
 
-/// Skill root read by Claude Code, Copilot, and OpenCode.
+/// Skill root read by Claude Code, Copilot, OpenCode, and Cursor (`.claude/skills/` scan).
 pub const CLAUDE_SKILL_DIR: &str = ".claude/skills/aps-planning";
-/// Skill root discovered by Codex (`codex skills install`) and Grok Build.
+/// Skill root discovered by Codex and the D-045 native-discovery harnesses
+/// (Grok, Antigravity, Amp, Gemini CLI, Windsurf, Roo Code, OpenClaw).
 pub const AGENTS_SKILL_DIR: &str = ".agents/skills/aps-planning";
 
 /// Hook scripts live under `.aps/scripts/` (v2), not `aps-planning/scripts/`.

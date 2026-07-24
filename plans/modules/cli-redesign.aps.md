@@ -208,12 +208,13 @@ Change status to **Ready** when:
   `scaffold/install`, `scaffold/install.ps1`, docs, and `test/**` parity fixtures
 - **Dependencies:** CLI-005
 
-### CLI-007: Add Cursor (GO-WITH-ASSETS)
+### CLI-007: Add Cursor
 
 - **Intent:** Add Cursor to init/setup as a supported harness. Cursor reads
   `AGENTS.md` natively but does **not** scan the shared `.agents/skills/` path
-  (it discovers skills only from `.cursor/`, `.claude/`, `.codex/`), so unlike the
-  CLI-006 zero-asset set it needs a small bespoke asset.
+  (it discovers skills from `.cursor/`, `.claude/`, `.codex/`). Because it scans
+  `.claude/skills/`, APS reuses the existing claude-root payload there — no
+  bespoke `.cursor/` asset needed (see the Build decision below).
 - **Expected Outcome:** `aps init --tools cursor` installs the planning skill where
   Cursor discovers it. **Build decision:** rely on Cursor's opportunistic
   `.claude/skills/` scan (no `.cursor/` mirror needed) — Cursor reuses the
@@ -242,10 +243,10 @@ Change status to **Ready** when:
     plan management, so its support must expose the `aps` plan-management path
     (`next`/`start`/`complete`) + the discoverable planning skill, not just passive
     skill install. Confirm the plan-management path in its smoke test.
-  - _Separate item **CLI-007** (GO-WITH-ASSETS, low cost, large user base):_
-    **Cursor** — reads `AGENTS.md` but scans only `.cursor/.claude/.codex` skills
-    dirs, so it needs the skill mirrored into `.cursor/skills/` (or its
-    `.claude/skills/` fallback).
+  - _Separate item **CLI-007** — **Cursor**:_ reads `AGENTS.md` and scans
+    `.cursor/.claude/.codex` skills dirs. Build resolved to the `.claude/skills/`
+    path (Cursor scans it), so it reuses the existing claude-root payload — a
+    **zero-asset** add, no `.cursor/` mirror needed. (Delivered CLI-007.)
   - _Deprioritise (not approved):_ **Hermes** (global `~/.hermes/skills/` path +
     severe name collision).
   - _Not now:_ the `AGENTS.md`-only crowd (Aider, Zed, Devin, Jules, Warp,
