@@ -47,6 +47,7 @@ pub enum AiTool {
     Windsurf,
     RooCode,
     OpenClaw,
+    Cursor,
     Generic,
 }
 
@@ -201,7 +202,7 @@ impl WizardState {
         WorkspaceTool::Nx,
         WorkspaceTool::Lerna,
     ];
-    const AI_TOOLS: [AiTool; 12] = [
+    const AI_TOOLS: [AiTool; 13] = [
         AiTool::ClaudeCode,
         AiTool::Copilot,
         AiTool::Codex,
@@ -213,6 +214,7 @@ impl WizardState {
         AiTool::Windsurf,
         AiTool::RooCode,
         AiTool::OpenClaw,
+        AiTool::Cursor,
         AiTool::Generic,
     ];
     const TEMPLATES: [Template; 5] = [
@@ -1520,6 +1522,7 @@ impl AiTool {
             Self::Windsurf => "Windsurf",
             Self::RooCode => "Roo Code",
             Self::OpenClaw => "OpenClaw",
+            Self::Cursor => "Cursor",
             Self::Generic => "Generic",
         }
     }
@@ -1537,6 +1540,7 @@ impl AiTool {
             Self::Windsurf => "AGENTS.md + auto-discovered skills",
             Self::RooCode => "AGENTS.md + auto-discovered skills",
             Self::OpenClaw => "AGENTS.md + auto-discovered skills",
+            Self::Cursor => "AGENTS.md + skill via .claude/skills",
             Self::Generic => "plain APS files only",
         }
     }
@@ -1555,6 +1559,7 @@ impl AiTool {
                 | Self::Windsurf
                 | Self::RooCode
                 | Self::OpenClaw
+                | Self::Cursor
         )
     }
 

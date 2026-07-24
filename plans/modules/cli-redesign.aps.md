@@ -200,6 +200,9 @@ Change status to **Ready** when:
   harness passes in all three CLIs (Grok precedent, CLI-004). OpenClaw additionally
   verified for a working plan-management path.
 - **Confidence:** medium
+- **Status:** Complete — merged 2026-07-24 (PRs #128 Antigravity, #129 the other
+  five). All six install the shared skill in Rust/bash/pwsh with three-way parity;
+  independently verified; regression tests iterate the full tool list.
 - **Files:** `cli/src/config.rs`, `cli/src/scaffold.rs`, `cli/src/wizard.rs`,
   `cli/src/{setup,update,doctor,main}.rs`, `lib/scaffold.sh`, `lib/Scaffold.psm1`,
   `scaffold/install`, `scaffold/install.ps1`, docs, and `test/**` parity fixtures
@@ -212,14 +215,18 @@ Change status to **Ready** when:
   (it discovers skills only from `.cursor/`, `.claude/`, `.codex/`), so unlike the
   CLI-006 zero-asset set it needs a small bespoke asset.
 - **Expected Outcome:** `aps init --tools cursor` installs the planning skill where
-  Cursor discovers it — mirror/symlink the shared skill into `.cursor/skills/`, or
-  rely on Cursor's opportunistic `.claude/skills/` scan (decide during build).
-  Landed in Rust, bash, and PowerShell with matching behaviour + parity fixtures.
+  Cursor discovers it. **Build decision:** rely on Cursor's opportunistic
+  `.claude/skills/` scan (no `.cursor/` mirror needed) — Cursor reuses the
+  existing `.claude/skills/aps-planning` payload, making it a **zero-asset** add
+  after all. Landed in Rust, bash, and PowerShell with matching behaviour.
 - **Validation:** `cargo test` + parity suite; init smoke test with `cursor`
   selected installs a Cursor-discoverable skill in all three CLIs.
 - **Confidence:** medium
-- **Files:** `cli/src/config.rs`, `cli/src/scaffold.rs`, `lib/scaffold.sh`,
-  `lib/Scaffold.psm1`, `scaffold/agents/`
+- **Status:** Complete — verified 2026-07-24. Cursor joins the `.claude/skills/`
+  claude-root group; skill installs in Rust/bash/pwsh; `doctor`/`setup`/`skill_step`
+  regression tests extended to cursor.
+- **Files:** `cli/src/config.rs`, `cli/src/scaffold.rs`, `cli/src/wizard.rs`,
+  `cli/src/{setup,doctor}.rs`, `lib/scaffold.sh`, `lib/Scaffold.psm1`, docs, `test/**`
 - **Dependencies:** CLI-005
 
 ## Decisions

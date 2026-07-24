@@ -617,6 +617,10 @@ function Write-ApsConfigV2 {
                 $lines += "    skill: .agents/skills/aps-planning"
                 $lines += "    instruction_file: AGENTS.md"
             }
+            "cursor" {
+                $lines += "    skill: .claude/skills/aps-planning"
+                $lines += "    instruction_file: AGENTS.md"
+            }
             "generic" {
                 $lines += "    # No tool integration"
             }
@@ -733,6 +737,7 @@ function Update-ApsV2 {
             "grok"        { Install-ApsAgentsSkillV2 -Target $Target }
             "antigravity" { Install-ApsAgentsSkillV2 -Target $Target }
             { $_ -in "amp", "gemini-cli", "windsurf", "roo-code", "openclaw" } { Install-ApsAgentsSkillV2 -Target $Target }
+            "cursor" { Install-ApsSkillV2 -Target $Target }
         }
     }
     if ($tools.Count -gt 0) {
@@ -786,7 +791,7 @@ function Invoke-ApsInit {
         }
     }
 
-    $toolNames = @("claude-code", "copilot", "codex", "opencode", "grok", "antigravity", "amp", "gemini-cli", "windsurf", "roo-code", "openclaw", "generic")
+    $toolNames = @("claude-code", "copilot", "codex", "opencode", "grok", "antigravity", "amp", "gemini-cli", "windsurf", "roo-code", "openclaw", "cursor", "generic")
     $selectedTools = @("generic")
     if ($optTools) {
         $selectedTools = @($optTools -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
@@ -865,6 +870,10 @@ function Invoke-ApsInit {
                 Install-ApsAgentsSkillV2 -Target $target
                 Write-ApsInfo ".agents/skills/aps-planning/ (skill — auto-discovered)"
             }
+            "cursor" {
+                Install-ApsSkillV2 -Target $target
+                Write-ApsInfo ".claude/skills/aps-planning/ (skill — Cursor discovers via .claude/skills)"
+            }
         }
     }
 
@@ -917,7 +926,7 @@ with 'aps setup'.
 Refuses to run if plans/ already exists.
 
 Options:
-  --tools TOOLS       Comma-separated: claude-code,copilot,codex,opencode,grok,antigravity,amp,gemini-cli,windsurf,roo-code,openclaw,generic
+  --tools TOOLS       Comma-separated: claude-code,copilot,codex,opencode,grok,antigravity,amp,gemini-cli,windsurf,roo-code,openclaw,cursor,generic
                       (default: generic — no tool integration)
   --hooks             Also install hook scripts into .aps/scripts
   --non-interactive   Accepted for bash-CLI parity (this port never prompts)

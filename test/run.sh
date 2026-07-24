@@ -167,7 +167,7 @@ done
 AGENT_DIR=$(mktemp -d)
 mkdir -p "$AGENT_DIR/.codex/agents"
 : > "$AGENT_DIR/.codex/agents/codex-config-snippet.toml"
-APS_LOCAL="$PROJECT_ROOT" $APS init "$AGENT_DIR" --profile agent --scope small --tools claude-code,copilot,codex,opencode,grok,antigravity,amp,gemini-cli,windsurf,roo-code,openclaw > /dev/null 2>&1 || fail "agent init failed"
+APS_LOCAL="$PROJECT_ROOT" $APS init "$AGENT_DIR" --profile agent --scope small --tools claude-code,copilot,codex,opencode,grok,antigravity,amp,gemini-cli,windsurf,roo-code,openclaw,cursor > /dev/null 2>&1 || fail "agent init failed"
 [[ -f "$AGENT_DIR/.claude/agents/aps-conductor.md" ]] || fail "claude conductor missing"
 [[ -f "$AGENT_DIR/.github/agents/aps-conductor.md" ]] || fail "copilot conductor missing"
 [[ -f "$AGENT_DIR/.codex/agents/aps-conductor.toml" ]] || fail "codex conductor missing"

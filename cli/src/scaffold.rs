@@ -215,6 +215,7 @@ pub fn resolve_model(
         | AiTool::Windsurf
         | AiTool::RooCode
         | AiTool::OpenClaw
+        | AiTool::Cursor
         | AiTool::Generic => None,
     }
 }
@@ -328,6 +329,7 @@ fn agent_dest(tool: AiTool, role: AgentRole) -> Option<&'static str> {
             | AiTool::Windsurf
             | AiTool::RooCode
             | AiTool::OpenClaw
+            | AiTool::Cursor
             | AiTool::Generic,
             _,
         ) => None,
@@ -356,6 +358,7 @@ fn render_agent(tool: AiTool, role: AgentRole, preference: ModelPreference) -> O
         | AiTool::Windsurf
         | AiTool::RooCode
         | AiTool::OpenClaw
+        | AiTool::Cursor
         | AiTool::Generic => None,
     }
 }
@@ -420,6 +423,9 @@ pub fn post_install_note(tool: AiTool) -> Option<&'static str> {
         AiTool::OpenClaw => Some(
             "OpenClaw: injects AGENTS.md and auto-discovers .agents/skills/; drive plans with `aps next/start/complete`",
         ),
+        AiTool::Cursor => {
+            Some("Cursor: reads AGENTS.md and discovers the skill via its .claude/skills/ scan")
+        }
         AiTool::Generic => None,
     }
 }
@@ -728,7 +734,9 @@ pub fn skill_step(tools: &[ToolConfig]) -> Option<ScaffoldStep> {
         || tools.iter().any(|c| {
             matches!(
                 c.tool,
-                AiTool::ClaudeCode | AiTool::Copilot | AiTool::OpenCode
+                // Cursor discovers skills via its opportunistic .claude/skills/ scan
+                // (D-045 / CLI-007), so it reuses the claude-root payload — no bespoke asset.
+                AiTool::ClaudeCode | AiTool::Copilot | AiTool::OpenCode | AiTool::Cursor
             )
         });
     let agents_root = tools.iter().any(|c| {
@@ -920,6 +928,7 @@ pub fn tool_key(tool: AiTool) -> &'static str {
         AiTool::Windsurf => "windsurf",
         AiTool::RooCode => "roo-code",
         AiTool::OpenClaw => "openclaw",
+        AiTool::Cursor => "cursor",
         AiTool::Generic => "generic",
     }
 }
@@ -1491,8 +1500,13 @@ mod tests {
         }
         let cfg = ToolConfig::default_for;
 
-        // Claude Code, Copilot, and OpenCode share .claude/skills/.
-        for tool in [AiTool::ClaudeCode, AiTool::Copilot, AiTool::OpenCode] {
+        // Claude Code, Copilot, OpenCode, and Cursor share .claude/skills/.
+        for tool in [
+            AiTool::ClaudeCode,
+            AiTool::Copilot,
+            AiTool::OpenCode,
+            AiTool::Cursor,
+        ] {
             let step = skill_step(&[cfg(tool)]).expect("skill installed");
             assert_eq!(roots(&step), (true, false), "{tool:?}");
         }
