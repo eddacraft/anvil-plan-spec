@@ -74,9 +74,10 @@ pub fn tool_from_key(key: &str) -> Result<AiTool, String> {
         "windsurf" => Ok(AiTool::Windsurf),
         "roo-code" => Ok(AiTool::RooCode),
         "openclaw" => Ok(AiTool::OpenClaw),
+        "cursor" => Ok(AiTool::Cursor),
         "gemini" => Err("'gemini' was retired in v0.7 (D-040); did you mean \
              'gemini-cli'? supported tools: claude-code, copilot, codex, opencode, \
-             grok, antigravity, amp, gemini-cli, windsurf, roo-code, openclaw, generic"
+             grok, antigravity, amp, gemini-cli, windsurf, roo-code, openclaw, cursor, generic"
             .to_string()),
         "generic" => Ok(AiTool::Generic),
         other => Err(format!("unknown tool '{other}'")),

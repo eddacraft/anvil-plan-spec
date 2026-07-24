@@ -206,7 +206,7 @@ aps setup all --yes       # full footprint (CLI + hooks + Claude Code)
 
 Tool names accepted by `aps setup <tool>`: `claude-code`, `copilot`,
 `codex`, `opencode`, `grok`, `antigravity`, `amp`, `gemini-cli`, `windsurf`,
-`roo-code`, `openclaw`, `generic`. The `all` flow installs a bulky
+`roo-code`, `openclaw`, `cursor`, `generic`. The `all` flow installs a bulky
 footprint and asks for confirmation first (skip it with `--yes`). Every
 other shortcut writes only the component you name. The native `aps` binary
 ships a Ratatui picker for the same flows; the bash CLI uses a numbered

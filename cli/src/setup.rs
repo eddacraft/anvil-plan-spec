@@ -359,7 +359,7 @@ impl Default for SetupState {
 }
 
 impl SetupState {
-    const TOOLS: [AiTool; 12] = [
+    const TOOLS: [AiTool; 13] = [
         AiTool::ClaudeCode,
         AiTool::Copilot,
         AiTool::Codex,
@@ -371,6 +371,7 @@ impl SetupState {
         AiTool::Windsurf,
         AiTool::RooCode,
         AiTool::OpenClaw,
+        AiTool::Cursor,
         AiTool::Generic,
     ];
 
@@ -824,6 +825,7 @@ mod tests {
             AiTool::Windsurf,
             AiTool::RooCode,
             AiTool::OpenClaw,
+            AiTool::Cursor,
             AiTool::Generic,
         ] {
             assert!(

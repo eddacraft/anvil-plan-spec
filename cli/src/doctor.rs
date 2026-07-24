@@ -231,6 +231,7 @@ fn config_expects_skill(root: &Path) -> bool {
                 | AiTool::Windsurf
                 | AiTool::RooCode
                 | AiTool::OpenClaw
+                | AiTool::Cursor
         )
     })
 }
@@ -370,6 +371,7 @@ mod tests {
             "windsurf",
             "roo-code",
             "openclaw",
+            "cursor",
         ] {
             let root = scratch(&format!("skill-{tool}"));
             let home = scratch(&format!("skill-{tool}-home"));
