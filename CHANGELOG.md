@@ -8,6 +8,42 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 _Nothing yet._
 
+## [0.8.0] - 2026-07-28
+
+**Release narrative:** [plans/releases/v0.8.0.md](./plans/releases/v0.8.0.md).
+
+### Added
+
+- **Seven new harnesses (CLI-006, CLI-007, D-045)** — `init`/`setup`/wizard and
+  the installers now support **Antigravity, Amp, Gemini CLI, Windsurf, Roo Code,
+  OpenClaw, and Cursor**, taking the supported set to twelve tools. Each clears
+  the D-045 native-discovery gate (reads the `AGENTS.md` family and
+  auto-discovers the shared skill), so all reuse the existing
+  `.agents/skills/aps-planning` payload — Cursor reuses `.claude/skills/` — with
+  no bespoke assets. Added in full Rust/bash/PowerShell parity, each with an
+  `aps init --tools <t>` smoke test; `doctor`/`setup`/`skill_step` regression
+  tests iterate the whole tool set so a missed enumeration fails CI. The retired
+  `gemini` tool now hints "did you mean 'gemini-cli'?".
+- **`plan-doctor` skill** — a structural plan-diagnostics skill now installs
+  alongside `aps-planning` (embedded in the binary, written to the same skill
+  roots, parity-tested).
+- **CLI command-surface redesign map (CLI-001)** —
+  [`plans/designs/2026-07-22-cli-redesign.design.md`](./plans/designs/2026-07-22-cli-redesign.design.md)
+  inventories the whole `aps` surface, flags the `update`/`migrate`/`upgrade`
+  overlaps, and proposes a profile-aware redesign with an alias/migration path.
+  Map only — no behaviour change.
+
+### Changed
+
+- **Refreshed canonical APS assets (INSTALL-024)** — the bundled `aps-planning`
+  skill and the `aps-planner`/`aps-librarian`/`aps-conductor` agents are
+  re-vended from the canonical eddacraft source, so the binary ships the current
+  planning stack.
+- **Finished the Gemini→Grok cutover (CLI-004, D-040)** — no user-facing Gemini
+  scaffolding references remain in prose; only the intentional `GEMINI.md`
+  protected-list entries and the retirement error messages stay. Grok verified
+  end-to-end across all three CLIs.
+
 ## [0.7.0] - 2026-07-21
 
 **Release narrative:** [plans/releases/v0.7.0.md](./plans/releases/v0.7.0.md).
