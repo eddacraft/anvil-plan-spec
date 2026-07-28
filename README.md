@@ -1,7 +1,7 @@
 <!-- markdownlint-disable MD041 -->
 
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.7.0-green.svg)](https://github.com/EddaCraft/anvil-plan-spec/releases/tag/v0.7.0)
+[![Version](https://img.shields.io/badge/version-0.8.0-green.svg)](https://github.com/EddaCraft/anvil-plan-spec/releases/tag/v0.8.0)
 [![Made for AI agents](https://img.shields.io/badge/made%20for-AI%20agents-purple.svg)](docs/ai-agent-guide.md)
 
 <!-- markdownlint-enable MD041 -->
@@ -271,28 +271,27 @@ need one.
 
 APS needs no hosted service, proprietary format, or mandatory integration.
 
-## What's in v0.7.0
+## What's in v0.8.0
 
-Released **2026-07-21**, this release makes APS adoptable by a team, not only
-its original author.
+Released **2026-07-28**, this release widens the harness set to a dozen tools
+and refreshes the planning assets the binary ships.
 
-- **Managed skill installs:** every skill tree carries an `.aps-managed.json`
-  marker, so `aps update` refreshes APS-owned content without overwriting user
-  edits. The Rust, bash, and PowerShell CLIs reconcile it byte-for-byte.
-- **v2 layout everywhere:** installers and updaters deliver the current
-  `.aps/` layout, migrate v1 installations with a backup, and use `cli_version`
-  in `.aps/config.yml` as the single version stamp.
-- **`aps export --json`:** a deterministic `aps-export/v1` snapshot gives
-  non-CLI stakeholders and other tools a stable view of the plan tree.
-- **Composite GitHub Action:** `uses: eddacraft/anvil-plan-spec@<tag>` lints
-  plans in CI, with an optional sticky pull request roll-up comment.
-- **Expanded harness set:** Claude Code, Copilot, Codex, OpenCode, Grok,
-  Antigravity, Amp, Gemini CLI, Windsurf, Roo Code, OpenClaw, and Cursor consume
-  the same planning contract.
-- **Team rollout guidance:** [docs/team-rollout.md](docs/team-rollout.md) and
-  `examples/team-payments/` cover ownership, review, and version pinning.
+- **Seven new harnesses:** `init`/`setup`/wizard now support **Antigravity, Amp,
+  Gemini CLI, Windsurf, Roo Code, OpenClaw, and Cursor** alongside Claude Code,
+  Copilot, Codex, OpenCode, and Grok — twelve tools sharing one planning
+  contract. Each was added under the D-045 native-discovery gate (reads
+  `AGENTS.md` + auto-discovers the shared skill) at zero bespoke-asset cost, in
+  full Rust/bash/PowerShell parity.
+- **Refreshed APS planning stack:** the bundled `aps-planning` skill and the
+  `aps-planner`/`aps-librarian`/`aps-conductor` agents are re-vended from the
+  canonical eddacraft source, and a new **`plan-doctor`** skill (structural plan
+  diagnostics) now installs alongside `aps-planning`.
+- **Coherent command surface:** the CLI-001 redesign map (`update` vs `migrate`
+  vs `upgrade`, profile-aware surfacing) is recorded as the north star for
+  ongoing command-surface work.
 
-Full notes: [CHANGELOG.md](CHANGELOG.md).
+Full notes: [CHANGELOG.md](CHANGELOG.md) ·
+[release narrative](plans/releases/v0.8.0.md).
 
 ## Templates
 
