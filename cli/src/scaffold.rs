@@ -1183,6 +1183,46 @@ mod tests {
         assert_eq!(normalize_dir("docs/plans/", "plans"), "docs/plans");
     }
 
+    /// Agent Skills loaders (Codex `.agents/skills`, Claude, etc.) reject
+    /// `SKILL.md` without YAML frontmatter (`---` / name / description).
+    /// 0.7.0 briefly shipped the tutorial body without frontmatter; keep the
+    /// embeds honest so `aps update` cannot reintroduce that skip warning.
+    #[test]
+    fn embedded_skill_markdown_has_yaml_frontmatter() {
+        for (label, files) in [
+            ("aps-planning", SKILL_FILES.as_slice()),
+            ("plan-doctor", PLAN_DOCTOR_FILES.as_slice()),
+        ] {
+            let skill = files
+                .iter()
+                .find(|(name, _)| *name == "SKILL.md")
+                .unwrap_or_else(|| panic!("{label}: SKILL.md missing from embed list"));
+            let body = skill.1;
+            assert!(
+                body.starts_with("---\n") || body.starts_with("---\r\n"),
+                "{label} SKILL.md must open with YAML frontmatter delimiters"
+            );
+            assert!(
+                body.contains("name:"),
+                "{label} SKILL.md frontmatter must include name:"
+            );
+            assert!(
+                body.contains("description:"),
+                "{label} SKILL.md frontmatter must include description:"
+            );
+            let after_open = body
+                .strip_prefix("---\r\n")
+                .or_else(|| body.strip_prefix("---\n"))
+                .expect("opening ---");
+            assert!(
+                after_open.contains("\n---\n")
+                    || after_open.contains("\r\n---\r\n")
+                    || after_open.contains("\n---\r\n"),
+                "{label} SKILL.md must close frontmatter with ---"
+            );
+        }
+    }
+
     fn base_selections() -> Selections {
         Selections {
             profile: Profile::Solo,

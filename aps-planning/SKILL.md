@@ -1,3 +1,11 @@
+---
+name: aps-planning
+description: >-
+  Persistent structured planning with Anvil Plan Spec (APS). Use when planning
+  multi-step work, loading plans/, creating or updating APS specs, modules,
+  work items, or action plans.
+---
+
 # APS Planning Skill
 
 > Persistent, structured planning for AI agents using Anvil Plan Spec.
