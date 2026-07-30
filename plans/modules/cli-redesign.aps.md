@@ -126,6 +126,9 @@ Change status to **Ready** when:
 - **Expected Outcome:** `aps upgrade` and the version output behave consistently
   across channels; `cli_version` reconciliation (D-036/D-044) and the staleness
   check remain the single on-disk version stamp; release checklist updated.
+  Partial: INSTALL-025 adds the interactive pin-vs-CLI gate on `aps update`
+  (update pin / install matching CLI / continue); full self-update via
+  `aps upgrade` remains in this item.
 - **Validation:** `cargo test`; a fetched/installed binary self-reports the new
   version and upgrades cleanly on Mac/Linux/Windows.
 - **Confidence:** medium

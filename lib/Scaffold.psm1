@@ -708,6 +708,79 @@ function Install-ApsToolAgents {
     }
 }
 
+
+function Resolve-ApsUpdateCliVersionPin {
+    <#
+    .SYNOPSIS
+        When project pin ≠ this CLI, offer to update the pin or install a matching binary.
+        Non-interactive runs warn and continue (same policy as Rust/bash).
+        Returns $true to proceed, $false to abort.
+    #>
+    param([string]$Target)
+
+    $config = Join-Path (Join-Path $Target ".aps") "config.yml"
+    if (-not (Test-Path -LiteralPath $config -PathType Leaf)) { return $true }
+
+    $pinLine = Select-String -LiteralPath $config -Pattern '^cli_version:\s*(.+)$' |
+        Select-Object -First 1
+    if (-not $pinLine) { return $true }
+    $pin = ($pinLine.Matches[0].Groups[1].Value -replace '["'']', '').Trim()
+    if ([string]::IsNullOrWhiteSpace($pin)) { return $true }
+    if ($pin -eq $script:ApsCliVersion) { return $true }
+
+    Write-ApsWarning "project pins cli_version $pin but this CLI is $($script:ApsCliVersion)"
+
+    $interactive = [Environment]::UserInteractive -and -not [Console]::IsInputRedirected -and -not [Console]::IsOutputRedirected
+    if (-not $interactive) {
+        Write-ApsWarning "continuing with this binary's assets (non-interactive); re-run in a terminal to update the pin or install a matching CLI"
+        return $true
+    }
+
+    Write-Host ""
+    Write-Host "Updating APS with a mismatched CLI refreshes templates from this binary."
+    Write-Host "  [p] Update the pin to $($script:ApsCliVersion) and continue"
+    Write-Host "  [u] Keep pin $pin — show how to install/upgrade the CLI, then exit"
+    Write-Host "  [c] Continue without changing the pin"
+    Write-Host -NoNewline "Choice [p/u/c]: "
+    $answer = Read-Host
+    switch -Regex ($answer.Trim().ToLowerInvariant()) {
+        '^(p|pin)$' {
+            $content = Get-Content -LiteralPath $config -Raw
+            if ($content -match '(?m)^cli_version:\s*.+$') {
+                $content = [regex]::Replace($content, '(?m)^cli_version:\s*.+$', "cli_version: $($script:ApsCliVersion)", 1)
+            } else {
+                if (-not $content.EndsWith("`n")) { $content += "`n" }
+                $content += "cli_version: $($script:ApsCliVersion)`n"
+            }
+            # LF, no BOM — keep config cross-CLI comparable
+            [System.IO.File]::WriteAllText((Resolve-Path $config), $content.Replace("`r`n", "`n").Replace("`r", "`n"))
+            Write-ApsInfo "Updated cli_version: $pin → $($script:ApsCliVersion) in .aps/config.yml"
+            return $true
+        }
+        '^(u|upgrade|i|install)$' {
+            Write-Host ""
+            Write-Host "Install the pinned CLI ($pin), then re-run ``aps update``:"
+            Write-Host ""
+            Write-Host "  curl -fsSL https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/v$pin/scaffold/install | bash -s -- --cli"
+            Write-Host "  # or"
+            Write-Host "  cargo install aps-cli --version $pin --locked"
+            Write-Host "  # or"
+            Write-Host "  scoop install aps"
+            Write-Host ""
+            Write-Host "Or bump the pin with ``cli_version: $($script:ApsCliVersion)`` in .aps/config.yml if this binary is intentional."
+            return $false
+        }
+        '^(c|continue)$' {
+            Write-ApsInfo "Continuing with pin $pin and binary $($script:ApsCliVersion)."
+            return $true
+        }
+        default {
+            Write-ApsError "Unrecognised choice — aborting (nothing changed)."
+            return $false
+        }
+    }
+}
+
 function Update-ApsV2 {
     <#
     .SYNOPSIS
@@ -719,6 +792,10 @@ function Update-ApsV2 {
     Write-Host ""
     Write-ApsInfo "Updating APS v2 in $Target"
     Write-Host ""
+
+    if (-not (Resolve-ApsUpdateCliVersionPin -Target $Target)) {
+        exit 1
+    }
 
     $apsDir = Join-Path $Target ".aps"
 

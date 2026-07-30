@@ -286,7 +286,11 @@ tooling_root: .aps/      # APS-owned tooling root
 - **`cli_version`** pins the toolchain a project expects. `aps init` stamps it
   from the running binary; `aps init --from <config>` replays an existing pin,
   and warns + inherits the current version when an older config predates the
-  field.
+  field. `aps update` compares the pin to the running CLI: interactively it
+  offers to rewrite the pin, keep the pin and show how to install a matching
+  CLI, or continue without changing the pin; non-interactively it warns and
+  continues. Project-scoped commands (`lint`, `next`, …) also warn on mismatch
+  and fail under `--strict`.
 - **`plans_dir` / `docs_dir` / `tooling_root`** are runtime defaults, not just
   init metadata — a monorepo can set `plans_dir: packages/foo/plans/`. Explicit
   flags (`--plans`, …) override them.

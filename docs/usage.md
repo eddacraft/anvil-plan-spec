@@ -141,7 +141,10 @@ These are the install-time commands:
   core templates, refreshes existing ones, and reconciles the skill when
   installed. It reports each file as added / updated / unchanged / skipped, and
   never touches your plan content. (`aps setup upgrade` refreshes only the files
-  already present; `update` is the one that also adds what's missing.)
+  already present; `update` is the one that also adds what's missing.) When the
+  project's `cli_version` pin differs from the running CLI, an interactive run
+  asks whether to update the pin, keep the pin and install a matching CLI, or
+  continue without changing the pin; non-interactive runs warn and continue.
 - **`aps migrate [dir]`** moves a project off the vendored bash CLI onto the
   global binary: it runs the `aps doctor` diagnosis, then (with `--apply`) backs
   up and removes vendored CLI bloat, rewrites stale hook paths, pins
