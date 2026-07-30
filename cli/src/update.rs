@@ -9,13 +9,15 @@
 //! with a reason otherwise. User-authored planning content is never touched.
 
 use std::fs;
+use std::io::{self, IsTerminal, Write};
 use std::path::Path;
 
 use crate::config::{self, parse_config};
 use crate::managed::{self, ReconcileResult};
 use crate::scaffold::{
     AGENTS_PLAN_DOCTOR_DIR, AGENTS_SKILL_DIR, CLAUDE_PLAN_DOCTOR_DIR, CLAUDE_SKILL_DIR,
-    HOOK_SCRIPTS, PLAN_DOCTOR_FILES, SKILL_FILES, agent_files, agent_paths, mark_executable,
+    CLI_VERSION, HOOK_SCRIPTS, PLAN_DOCTOR_FILES, SKILL_FILES, agent_files, agent_paths,
+    mark_executable,
 };
 use crate::wizard::{AiTool, ModelPreference};
 
@@ -114,6 +116,154 @@ fn reconcile(path: &Path, display: &str, content: &str, tally: &mut Tally) {
     }
 }
 
+
+/// Interactive / non-interactive decision for a cli_version mismatch.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum PinDecision {
+    Proceed,
+    Abort,
+}
+
+/// User choice when pin ≠ running binary (interactive path).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum PinChoice {
+    /// Rewrite `.aps/config.yml` `cli_version` to this binary and continue.
+    UpdatePin,
+    /// Keep the pin; print install/upgrade instructions and exit.
+    InstallMatchingCli,
+    /// Continue the asset refresh without touching the pin.
+    ContinueWithoutChange,
+}
+
+/// Parse a one-line answer from the pin-mismatch prompt.
+fn parse_pin_choice(answer: &str) -> Option<PinChoice> {
+    match answer.trim().to_lowercase().as_str() {
+        "p" | "pin" => Some(PinChoice::UpdatePin),
+        "u" | "upgrade" | "i" | "install" => Some(PinChoice::InstallMatchingCli),
+        "c" | "continue" => Some(PinChoice::ContinueWithoutChange),
+        _ => None,
+    }
+}
+
+/// Rewrite a top-level `cli_version:` scalar in config text. Preserves the rest
+/// of the file byte-for-byte aside from the replaced (or appended) line.
+fn rewrite_cli_version(text: &str, version: &str) -> String {
+    let mut found = false;
+    let mut out = String::with_capacity(text.len() + 16);
+    for line in text.lines() {
+        if !found
+            && !line.starts_with(char::is_whitespace)
+            && !line.trim_start().starts_with('#')
+            && line
+                .split_once(':')
+                .is_some_and(|(k, _)| k.trim() == "cli_version")
+        {
+            out.push_str(&format!("cli_version: {version}\n"));
+            found = true;
+        } else {
+            out.push_str(line);
+            out.push('\n');
+        }
+    }
+    if !found {
+        if !out.is_empty() && !out.ends_with('\n') {
+            out.push('\n');
+        }
+        out.push_str(&format!("cli_version: {version}\n"));
+    }
+    out
+}
+
+fn print_install_matching_cli(pin: &str) {
+    println!();
+    println!("Install the pinned CLI ({pin}), then re-run `aps update`:");
+    println!();
+    println!(
+        "  curl -fsSL https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/v{pin}/scaffold/install | bash -s -- --cli"
+    );
+    println!("  # or");
+    println!("  cargo install aps-cli --version {pin} --locked");
+    println!("  # or (Windows Scoop, when the bucket is on that release)");
+    println!("  scoop install aps");
+    println!();
+    println!("Or bump the pin with `cli_version: {CLI_VERSION}` in .aps/config.yml if this binary is intentional.");
+}
+
+/// When the project pin differs from this binary, ask (TTY) or warn (non-TTY).
+fn reconcile_cli_version_pin(root: &Path) -> PinDecision {
+    let Some(project) = config::discover_project(root) else {
+        return PinDecision::Proceed;
+    };
+    let Some(pin) = project.cli_version.as_deref() else {
+        return PinDecision::Proceed;
+    };
+    if pin == CLI_VERSION {
+        return PinDecision::Proceed;
+    }
+
+    eprintln!("warning: project pins cli_version {pin} but this CLI is {CLI_VERSION}");
+
+    let interactive = io::stdin().is_terminal() && io::stdout().is_terminal();
+    if !interactive {
+        eprintln!(
+            "  continuing with this binary's assets (non-interactive); re-run in a terminal to update the pin or install a matching CLI"
+        );
+        return PinDecision::Proceed;
+    }
+
+    println!();
+    println!("Updating APS with a mismatched CLI refreshes templates from this binary.");
+    println!("  [p] Update the pin to {CLI_VERSION} and continue");
+    println!("  [u] Keep pin {pin} — show how to install/upgrade the CLI, then exit");
+    println!("  [c] Continue without changing the pin");
+    print!("Choice [p/u/c]: ");
+    let _ = io::stdout().flush();
+
+    let mut answer = String::new();
+    if io::stdin().read_line(&mut answer).is_err() {
+        eprintln!("error: failed to read choice");
+        return PinDecision::Abort;
+    }
+    match parse_pin_choice(&answer) {
+        Some(PinChoice::UpdatePin) => {
+            let config_path = project.root.join(".aps/config.yml");
+            match fs::read_to_string(&config_path) {
+                Ok(text) => {
+                    let rewritten = rewrite_cli_version(&text, CLI_VERSION);
+                    match fs::write(&config_path, rewritten) {
+                        Ok(()) => {
+                            println!(
+                                "Updated cli_version: {pin} → {CLI_VERSION} in .aps/config.yml"
+                            );
+                            PinDecision::Proceed
+                        }
+                        Err(err) => {
+                            eprintln!("error: failed to write .aps/config.yml: {err}");
+                            PinDecision::Abort
+                        }
+                    }
+                }
+                Err(err) => {
+                    eprintln!("error: failed to read .aps/config.yml: {err}");
+                    PinDecision::Abort
+                }
+            }
+        }
+        Some(PinChoice::InstallMatchingCli) => {
+            print_install_matching_cli(pin);
+            PinDecision::Abort
+        }
+        Some(PinChoice::ContinueWithoutChange) => {
+            println!("Continuing with pin {pin} and binary {CLI_VERSION}.");
+            PinDecision::Proceed
+        }
+        None => {
+            println!("Unrecognised choice — aborting (nothing changed).");
+            PinDecision::Abort
+        }
+    }
+}
+
 /// `aps update [dir]` entry. Returns the process exit code.
 pub fn cmd_update(start: &Path) -> i32 {
     let project = config::discover_project(start);
@@ -133,6 +283,13 @@ pub fn cmd_update(start: &Path) -> i32 {
             plans.display()
         );
         eprintln!("  Run `aps init` to scaffold a new project.");
+        return 1;
+    }
+
+    // Pin vs running binary: interactive projects get a choice (update pin or
+    // install a matching CLI). Non-interactive runs warn and continue so CI
+    // / scripts are not blocked.
+    if let PinDecision::Abort = reconcile_cli_version_pin(&root) {
         return 1;
     }
 
@@ -594,6 +751,62 @@ mod tests {
         assert_eq!(
             fs::read_to_string(skill.join("SKILL.md")).unwrap(),
             "custom\n"
+        );
+        fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn parse_pin_choice_accepts_aliases() {
+        assert_eq!(parse_pin_choice("p"), Some(PinChoice::UpdatePin));
+        assert_eq!(parse_pin_choice("PIN"), Some(PinChoice::UpdatePin));
+        assert_eq!(parse_pin_choice("u"), Some(PinChoice::InstallMatchingCli));
+        assert_eq!(parse_pin_choice("upgrade"), Some(PinChoice::InstallMatchingCli));
+        assert_eq!(parse_pin_choice("i"), Some(PinChoice::InstallMatchingCli));
+        assert_eq!(parse_pin_choice("c"), Some(PinChoice::ContinueWithoutChange));
+        assert_eq!(parse_pin_choice("continue"), Some(PinChoice::ContinueWithoutChange));
+        assert_eq!(parse_pin_choice(""), None);
+        assert_eq!(parse_pin_choice("maybe"), None);
+    }
+
+    #[test]
+    fn rewrite_cli_version_replaces_top_level_pin() {
+        let input = "# header\ncli_version: 0.1.0\nplans_dir: plans/\n";
+        let out = rewrite_cli_version(input, "0.8.0");
+        assert_eq!(out, "# header\ncli_version: 0.8.0\nplans_dir: plans/\n");
+    }
+
+    #[test]
+    fn rewrite_cli_version_appends_when_missing() {
+        let input = "plans_dir: plans/\n";
+        let out = rewrite_cli_version(input, "0.8.0");
+        assert!(out.contains("cli_version: 0.8.0\n"));
+        assert!(out.starts_with("plans_dir: plans/\n"));
+    }
+
+    #[test]
+    fn rewrite_cli_version_ignores_indented_keys() {
+        let input = "tools:\n  cli_version: nested\ncli_version: 0.1.0\n";
+        let out = rewrite_cli_version(input, "0.9.0");
+        assert!(out.contains("  cli_version: nested\n"));
+        assert!(out.contains("cli_version: 0.9.0\n"));
+        assert!(!out.contains("cli_version: 0.1.0"));
+    }
+
+    #[test]
+    fn noninteractive_mismatch_continues_without_rewriting_pin() {
+        // cargo test has no TTY — mismatch must warn and proceed, not rewrite.
+        let root = scratch("pin-mismatch");
+        let plans = root.join("plans");
+        fs::create_dir_all(plans.join("modules")).unwrap();
+        fs::create_dir_all(plans.join("execution")).unwrap();
+        fs::create_dir_all(root.join(".aps")).unwrap();
+        let config = root.join(".aps/config.yml");
+        fs::write(&config, "cli_version: 0.0.1\nplans_dir: plans/\n").unwrap();
+
+        assert_eq!(cmd_update(&root), 0);
+        assert_eq!(
+            fs::read_to_string(&config).unwrap(),
+            "cli_version: 0.0.1\nplans_dir: plans/\n"
         );
         fs::remove_dir_all(&root).ok();
     }

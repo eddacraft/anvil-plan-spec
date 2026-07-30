@@ -1261,12 +1261,85 @@ cmd_update() {
   fi
 }
 
+
+# When project pin ≠ this CLI, offer to update the pin or install a matching
+# binary. Non-interactive runs warn and continue (same policy as the Rust CLI).
+# Returns 0 to proceed with update, 1 to abort.
+aps_update_reconcile_cli_version_pin() {
+  local target="${1:-.}"
+  local config="$target/.aps/config.yml"
+  local pin
+  [[ -f "$config" ]] || return 0
+  pin="$(aps_config_get "$config" cli_version 2>/dev/null || true)"
+  [[ -z "$pin" ]] && return 0
+  [[ "$pin" == "${APS_CLI_VERSION}" ]] && return 0
+
+  warn "project pins cli_version $pin but this CLI is ${APS_CLI_VERSION}"
+
+  if [[ ! -t 0 || ! -t 1 ]]; then
+    warn "continuing with this binary's assets (non-interactive); re-run in a terminal to update the pin or install a matching CLI"
+    return 0
+  fi
+
+  echo ""
+  echo "Updating APS with a mismatched CLI refreshes templates from this binary."
+  echo "  [p] Update the pin to ${APS_CLI_VERSION} and continue"
+  echo "  [u] Keep pin $pin — show how to install/upgrade the CLI, then exit"
+  echo "  [c] Continue without changing the pin"
+  printf "Choice [p/u/c]: "
+  local answer=""
+  if ! read -r answer; then
+    error "failed to read choice"
+    return 1
+  fi
+  case "$(echo "$answer" | tr '[:upper:]' '[:lower:]')" in
+    p|pin)
+      if grep -qE '^cli_version:' "$config"; then
+        # Rewrite the top-level pin; leave the rest of the file alone.
+        local tmp
+        tmp="$(mktemp)"
+        awk -v ver="$APS_CLI_VERSION" '
+          BEGIN { done=0 }
+          !done && /^cli_version:/ { print "cli_version: " ver; done=1; next }
+          { print }
+          END { if (!done) print "cli_version: " ver }
+        ' "$config" > "$tmp" && mv "$tmp" "$config"
+      else
+        printf 'cli_version: %s\n' "$APS_CLI_VERSION" >> "$config"
+      fi
+      info "Updated cli_version: $pin → ${APS_CLI_VERSION} in .aps/config.yml"
+      return 0
+      ;;
+    u|upgrade|i|install)
+      echo ""
+      echo "Install the pinned CLI ($pin), then re-run \`aps update\`:"
+      echo ""
+      echo "  curl -fsSL https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/v${pin}/scaffold/install | bash -s -- --cli"
+      echo "  # or"
+      echo "  cargo install aps-cli --version ${pin} --locked"
+      echo ""
+      echo "Or bump the pin with \`cli_version: ${APS_CLI_VERSION}\` in .aps/config.yml if this binary is intentional."
+      return 1
+      ;;
+    c|continue)
+      info "Continuing with pin $pin and binary ${APS_CLI_VERSION}."
+      return 0
+      ;;
+    *)
+      error "Unrecognised choice — aborting (nothing changed)."
+      return 1
+      ;;
+  esac
+}
+
 cmd_update_v2() {
   local target="$1"
 
   echo ""
   info "Updating APS v2 in $target"
   echo ""
+
+  aps_update_reconcile_cli_version_pin "$target" || return 1
 
   # CLI
   v2_install_cli "$target"

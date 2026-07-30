@@ -981,6 +981,30 @@ Notes on schema:
   PowerShell execution is unavailable because `pwsh` is not installed. Review:
   [anvil-plan-spec#131](https://github.com/eddacraft/anvil-plan-spec/pull/131).
 
+### INSTALL-025: Pin-vs-CLI gate on `aps update`
+
+- **Intent:** When someone runs `aps update`, surface a mismatch between the
+  project's `cli_version` pin and the running global CLI, and ask whether to
+  change the pin or install/upgrade to a matching CLI — instead of silently
+  refreshing assets from the wrong binary.
+- **Expected Outcome:** Interactive `aps update` offers `[p]` update pin /
+  `[u]` keep pin + install hints / `[c]` continue; non-interactive runs warn
+  and continue (scripts/CI stay unblocked). Behaviour is shared across Rust,
+  bash, and PowerShell.
+- **Validation:** `cargo test update::`; non-TTY mismatch leaves the pin
+  untouched and exits 0; docs mention the gate; `./test/run.sh` green where
+  applicable.
+- **Confidence:** high
+- **Dependencies:** INSTALL-014, INSTALL-016, D-044
+- **Files:** cli/src/update.rs, lib/scaffold.sh, lib/Scaffold.psm1,
+  docs/usage.md, docs/installation.md
+- **Status:** Complete: 2026-07-29
+- **Results:** Rust `reconcile_cli_version_pin` prompts on TTY and warns
+  non-interactively; pure helpers + unit tests cover choice parsing, pin
+  rewrite, and non-TTY non-mutation. Bash `aps_update_reconcile_cli_version_pin`
+  and PowerShell `Resolve-ApsUpdateCliVersionPin` mirror the same three choices.
+  Documented on `aps update` and the `cli_version` contract.
+
 ## Execution Strategy
 
 ### Wave 1: Foundations (no dependencies)
