@@ -116,7 +116,6 @@ fn reconcile(path: &Path, display: &str, content: &str, tally: &mut Tally) {
     }
 }
 
-
 /// Interactive / non-interactive decision for a cli_version mismatch.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum PinDecision {
@@ -186,7 +185,9 @@ fn print_install_matching_cli(pin: &str) {
     println!("  # or (Windows Scoop, when the bucket is on that release)");
     println!("  scoop install aps");
     println!();
-    println!("Or bump the pin with `cli_version: {CLI_VERSION}` in .aps/config.yml if this binary is intentional.");
+    println!(
+        "Or bump the pin with `cli_version: {CLI_VERSION}` in .aps/config.yml if this binary is intentional."
+    );
 }
 
 /// When the project pin differs from this binary, ask (TTY) or warn (non-TTY).
@@ -760,10 +761,19 @@ mod tests {
         assert_eq!(parse_pin_choice("p"), Some(PinChoice::UpdatePin));
         assert_eq!(parse_pin_choice("PIN"), Some(PinChoice::UpdatePin));
         assert_eq!(parse_pin_choice("u"), Some(PinChoice::InstallMatchingCli));
-        assert_eq!(parse_pin_choice("upgrade"), Some(PinChoice::InstallMatchingCli));
+        assert_eq!(
+            parse_pin_choice("upgrade"),
+            Some(PinChoice::InstallMatchingCli)
+        );
         assert_eq!(parse_pin_choice("i"), Some(PinChoice::InstallMatchingCli));
-        assert_eq!(parse_pin_choice("c"), Some(PinChoice::ContinueWithoutChange));
-        assert_eq!(parse_pin_choice("continue"), Some(PinChoice::ContinueWithoutChange));
+        assert_eq!(
+            parse_pin_choice("c"),
+            Some(PinChoice::ContinueWithoutChange)
+        );
+        assert_eq!(
+            parse_pin_choice("continue"),
+            Some(PinChoice::ContinueWithoutChange)
+        );
         assert_eq!(parse_pin_choice(""), None);
         assert_eq!(parse_pin_choice("maybe"), None);
     }
