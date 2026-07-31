@@ -1,7 +1,7 @@
 <!-- markdownlint-disable MD041 -->
 
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.8.0-green.svg)](https://github.com/EddaCraft/anvil-plan-spec/releases/tag/v0.8.0)
+[![Version](https://img.shields.io/badge/version-0.8.1-green.svg)](https://github.com/EddaCraft/anvil-plan-spec/releases/tag/v0.8.1)
 [![Made for AI agents](https://img.shields.io/badge/made%20for-AI%20agents-purple.svg)](docs/ai-agent-guide.md)
 
 <!-- markdownlint-enable MD041 -->
@@ -271,10 +271,17 @@ need one.
 
 APS needs no hosted service, proprietary format, or mandatory integration.
 
-## What's in v0.8.0
+## What's in v0.8.1
 
-Released **2026-07-28**, this release widens the harness set to a dozen tools
-and refreshes the planning assets the binary ships.
+Patch release (**2026-07-31**) on top of v0.8.0's harness expansion:
+
+- **Skill embeds carry YAML frontmatter:** the bundled `SKILL.md` files now
+  ship the `---`-delimited `name`/`description` block that Agent Skills
+  harnesses require to discover them — without it they silently skip the skill.
+- **`aps update` respects the version pin:** update now gates on a
+  `cli_version` pin mismatch instead of refreshing against the wrong toolchain.
+
+The v0.8.0 line (still current):
 
 - **Seven new harnesses:** `init`/`setup`/wizard now support **Antigravity, Amp,
   Gemini CLI, Windsurf, Roo Code, OpenClaw, and Cursor** alongside Claude Code,
@@ -291,7 +298,7 @@ and refreshes the planning assets the binary ships.
   ongoing command-surface work.
 
 Full notes: [CHANGELOG.md](CHANGELOG.md) ·
-[release narrative](plans/releases/v0.8.0.md).
+[release narrative](plans/releases/v0.8.1.md).
 
 ## Templates
 

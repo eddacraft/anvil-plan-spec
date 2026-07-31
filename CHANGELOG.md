@@ -8,6 +8,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 _Nothing yet._
 
+## [0.8.1] - 2026-07-31
+
+**Release narrative:** [plans/releases/v0.8.1.md](./plans/releases/v0.8.1.md).
+
+### Fixed
+
+- **Skill embeds require YAML frontmatter** — the bundled `SKILL.md` files now
+  carry the `---`-delimited `name`/`description` block, and the scaffold
+  enforces it. Agent Skills harnesses skip a `SKILL.md` without frontmatter, so
+  without this the installed planning skill could be silently ignored.
+
+### Changed
+
+- **`aps update` gates on the `cli_version` pin** — update now refuses/flags a
+  pin mismatch instead of refreshing a project against a different toolchain
+  than it pins.
+
 ## [0.8.0] - 2026-07-28
 
 **Release narrative:** [plans/releases/v0.8.0.md](./plans/releases/v0.8.0.md).
