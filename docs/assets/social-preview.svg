@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640">
+  <!-- eddacraft / anvil brand: Void bg, no gradients, no shadows, sharp corners -->
+  <rect width="1280" height="640" fill="#0d0d0f"/>
+
+  <!-- ===== identity row ===== -->
+  <!-- anvil brandmark (official, off-white on void), 88px @ scale 0.157 -->
+  <g transform="translate(80,60) scale(0.1571)" fill="#ebebeb">
+    <path d="M123.2 95.6308H443.692V153.354H123.2V95.6308Z"/>
+    <path d="M123.2 200.738H443.692V258.462H123.2V200.738Z"/>
+    <path d="M249.846 124.923H316.949V222.277H249.846V124.923Z"/>
+    <path d="M249.846 328.246H316.949V425.6H249.846V328.246Z"/>
+    <path d="M123.2 298.954H443.692V356.677H123.2V298.954Z"/>
+    <path d="M123.2 404.062H443.692V461.785H123.2V404.062Z"/>
+    <path d="M560 0H393.21V74.9606H560V0Z"/>
+    <path d="M560 73.1969H483.951V485.921H560V73.1969Z"/>
+    <path d="M560 485.039H393.21V560H560V485.039Z"/>
+    <path d="M0 0H166.79V74.9606H0V0Z"/>
+    <path d="M0 73.1969H76.0494V485.921H0V73.1969Z"/>
+    <path d="M0 485.039H166.79V560H0V485.039Z"/>
+  </g>
+
+  <!-- wordmark: Departure Mono, kept clear of the brandmark (>40px) -->
+  <text x="256" y="132" font-family="Departure Mono, JetBrainsMono Nerd Font" font-size="46" fill="#ebebeb" letter-spacing="1">anvil plan spec</text>
+
+  <!-- parent brand, quiet, top-right -->
+  <text x="1200" y="112" text-anchor="end" font-family="JetBrainsMono Nerd Font" font-size="20" fill="#85858a" letter-spacing="1">eddacraft</text>
+
+  <!-- ===== terminal window ===== -->
+  <rect x="80" y="196" width="1120" height="380" fill="#141416" stroke="#2a2a2e" stroke-width="1"/>
+  <!-- title bar -->
+  <line x1="80" y1="244" x2="1200" y2="244" stroke="#2a2a2e" stroke-width="1"/>
+  <text x="104" y="227" font-family="JetBrainsMono Nerd Font" font-size="18" fill="#85858a">// ~/eddacraft/anvil-plan-spec</text>
+  <text x="1176" y="227" text-anchor="end" font-family="JetBrainsMono Nerd Font" font-size="18" fill="#85858a">aps</text>
+
+  <!-- terminal body: large mono facts (xml:space=preserve keeps tspan-edge spaces) -->
+  <g font-family="JetBrainsMono Nerd Font" font-size="28"><text x="104" y="300" xml:space="preserve"><tspan fill="#cc5500">$</tspan><tspan fill="#ebebeb"> aps next</tspan></text><text x="104" y="348" fill="#85858a">// the plan survives model, harness, team, and time</text><text x="104" y="404" xml:space="preserve"><tspan fill="#2e8b57">[ OK ]</tspan><tspan fill="#ebebeb"> MARKDOWN-NATIVE PLANNING SPEC</tspan></text><text x="104" y="452" xml:space="preserve"><tspan fill="#2e8b57">[ OK ]</tspan><tspan fill="#ebebeb"> 12 HARNESSES </tspan><tspan fill="#85858a">::</tspan><tspan fill="#ebebeb"> ONE CONTRACT</tspan></text><text x="104" y="500" xml:space="preserve"><tspan fill="#2e8b57">[ OK ]</tspan><tspan fill="#ebebeb"> RUST </tspan><tspan fill="#85858a">::</tspan><tspan fill="#ebebeb"> BASH </tspan><tspan fill="#85858a">::</tspan><tspan fill="#ebebeb"> POWERSHELL</tspan></text><text x="104" y="548"><tspan fill="#cc5500">$</tspan></text></g>
+  <!-- cursor block, anvil ember (after "$ ") -->
+  <rect x="132" y="527" width="15" height="26" fill="#cc5500"/>
+
+  <!-- footer: repo url, quiet -->
+  <text x="640" y="614" text-anchor="middle" font-family="JetBrainsMono Nerd Font" font-size="18" fill="#85858a" letter-spacing="0.5">github.com/eddacraft/anvil-plan-spec</text>
+</svg>
