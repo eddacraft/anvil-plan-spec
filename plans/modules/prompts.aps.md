@@ -31,7 +31,7 @@ harnesses without drifting away from the shared APS lifecycle.
 **Depends on:**
 
 - AGENT (agents) — stubs and variants defer to `AGENTS.md` / `aps-rules.md`
-- SPEC (spec) — prompts must teach the canonical status vocabulary (D-026)
+- SPEC (spec) — prompts must teach the canonical status vocabulary (D-037)
 
 **Exposes:**
 
@@ -68,16 +68,16 @@ harness now has a prompt entry point (D-006 closed by PROMPTS-003).
 
 ## Work Items
 
-### PROMPTS-001: Normalize existing prompt variants — Ready
+### PROMPTS-001: Normalize existing prompt variants — In Progress
 
-- **Status:** Ready
+- **Status:** In Progress
 - **Intent:** Keep the OpenCode and Claude Code variants consistent with the
   generic APS rules so tool prompts state only their tool-specific deltas and
   otherwise defer to shared APS concepts.
 - **Expected Outcome:** Each variant under `opencode/` and `claudecode/` opens
   with a one-line "defers to generic; differences below" pointer, carries no
   duplicated stale lifecycle rules, and uses the canonical status vocabulary
-  (`Draft / Ready / In Progress / Complete / Blocked`, D-026).
+  (`Draft / Ready / In Progress / Complete / Blocked`, D-037).
 - **Validation:** Diff each variant against its generic counterpart — only
   intentional deltas remain; `markdownlint docs/ai/prompting/` passes.
 - **Confidence:** high
