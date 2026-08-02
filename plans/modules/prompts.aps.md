@@ -127,6 +127,5 @@ harness now has a prompt entry point (D-006 closed by PROMPTS-003).
 
 ## Notes
 
-Promoted Draft → Ready on 2026-06-27. PROMPTS-001 and PROMPTS-002 have no
-dependencies and can start immediately; PROMPTS-003 follows once the
-variant-vs-stub policy (D-038) is written.
+Promoted Draft → Ready on 2026-06-27. PROMPTS-002 and PROMPTS-003 completed on
+2026-07-16; PROMPTS-001 is the remaining item and is now In Progress.
