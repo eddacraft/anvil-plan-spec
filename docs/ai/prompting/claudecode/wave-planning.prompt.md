@@ -1,6 +1,8 @@
 # Wave Planning for Parallel Execution
 
-Use this prompt to analyze APS work items and plan parallel execution waves.
+This variant defers to the [generic action plan prompt](../actions.prompt.md); only Claude Code-specific differences follow.
+
+Use this prompt to map APS work items into parallel Claude Code Task waves.
 
 ---
 
@@ -11,7 +13,7 @@ I have an APS project with these work items and dependencies:
 
 {PASTE WORK ITEMS TABLE OR MODULE CONTENT}
 
-Analyze the dependency graph and create a wave-based execution plan:
+Analyze the dependency graph and create a Claude Code Task execution plan:
 
 1. **Wave 1**: Tasks with no dependencies (can start immediately)
 2. **Wave 2**: Tasks whose dependencies are all in Wave 1
