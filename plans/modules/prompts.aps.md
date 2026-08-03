@@ -83,6 +83,11 @@ harness now has a prompt entry point (D-006 closed by PROMPTS-003).
 - **Confidence:** high
 - **Dependencies:** None
 - **Files:** docs/ai/prompting/opencode/, docs/ai/prompting/claudecode/
+- **Results:** Normalized eight OpenCode and Claude Code variants to defer to
+  their generic prompts while retaining harness-specific deltas. APS lint,
+  the full CLI suite, repository-wide Markdown lint, diff checks, and fresh
+  independent verification pass. Review:
+  [#143](https://github.com/eddacraft/anvil-plan-spec/pull/143) (base: `main`).
 
 ### PROMPTS-002: Document variant-vs-stub policy — Complete 2026-07-16
 
