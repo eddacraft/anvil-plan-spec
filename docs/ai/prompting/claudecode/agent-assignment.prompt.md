@@ -1,13 +1,15 @@
 # Agent Assignment for Multi-Agent Execution
 
-Use this prompt to optimally assign work items to parallel agents.
+This variant defers to the [generic action plan prompt](../actions.prompt.md); only Claude Code-specific differences follow.
+
+Use this prompt to assign Claude Code Tasks to parallel agents.
 
 ---
 
 ## Prompt
 
 ```
-I have these APS work items ready for execution:
+I have created Claude Code Tasks for these Ready APS work items:
 
 {PASTE WORK ITEMS WITH FILES/PACKAGES}
 

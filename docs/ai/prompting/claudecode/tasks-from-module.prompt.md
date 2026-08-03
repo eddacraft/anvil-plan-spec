@@ -1,5 +1,7 @@
 # Create Tasks from APS Module
 
+This variant defers to the [generic module prompt](../module.prompt.md); only Claude Code-specific differences follow.
+
 Use this prompt to generate Claude Code Tasks from an APS module spec.
 
 ---
@@ -9,7 +11,7 @@ Use this prompt to generate Claude Code Tasks from an APS module spec.
 ```
 Read the APS module at: {MODULE_PATH}
 
-For each work item with status "Ready":
+For each work item with canonical `- **Status:** Ready`:
 
 1. Create a Task with format: "{ID}: {title}"
    - Example: "AUTH-001: User registration flow"

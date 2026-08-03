@@ -1,6 +1,8 @@
 # Sync Task Status to APS
 
-Use this prompt at session end to update APS files with task completion status.
+This variant defers to the [generic module](../module.prompt.md) and [index](../index.prompt.md) prompts; only Claude Code-specific differences follow.
+
+Use this prompt at session end to reconcile Claude Code Task outcomes with APS.
 
 ---
 
@@ -21,15 +23,17 @@ New work discovered:
 
 Please update the APS files:
 
-1. In the module file (plans/modules/{MODULE}.aps.md):
-   - Mark completed work items with `Status: Complete (YYYY-MM-DD)`
-   - Mark blocked items with `Status: Blocked: {reason}`
-   - Add discovered work as new Draft work items
+Follow the repository's `AGENTS.md` and the current APS file structure for
+lifecycle and index rules.
 
-2. In the index (plans/index.aps.md):
-   - Update "What's Next" section
-   - Remove completed items
-   - Add any new Ready items
+1. In the module file (`plans/modules/{MODULE}.aps.md`), map Claude Code Task
+   outcomes to canonical APS status fields:
+   - Completed: `- **Status:** Complete: YYYY-MM-DD`
+   - Blocked: `- **Status:** Blocked: {reason}`
+   - Discovered: add a work item with `- **Status:** Draft`
+
+2. Reconcile the index only where repository guidance and its existing structure
+   require it. Do not add or remove a "What's Next" section merely for this sync.
 
 3. Show me the git diff of changes for review.
 ```
@@ -59,12 +63,12 @@ Claude updates:
 
 ### AUTH-001: User registration flow
 
-- **Status:** Complete (2025-01-24)
+- **Status:** Complete: 2025-01-24
   ...
 
 ### AUTH-002: Email verification
 
-- **Status:** Complete (2025-01-24)
+- **Status:** Complete: 2025-01-24
   ...
 
 ### AUTH-003: Password reset
@@ -72,8 +76,9 @@ Claude updates:
 - **Status:** Blocked: email provider API key not configured
   ...
 
-### AUTH-004: Rate limiting for registration (Draft)
+### AUTH-004: Rate limiting for registration
 
+- **Status:** Draft
 - **Intent:** Prevent abuse of registration endpoint
 - **Expected Outcome:** Registration endpoint returns 429 after N requests/minute
 - **Validation:** `npm test -- rate-limit`
@@ -92,7 +97,7 @@ Session ending. Please perform the APS session end ritual:
 
 1. **Update status** - Mark work items based on task completion
 2. **Capture discovered work** - Add new Draft items I mentioned
-3. **Update "What's Next"** - Reflect current priority queue
+3. **Reconcile the index** - Follow repository guidance and existing structure
 4. **Session summary** - Brief note for next agent
 
 Completed: {list tasks}
