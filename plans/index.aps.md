@@ -5,7 +5,7 @@
 | Status  | Active     |
 | Owner   | @aneki     |
 | Created | 2025-12-31 |
-| Updated | 2026-07-22 |
+| Updated | 2026-08-07 |
 
 ## Problem
 
@@ -86,6 +86,7 @@ release narratives live in [`plans/releases/`](./releases/).
 | [prompts](./modules/prompts.aps.md)           | Tool-specific prompt variants                             | In Progress |
 | [integrations](./modules/integrations.aps.md) | JSON export, GitHub Action, lint/rollup CI surface        | Complete    |
 | [team-coordination](./modules/team-coordination.aps.md) | Multi-human, multi-agent claims, handoffs, and visibility | Draft |
+| [progress-journal](./modules/progress-journal.aps.md) | Standing modules, create-only progress journals, computed counts | Draft |
 | [cli-redesign](./modules/cli-redesign.aps.md)         | Solo/team CLI command rethink, binary upgrade, harness expansion | Draft |
 | [monorepo](./modules/monorepo.aps.md)         | Nested index.aps.md plans, federated lint + orchestration | Complete |
 | [package-views](./modules/package-views.aps.md) | CLI tooling for the tagged monorepo tier (`Packages:` lint, next filter, generated views) | Complete |
