@@ -1435,6 +1435,58 @@ cmd_update_v1() {
   echo ""
 }
 
+# True when $1 is a shebang script (bash CLI). Native binaries are not.
+is_script_cli() {
+  local f="$1" magic
+  [[ -f "$f" ]] || return 1
+  magic="$(head -c 2 "$f" 2>/dev/null || true)"
+  [[ "$magic" == "#!" ]]
+}
+
+detect_release_target() {
+  local os arch
+  os="$(uname -s)"
+  arch="$(uname -m)"
+  case "$os/$arch" in
+    Linux/x86_64)              echo "x86_64-unknown-linux-gnu" ;;
+    Linux/aarch64|Linux/arm64) echo "aarch64-unknown-linux-gnu" ;;
+    Darwin/arm64)              echo "aarch64-apple-darwin" ;;
+    Darwin/x86_64)             echo "x86_64-apple-darwin" ;;
+    *) return 1 ;;
+  esac
+}
+
+# Download the prebuilt aps binary from GitHub releases into $1.
+# Returns non-zero on failure so callers can keep a script runtime.
+install_release_binary() {
+  local dest_dir="$1" target url tmp ver
+  if ! target="$(detect_release_target)"; then
+    return 1
+  fi
+  ver="${VERSION:-${APS_VERSION:-main}}"
+  if [[ "$ver" == "main" || "$ver" == "latest" ]]; then
+    url="https://github.com/EddaCraft/anvil-plan-spec/releases/latest/download/aps-$target.tar.gz"
+  else
+    url="https://github.com/EddaCraft/anvil-plan-spec/releases/download/v${ver#v}/aps-$target.tar.gz"
+  fi
+  tmp="$(mktemp -d)"
+  if ! curl -fsSL "$url" -o "$tmp/aps.tar.gz"; then
+    rm -rf "$tmp"
+    return 1
+  fi
+  if ! tar -xzf "$tmp/aps.tar.gz" -C "$tmp"; then
+    rm -rf "$tmp"
+    return 1
+  fi
+  if ! mkdir -p "$dest_dir" || ! mv "$tmp/aps" "$dest_dir/aps"; then
+    rm -rf "$tmp"
+    return 1
+  fi
+  chmod +x "$dest_dir/aps"
+  rm -rf "$tmp"
+  return 0
+}
+
 cmd_update_global() {
   local aps_home="${APS_HOME:-$HOME/.aps}"
 
@@ -1450,6 +1502,22 @@ cmd_update_global() {
   echo ""
   info "Updating global APS CLI at $aps_home"
   echo ""
+
+  local bin="$aps_home/bin/aps"
+  # Native binary installs must never be overwritten with the bash runtime.
+  if [[ -f "$bin" ]] && ! is_script_cli "$bin"; then
+    if install_release_binary "$aps_home/bin"; then
+      info "Global update complete"
+      info "native binary updated at $bin"
+      echo ""
+      return 0
+    fi
+    error "Failed to update the native binary at $bin"
+    echo "The existing binary was left in place (not replaced with the bash CLI)."
+    echo "Re-run: curl -fsSL https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install | bash -s -- --cli"
+    echo ""
+    exit 1
+  fi
 
   for f in "${V2_CLI_FILES[@]}"; do
     download "$f" "$aps_home/$f"
@@ -1477,7 +1545,9 @@ For v2: reads .aps/config.yml to determine which tool files to refresh.
 For v1: updates in-place, suggests migration.
 
 Options:
-  --global  Update the global CLI installation (~/.aps/)
+  --global  Upgrade the machine-wide CLI at ~/.aps (or \$APS_HOME).
+            Native binaries are replaced from GitHub releases; script
+            runtimes refresh bin/ + lib/. Never mixes the two.
   --help    Show this help
 
 Environment:

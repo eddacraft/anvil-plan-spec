@@ -19,6 +19,7 @@ mod orchestrate;
 mod parser;
 mod rollup;
 mod scaffold;
+mod self_update;
 mod setup;
 mod update;
 mod wizard;
@@ -103,6 +104,9 @@ enum Command {
     Update {
         /// Project directory (default: current directory)
         dir: Option<String>,
+        /// Upgrade the machine-wide CLI at $APS_HOME/bin (default ~/.aps/bin)
+        #[arg(long, short = 'g')]
+        global: bool,
     },
     /// Move a project onto the global binary: diagnose, remove vendored bloat
     Migrate {
@@ -328,7 +332,10 @@ fn main() {
             );
             std::process::exit(code);
         }
-        Some(Command::Update { dir }) => {
+        Some(Command::Update { dir, global }) => {
+            if global {
+                std::process::exit(self_update::cmd_update_global());
+            }
             let start = PathBuf::from(dir.unwrap_or_else(|| ".".to_string()));
             std::process::exit(update::cmd_update(&start));
         }

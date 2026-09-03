@@ -1119,6 +1119,65 @@ function Invoke-ApsUpdate {
     Write-Host ""
 }
 
+function Test-ApsNativeBinary {
+    <#
+    .SYNOPSIS
+        True when $Path is a native APS binary (not a shebang script).
+    #>
+    param([string]$Path)
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return $false }
+    if ([System.IO.Path]::GetExtension($Path) -eq ".exe") { return $true }
+    $stream = [System.IO.File]::OpenRead($Path)
+    try {
+        $b0 = $stream.ReadByte()
+        $b1 = $stream.ReadByte()
+        return -not ($b0 -eq 0x23 -and $b1 -eq 0x21)
+    } finally {
+        $stream.Dispose()
+    }
+}
+
+function Get-ApsReleaseTarget {
+    $arch = $env:PROCESSOR_ARCHITECTURE
+    switch ($arch) {
+        "AMD64" { return "x86_64-pc-windows-gnu" }
+        default { return $null }
+    }
+}
+
+function Install-ApsReleaseBinary {
+    <#
+    .SYNOPSIS
+        Download the prebuilt aps.exe from GitHub releases into $DestDir.
+    #>
+    param([string]$DestDir)
+    $target = Get-ApsReleaseTarget
+    if (-not $target) { return $false }
+
+    $ver = if ($env:VERSION) { $env:VERSION } elseif ($script:ApsVersion) { $script:ApsVersion } else { "main" }
+    if ($ver -eq "main" -or $ver -eq "latest") {
+        $url = "https://github.com/EddaCraft/anvil-plan-spec/releases/latest/download/aps-$target.zip"
+    } else {
+        $v = $ver.TrimStart("v")
+        $url = "https://github.com/EddaCraft/anvil-plan-spec/releases/download/v$v/aps-$target.zip"
+    }
+
+    $tmp = Join-Path ([System.IO.Path]::GetTempPath()) ("aps-" + [System.IO.Path]::GetRandomFileName())
+    New-Item -ItemType Directory -Path $tmp -Force | Out-Null
+    try {
+        $zip = Join-Path $tmp "aps.zip"
+        Invoke-WebRequest -Uri $url -OutFile $zip -UseBasicParsing
+        Expand-Archive -Path $zip -DestinationPath $tmp -Force
+        New-Item -ItemType Directory -Path $DestDir -Force | Out-Null
+        Move-Item -Path (Join-Path $tmp "aps.exe") -Destination (Join-Path $DestDir "aps.exe") -Force
+        return $true
+    } catch {
+        return $false
+    } finally {
+        Remove-Item -Path $tmp -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
+
 function Update-ApsGlobal {
     <#
     .SYNOPSIS
@@ -1139,6 +1198,22 @@ function Update-ApsGlobal {
     Write-Host ""
     Write-ApsInfo "Updating global APS CLI at $ApsHome"
     Write-Host ""
+
+    $nativeExe = Join-Path $binDir "aps.exe"
+    $unixBin = Join-Path $binDir "aps"
+    if ((Test-Path -LiteralPath $nativeExe) -or (Test-ApsNativeBinary -Path $unixBin)) {
+        if (Install-ApsReleaseBinary -DestDir $binDir) {
+            Write-ApsInfo "Global update complete"
+            Write-ApsInfo "native binary updated at $binDir"
+            Write-Host ""
+            return
+        }
+        Write-ApsError "Failed to update the native binary under $binDir"
+        Write-Host "The existing binary was left in place (not replaced with the PowerShell CLI)."
+        Write-Host 'Re-run: irm https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install.ps1 | iex -- --cli'
+        Write-Host ""
+        exit 1
+    }
 
     foreach ($f in $script:CliFilesPowerShell) {
         Invoke-ApsDownloadRoot -Source $f -Destination (Join-Path $ApsHome $f)
@@ -1164,7 +1239,9 @@ touching your specs (index.aps.md, modules/*.aps.md, execution/*.actions.md).
 If hooks are not yet configured, prompts to install them.
 
 Options:
-  --global  Update the global CLI installation (~/.aps/)
+  --global  Upgrade the machine-wide CLI at ~/.aps (or `$env:APS_HOME).
+            Native binaries are replaced from GitHub releases; script
+            runtimes refresh bin/ + lib/. Never mixes the two.
   --help    Show this help
 
 Environment:

@@ -19,6 +19,13 @@ trap 'rm -rf "$WORK"' EXIT
 
 "$APS_BIN" --version >/dev/null
 
+"$APS_BIN" update --help | grep -q -- '--global'
+
+if APS_HOME="$WORK/no-global" "$APS_BIN" update --global; then
+  echo "native user journey: update --global should fail without a global install" >&2
+  exit 1
+fi
+
 # Single-project root.
 SINGLE="$WORK/single"
 mkdir -p "$SINGLE"
