@@ -6,7 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
-_Nothing yet._
+### Added
+
+- **`aps update --global`** upgrades the machine-wide CLI at `~/.aps` (or
+  `$APS_HOME`) from GitHub releases. Project `aps update` is unchanged. Bash
+  and PowerShell `--global` no longer overwrite a native binary with the
+  script runtime.
 
 ## [0.8.1] - 2026-07-31
 

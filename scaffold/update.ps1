@@ -156,6 +156,20 @@ function Test-V1Layout {
 
 # --- Global update: CLI only ---
 
+function Test-ApsNativeBinary {
+    param([string]$Path)
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return $false }
+    if ([System.IO.Path]::GetExtension($Path) -eq ".exe") { return $true }
+    $stream = [System.IO.File]::OpenRead($Path)
+    try {
+        $b0 = $stream.ReadByte()
+        $b1 = $stream.ReadByte()
+        return -not ($b0 -eq 0x23 -and $b1 -eq 0x21)
+    } finally {
+        $stream.Dispose()
+    }
+}
+
 function Update-ApsGlobal {
     $ApsHome = if ($env:APS_HOME) { $env:APS_HOME } else { Join-Path $HOME ".aps" }
     $binDir = Join-Path $ApsHome "bin"
@@ -174,6 +188,17 @@ function Update-ApsGlobal {
     Write-Host ""
 
     Write-Step "Updating APS CLI at $ApsHome"
+
+    $nativeExe = Join-Path $binDir "aps.exe"
+    $unixBin = Join-Path $binDir "aps"
+    if ((Test-Path -LiteralPath $nativeExe) -or (Test-ApsNativeBinary -Path $unixBin)) {
+        Write-Err "Native binary install detected under $binDir"
+        Write-Host "The curl/irm updater will not replace it with the script runtime."
+        Write-Host "Use the native CLI: aps update --global"
+        Write-Host "Or re-run: irm https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install.ps1 | iex -- --cli"
+        Write-Host ""
+        exit 1
+    }
 
     foreach ($f in ($CliFilesBash + $CliFilesPowerShell)) {
         Invoke-Download -Path $f -Destination (Join-Path $ApsHome $f)

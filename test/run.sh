@@ -634,6 +634,28 @@ for kw in 'crates.io' 'Scoop' 'binstall'; do
 done
 pass
 
+# Test 39b: aps update --global never overwrites a native binary with the bash CLI (CLI-003)
+echo -n "Test: update --global preserves a native binary... "
+$APS update --help 2>&1 | grep -q -- '--global' || fail "bash aps update --help missing --global"
+GHOME=$(mktemp -d)
+mkdir -p "$GHOME/bin"
+# Not a shebang — stand in for a native ELF/Mach-O binary.
+printf 'ELF-STUB' > "$GHOME/bin/aps"
+chmod +x "$GHOME/bin/aps"
+# Force the release download to fail so we observe the fail-closed path.
+if VERSION=0.0.0-not-a-release APS_HOME="$GHOME" $APS update --global >/dev/null 2>&1; then
+  fail "update --global should fail when the native download fails"
+fi
+[[ "$(cat "$GHOME/bin/aps")" == "ELF-STUB" ]] \
+  || fail "update --global replaced a native binary with the bash CLI"
+# Missing bin dir is a hard error, not a silent install.
+NHOME=$(mktemp -d)
+if APS_HOME="$NHOME" $APS update --global >/dev/null 2>&1; then
+  fail "update --global should fail when no global install exists"
+fi
+rm -rf "$GHOME" "$NHOME"
+pass
+
 # Test 40: binary-first project init — docs + picker reflect no default vendoring (INSTALL-018)
 echo -n "Test: binary-first project init... "
 DOCS="$PROJECT_ROOT/docs/installation.md"

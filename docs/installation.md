@@ -104,8 +104,21 @@ $env:APS_HOME = "$HOME\Tools\aps"
 & ([scriptblock]::Create((irm https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install.ps1))) --global
 ```
 
-To update a global installation, reinstall the binary the same way you
-installed it:
+To update a global installation, run `aps update --global` from the
+installed CLI. That fetches the current GitHub-release binary into
+`~/.aps/bin` (or `$APS_HOME/bin`):
+
+```bash
+aps update --global
+```
+
+Pin a release with `APS_VERSION` (or `VERSION`):
+
+```bash
+APS_VERSION=0.8.1 aps update --global
+```
+
+Other channels still work the same way you installed:
 
 ```bash
 cargo binstall aps-cli                                  # prebuilt binary
@@ -119,12 +132,14 @@ curl -fsSL .../scaffold/update | bash -s -- --global
 PowerShell equivalents:
 
 ```powershell
+aps update --global
 & ([scriptblock]::Create((irm https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install.ps1))) --cli
 & ([scriptblock]::Create((irm https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/update.ps1))) --global
 ```
 
-> Note: `aps update` (the binary subcommand) reconciles a **project's**
-> generated files — it is not how you upgrade the global binary itself.
+> Note: `aps update` without flags reconciles a **project's** generated
+> files. `aps update --global` upgrades the machine-wide CLI. A native
+> `~/.aps/bin/aps` is never overwritten with the bash/PowerShell runtime.
 
 To uninstall: remove `~/.aps/` and the PATH line from your shell config.
 

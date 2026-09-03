@@ -6,7 +6,7 @@
 | --- | ------ | -------- | ------ |
 | CLI | @aneki | high     | Draft  |
 
-**Last reviewed:** 2026-07-23
+**Last reviewed:** 2026-09-03
 
 ## Purpose
 
@@ -123,15 +123,24 @@ Change status to **Ready** when:
 
 - **Intent:** Ship the redesign as a clean binary upgrade with a single, honest
   version surface and reliable self-update.
-- **Expected Outcome:** `aps upgrade` and the version output behave consistently
-  across channels; `cli_version` reconciliation (D-036/D-044) and the staleness
-  check remain the single on-disk version stamp; release checklist updated.
-  Partial: INSTALL-025 adds the interactive pin-vs-CLI gate on `aps update`
-  (update pin / install matching CLI / continue); full self-update via
-  `aps upgrade` remains in this item.
-- **Validation:** `cargo test`; a fetched/installed binary self-reports the new
-  version and upgrades cleanly on Mac/Linux/Windows.
+- **Expected Outcome:** `aps update --global` upgrades the machine-wide CLI at
+  `$APS_HOME/bin` (default `~/.aps/bin`) from GitHub releases, matching the
+  bash/PowerShell flag. Project `aps update` is unchanged. Native installs are
+  never overwritten with the script runtime. `cli_version` reconciliation
+  (D-036/D-044) remains the on-disk project stamp. `aps upgrade` stays reserved
+  until bash `upgrade` is fully aliased to `migrate` (D-CLI-a); this item ships
+  the self-update _job_ on `--global` rather than reassigning that verb.
+  Partial: INSTALL-025 already added the interactive pin-vs-CLI gate on project
+  `aps update`.
+- **Validation:** `cargo test --bin aps self_update`; `./test/run.sh`; native
+  `aps update --help` shows `--global`; `aps update --global` with no
+  `$APS_HOME/bin` exits 1.
 - **Confidence:** medium
+- **Status:** In Progress
+- **Files:** `cli/src/self_update.rs`, `cli/src/main.rs`, `lib/scaffold.sh`,
+  `lib/Scaffold.psm1`, `scaffold/update`, `scaffold/update.ps1`,
+  `docs/installation.md`, `docs/usage.md`, `CHANGELOG.md`, `test/run.sh`,
+  `test/native-user-journey.sh`
 - **Dependencies:** CLI-001, INSTALL
 
 ### CLI-004: Finish Gemini removal and confirm Grok end-to-end
@@ -257,6 +266,13 @@ Change status to **Ready** when:
 
   Note: "zero-asset" bounds bespoke **scaffold** cost only; each add still carries
   per-tool CLI plumbing + D-039 three-way parity + a real init smoke test.
+
+- **D-CLI-e (accepted 2026-09-03):** Ship binary self-update as
+  `aps update --global` (the flag bash/PowerShell already advertised) rather
+  than reassigning `aps upgrade` in the same change. D-CLI-a still reserves
+  `upgrade` for this job once bash `upgrade` (bloat-strip) is only an alias
+  to `migrate`. Mixing the two verbs while bash `upgrade` still removes bloat
+  would recreate F2.
 
 ## Notes
 

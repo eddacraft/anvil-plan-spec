@@ -14,6 +14,7 @@ faster and harder to get wrong than manual status edits.
 ```bash
 aps init [dir]              # Create APS structure in a new project
 aps update [dir]            # Reconcile generated templates + skill (add missing, refresh)
+aps update --global         # Upgrade the machine-wide CLI at ~/.aps (or $APS_HOME)
 aps migrate [dir]           # Move a project onto the global binary (remove vendored bloat)
 aps lint [file|dir]         # Validate APS documents
 aps next [module]           # Show the next ready work item
@@ -145,6 +146,9 @@ These are the install-time commands:
   project's `cli_version` pin differs from the running CLI, an interactive run
   asks whether to update the pin, keep the pin and install a matching CLI, or
   continue without changing the pin; non-interactive runs warn and continue.
+  **`aps update --global`** is a different job: it upgrades the machine-wide
+  CLI binary at `$APS_HOME/bin` (default `~/.aps/bin`) from GitHub releases.
+  It does not touch project files.
 - **`aps migrate [dir]`** moves a project off the vendored bash CLI onto the
   global binary: it runs the `aps doctor` diagnosis, then (with `--apply`) backs
   up and removes vendored CLI bloat, rewrites stale hook paths, pins
