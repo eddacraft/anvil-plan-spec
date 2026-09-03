@@ -1,6 +1,24 @@
-# Force the patched hono release into the @modelcontextprotocol/sdk dependency
-# tree (transitive via @hono/node-server). Resolves GHSA advisories for CORS
-# wildcard credential reflection, serve-static path traversal, body-limit
-# bypass, and Set-Cookie/header handling. See alerts #25-#29.
+# Force patched releases into the @modelcontextprotocol/sdk dependency tree.
+# hono is transitive via @hono/node-server; the others are nested under
+# ajv, express, and express-rate-limit. Parent ranges already permit these
+# versions; pnpm will not refresh them without overrides.
+#
+# hono ^4.12.34: GHSA-f23p-vx2j-j53r, GHSA-8j4g-w8fx-2239,
+#   GHSA-54fx-42gc-7vw4, GHSA-79qm-7rj5-m7r9 (alerts #44-#49).
+#   Earlier CORS/serve-static/body-limit advisories were #25-#29.
+# @hono/node-server ^1.19.15: GHSA-frvp-7c67-39w9 (alert #51).
+# fast-uri ^3.1.7: GHSA-fph4-wmhf-6fwf and siblings (alerts #35, #36, #46, #52).
+# ip-address ^10.3.1: GHSA-mwp4-54f8-5fhr, GHSA-4xrf-jv44-h6hh,
+#   GHSA-22jq-vg5j-6vgg (alerts #42, #43, #45).
+# body-parser ^2.3.0: GHSA-v422-hmwv-36x6 (alert #33).
 overrides:
-  hono: ^4.12.27
+  hono: ^4.12.34
+  "@hono/node-server": ^1.19.15
+  fast-uri: ^3.1.7
+  ip-address: ^10.3.1
+  body-parser: ^2.3.0
+
+# 3.1.7 is newer than pnpm's minimumReleaseAge window; exclude so the
+# host-confusion patch can be installed.
+minimumReleaseAgeExclude:
+  - fast-uri@3.1.7
