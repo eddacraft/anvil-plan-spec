@@ -1127,13 +1127,19 @@ function Test-ApsNativeBinary {
     param([string]$Path)
     if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return $false }
     if ([System.IO.Path]::GetExtension($Path) -eq ".exe") { return $true }
-    $stream = [System.IO.File]::OpenRead($Path)
     try {
-        $b0 = $stream.ReadByte()
-        $b1 = $stream.ReadByte()
-        return -not ($b0 -eq 0x23 -and $b1 -eq 0x21)
-    } finally {
-        $stream.Dispose()
+        $stream = [System.IO.File]::OpenRead($Path)
+        try {
+            $b0 = $stream.ReadByte()
+            $b1 = $stream.ReadByte()
+            return -not ($b0 -eq 0x23 -and $b1 -eq 0x21)
+        } finally {
+            $stream.Dispose()
+        }
+    } catch {
+        # Unreadable/locked: fail closed and treat as native so we never
+        # overwrite it with the script runtime.
+        return $true
     }
 }
 
@@ -1239,7 +1245,7 @@ touching your specs (index.aps.md, modules/*.aps.md, execution/*.actions.md).
 If hooks are not yet configured, prompts to install them.
 
 Options:
-  --global  Upgrade the machine-wide CLI at ~/.aps (or `$env:APS_HOME).
+  --global  Upgrade the machine-wide CLI at ~/.aps (or APS_HOME).
             Native binaries are replaced from GitHub releases; script
             runtimes refresh bin/ + lib/. Never mixes the two.
   --help    Show this help

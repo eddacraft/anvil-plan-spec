@@ -105,7 +105,7 @@ enum Command {
         /// Project directory (default: current directory)
         dir: Option<String>,
         /// Upgrade the machine-wide CLI at $APS_HOME/bin (default ~/.aps/bin)
-        #[arg(long, short = 'g')]
+        #[arg(long, short = 'g', conflicts_with = "dir")]
         global: bool,
     },
     /// Move a project onto the global binary: diagnose, remove vendored bloat
