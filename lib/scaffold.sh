@@ -1478,6 +1478,10 @@ install_release_binary() {
     rm -rf "$tmp"
     return 1
   fi
+  if [[ -L "$tmp/aps" || ! -f "$tmp/aps" ]]; then
+    rm -rf "$tmp"
+    return 1
+  fi
   if ! mkdir -p "$dest_dir" || ! mv "$tmp/aps" "$dest_dir/aps"; then
     rm -rf "$tmp"
     return 1

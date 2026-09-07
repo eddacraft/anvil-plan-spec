@@ -160,13 +160,17 @@ function Test-ApsNativeBinary {
     param([string]$Path)
     if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return $false }
     if ([System.IO.Path]::GetExtension($Path) -eq ".exe") { return $true }
-    $stream = [System.IO.File]::OpenRead($Path)
     try {
-        $b0 = $stream.ReadByte()
-        $b1 = $stream.ReadByte()
-        return -not ($b0 -eq 0x23 -and $b1 -eq 0x21)
-    } finally {
-        $stream.Dispose()
+        $stream = [System.IO.File]::OpenRead($Path)
+        try {
+            $b0 = $stream.ReadByte()
+            $b1 = $stream.ReadByte()
+            return -not ($b0 -eq 0x23 -and $b1 -eq 0x21)
+        } finally {
+            $stream.Dispose()
+        }
+    } catch {
+        return $true
     }
 }
 

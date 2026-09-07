@@ -119,8 +119,10 @@ impl BinaryInstaller for CurlInstaller {
                 "aps"
             };
             let src = tmp.join(src_name);
-            if !src.is_file() {
-                return Err(format!("archive did not contain {src_name} (url: {url})"));
+            if !is_regular_file(&src) {
+                return Err(format!(
+                    "archive did not contain a regular file {src_name} (url: {url})"
+                ));
             }
 
             fs::create_dir_all(dest_dir)
@@ -135,6 +137,11 @@ impl BinaryInstaller for CurlInstaller {
         let _ = fs::remove_dir_all(&tmp);
         result
     }
+}
+
+/// True only for a non-symlink regular file (does not follow links).
+fn is_regular_file(path: &Path) -> bool {
+    fs::symlink_metadata(path).is_ok_and(|meta| meta.is_file())
 }
 
 fn replace_binary(staging: &Path, dest: &Path) -> Result<(), String> {
@@ -273,6 +280,26 @@ mod tests {
             fs::write(dest_dir.join(installed_bin_name()), self.payload).unwrap();
             Ok(())
         }
+    }
+
+    #[test]
+    fn regular_file_check_rejects_symlinks() {
+        let dir = scratch("symlink");
+        fs::create_dir_all(&dir).unwrap();
+        let target = dir.join("target");
+        let link = dir.join("link");
+        fs::write(&target, b"payload").unwrap();
+        #[cfg(unix)]
+        {
+            std::os::unix::fs::symlink(&target, &link).unwrap();
+            assert!(is_regular_file(&target));
+            assert!(!is_regular_file(&link));
+        }
+        #[cfg(not(unix))]
+        {
+            assert!(is_regular_file(&target));
+        }
+        fs::remove_dir_all(&dir).ok();
     }
 
     #[test]
