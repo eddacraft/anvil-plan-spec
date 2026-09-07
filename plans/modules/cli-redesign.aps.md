@@ -136,11 +136,16 @@ Change status to **Ready** when:
   `aps update --help` shows `--global`; `aps update --global` with no
   `$APS_HOME/bin` exits 1.
 - **Confidence:** medium
-- **Status:** In Progress
+- **Status:** Merged: 2026-09-07
 - **Files:** `cli/src/self_update.rs`, `cli/src/main.rs`, `lib/scaffold.sh`,
   `lib/Scaffold.psm1`, `scaffold/update`, `scaffold/update.ps1`,
   `docs/installation.md`, `docs/usage.md`, `CHANGELOG.md`, `test/run.sh`,
   `test/native-user-journey.sh`
+- **Results:** Native `aps update --global` and fail-closed script updaters
+  landed on `main` via PR #147 (`7f50c9f`, ancestor of `origin/main`).
+  `aps upgrade` remains reserved until bash `upgrade` is only a `migrate`
+  alias. Copilot review findings (clap conflict, symlink payloads, pwsh
+  fail-closed, help typo) fixed in the same PR.
 - **Dependencies:** CLI-001, INSTALL
 
 ### CLI-004: Finish Gemini removal and confirm Grok end-to-end
