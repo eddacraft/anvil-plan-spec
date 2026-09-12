@@ -92,7 +92,7 @@ fn list_records(plans: &Path) -> Vec<(String, PathBuf)> {
         }
         out.push((rest.to_string(), entry.path()));
     }
-    out.sort_by(|left, right| version_key(&left.0).cmp(&version_key(&right.0)));
+    out.sort_by_key(|left| version_key(&left.0));
     out
 }
 
