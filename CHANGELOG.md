@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **`aps release` (REL-005, Rust phase)** — `new` scaffolds a release record
+  from the template, `status` summarises a release's modules and work-item
+  completion, `notes` drafts markdown from Complete items since the previous
+  release, and `close` reads the prose release record plus the plan tree and
+  advances `Merged`/`Released` items to `Complete` with a release-evidence
+  line, reporting every item advanced or skipped. Dry-run is the default;
+  `--apply` mutates, and refuses a record that has not shipped unless
+  `--force`. The prose record drives the closeout — no JSON sidecar.
+  **Not yet in the bash or PowerShell CLIs**, so per D-039 the work item stays
+  In Progress until all three agree with shared-fixture coverage.
+
 ## [0.9.0] - 2026-09-12
 
 **Release narrative:** [plans/releases/v0.9.0.md](./plans/releases/v0.9.0.md).

@@ -209,7 +209,7 @@ The pattern is generic enough to extract.
   the same advancements without writing
 - **Confidence:** medium
 - **Dependencies:** REL-001, REL-003, ORCH-001 (parser reuse)
-- **Status:** Ready
+- **Status:** In Progress
 - **Notes:** Promoted from deferred 2026-07-13 after two field reports made
   the gap concrete. (1) This repo's v0.5.0 closeout was manual — the
   `aps-cleanup.sh` the vendored skills mention is anvil-001-specific and was
@@ -224,6 +224,37 @@ The pattern is generic enough to extract.
   applies — not Complete until Rust, bash, and PowerShell agree with
   shared-fixture coverage; phasing (Rust first) is fine, shipping
   one-CLI-only is not.
+- **Results (Rust phase, 2026-09-12):** `cli/src/release.rs` implements all
+  four subcommands. `new` copies the template with version and date filled and
+  refuses to overwrite an existing record. `status` reports the record's
+  lifecycle dates, previous release, tag, per-module completion counts, and how
+  many items are Complete / awaiting closeout / open. `notes` drafts markdown
+  from Complete items since the previous release. `close` reads the prose
+  record plus the plan tree and advances `Merged`/`Released` items to
+  `Complete` with a `**Released:**` evidence line, listing every item advanced
+  and every item skipped with the reason. Dry-run is the default and was
+  verified to write nothing (`diff -rq` against an untouched copy); `--apply`
+  mutates. No JSON sidecar — the prose record drives it, per the design
+  constraint above. Two safety behaviours worth keeping: `--apply` refuses a
+  record whose Status is not Shipped/Released/Archived unless `--force`, so a
+  release cannot be closed out mid-prep, and a record missing ship evidence
+  warns that it would stamp today rather than silently doing so
+  (`--date`/`--tag` override).
+- **Review findings fixed during implementation:** `status` initially reported
+  an unshipped release as shipped today (defaulting the ship date to the
+  planning date) and did not understand the `(cut)` label that the v0.8.0 and
+  v0.8.1 records use, taking the cut date as the ship date. Both were found by
+  running the command against this repo's real records rather than fixtures,
+  and both are fixed — an unshipped record now renders Cut and Shipped as
+  absent. Module resolution also required markdown links to module plans inside
+  `## What Ships`; the v0.9.0 record was updated to use them, which the
+  template already specified.
+- **Parity debt (blocks Complete):** D-039 requires the bash and PowerShell
+  CLIs to carry the same surface before this item is `Complete`. Only the Rust
+  phase has landed, so the item stays In Progress; phasing is allowed by the
+  Notes above, shipping one-CLI-only is not. The ports need the handover spec
+  (exact flags, output strings, exit codes) plus shared-fixture coverage in
+  `test/cli-parity.sh`.
 
 ## Execution Strategy
 

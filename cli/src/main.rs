@@ -17,6 +17,7 @@ mod migrate;
 mod next;
 mod orchestrate;
 mod parser;
+mod release;
 mod rollup;
 mod scaffold;
 mod self_update;
@@ -224,8 +225,71 @@ enum Command {
         #[arg(long)]
         json: bool,
     },
+    /// Create, track, and close out release records under plans/releases/
+    Release {
+        #[command(subcommand)]
+        command: ReleaseCommand,
+    },
     /// Diagnose migration state (global binary, cli_version, leftover CLI)
     Doctor,
+}
+
+// `propagate_version` hands every subcommand an auto `--version` flag, which
+// would collide with these positional `version` arguments. The release version
+// is positional here, so the inherited flag is dropped.
+#[derive(Subcommand)]
+enum ReleaseCommand {
+    /// Create plans/releases/v<version>.md from the release template
+    #[command(disable_version_flag = true)]
+    New {
+        /// Release version (0.6.0 or v0.6.0)
+        version: String,
+        /// Plan root directory (default: plans)
+        #[arg(long, value_name = "DIR")]
+        plans: Option<String>,
+    },
+    /// Summarise work-item completion for a release (default: the newest)
+    #[command(disable_version_flag = true)]
+    Status {
+        /// Release version (default: the most recent record)
+        version: Option<String>,
+        /// Plan root directory (default: plans)
+        #[arg(long, value_name = "DIR")]
+        plans: Option<String>,
+    },
+    /// Draft markdown release notes from Complete items since the last release
+    #[command(disable_version_flag = true)]
+    Notes {
+        /// Release version (0.6.0 or v0.6.0)
+        version: String,
+        /// Plan root directory (default: plans)
+        #[arg(long, value_name = "DIR")]
+        plans: Option<String>,
+    },
+    /// Advance Merged/Released work items to Complete with release evidence
+    #[command(disable_version_flag = true)]
+    Close {
+        /// Release version (0.6.0 or v0.6.0)
+        version: String,
+        /// Write the changes (default: dry run)
+        #[arg(long)]
+        apply: bool,
+        /// Preview only — never modify files (the default)
+        #[arg(long)]
+        dry_run: bool,
+        /// Advance even when the record's Status is not Shipped/Released
+        #[arg(long)]
+        force: bool,
+        /// Tag commit for the evidence line (default: from the record's prose)
+        #[arg(long, value_name = "SHA")]
+        tag: Option<String>,
+        /// Release date for the evidence line (default: the record's ship date)
+        #[arg(long, value_name = "YYYY-MM-DD")]
+        date: Option<String>,
+        /// Plan root directory (default: plans)
+        #[arg(long, value_name = "DIR")]
+        plans: Option<String>,
+    },
 }
 
 fn main() {
@@ -409,6 +473,43 @@ fn main() {
                 no_run,
                 stale_days,
             ));
+        }
+        Some(Command::Release { command }) => {
+            let code = match command {
+                ReleaseCommand::New { version, plans } => {
+                    let resolved = resolve_plans(plans, cli.strict, "aps release new");
+                    release::cmd_release_new(&resolved, &version)
+                }
+                ReleaseCommand::Status { version, plans } => {
+                    let resolved = resolve_plans(plans, cli.strict, "aps release status");
+                    release::cmd_release_status(&resolved, version.as_deref())
+                }
+                ReleaseCommand::Notes { version, plans } => {
+                    let resolved = resolve_plans(plans, cli.strict, "aps release notes");
+                    release::cmd_release_notes(&resolved, &version)
+                }
+                ReleaseCommand::Close {
+                    version,
+                    apply,
+                    dry_run,
+                    force,
+                    tag,
+                    date,
+                    plans,
+                } => {
+                    let resolved = resolve_plans(plans, cli.strict, "aps release close");
+                    // --dry-run is the default and always wins over --apply.
+                    release::cmd_release_close(
+                        &resolved,
+                        &version,
+                        apply && !dry_run,
+                        force,
+                        tag.as_deref(),
+                        date.as_deref(),
+                    )
+                }
+            };
+            std::process::exit(code);
         }
         Some(Command::Doctor) => {
             let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
