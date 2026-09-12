@@ -337,17 +337,49 @@ is promoted back to the relevant module.
   The PowerShell sort fix (`[StringComparer]::Ordinal`) changes ordering for
   every file type, not just release plans, so it needs its own parity pass.
 
+### CIB-009: Align the local Rust toolchain with CI
+
+- **Status:** Draft
+- **Intent:** Make `cargo clippy` locally mean the same thing it means in CI, so
+  a contributor cannot pass every gate and still turn the pipeline red.
+- **Expected Outcome:** A contributor running the documented pre-push checks
+  gets the same clippy lint set as CI. Adding `rust-toolchain.toml` with
+  `channel = "stable"` is the proposed fix: rustup then resolves the current
+  stable locally, matching `dtolnay/rust-toolchain@stable` in CI without
+  freezing a version. `CONTRIBUTING.md` names the checks to run and notes that
+  an out-of-date stable will miss lints.
+- **Validation:** On a machine whose default stable is older than CI's, a fresh
+  clone reproduces CI's clippy result; `cargo clippy --locked --all-targets --
+  -D warnings` agrees between local and CI on a commit known to fail the lint.
+- **Identified From:** Release review 2026-09-12. The `Rust CLI` job failed on
+  `40a0517` with `clippy::unnecessary_sort_by`, a lint that does not exist in
+  clippy 0.1.94; the local toolchain was 1.94.1 against CI's 1.98.1, so local
+  clippy reported zero errors on the identical code. Fixed forward in
+  `5e66e9c` after installing 1.98.1 to verify rather than guess, but nothing
+  stops the next contributor hitting the same gap.
+- **Files:** `rust-toolchain.toml` (new), `CONTRIBUTING.md`,
+  possibly `.github/workflows/ci.yml`
+- **Confidence:** medium
+- **Dependencies:** none
+- **Notes:** Decision needed on whether to track stable (`channel = "stable"`,
+  local follows CI, but a new stable can introduce lints that break CI
+  unannounced) or pin an exact version (reproducible, but CI must pin the same
+  and someone must bump both). Tracking stable matches current CI behaviour and
+  is the smaller change; pinning trades that for reproducibility. Either beats
+  the status quo, where local and CI silently disagree.
+
 ## Status Roll-up
 
 - **Concern:** Standing APS maintenance intake
-- **Progress:** 5/8 work items Complete
+- **Progress:** 5/9 work items Complete
 - **Readout:** CIB-002, CIB-003, and CIB-004 are complete with native Windows
   CI evidence. CIB-001 remains Draft and isolated in its own worktree. CIB-005
   (plan-doctor false positives, issue #132) and CIB-006 (release-lint three-CLI
   parity) were intaken from the 2026-09-12 release review and are Ready.
   CIB-005 and CIB-006 completed on 2026-09-12. CIB-007 (version surface on the
   fallback CLIs) and CIB-008 (release-rule hardening plus residual lint
-  divergences) were intaken from the same review and are Draft.
+  divergences) were intaken from the same review and are Draft, as is CIB-009
+  (local Rust toolchain drifting from CI's).
 
 ## Decisions
 

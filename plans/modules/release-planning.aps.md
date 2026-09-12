@@ -252,9 +252,35 @@ The pattern is generic enough to extract.
 - **Parity debt (blocks Complete):** D-039 requires the bash and PowerShell
   CLIs to carry the same surface before this item is `Complete`. Only the Rust
   phase has landed, so the item stays In Progress; phasing is allowed by the
-  Notes above, shipping one-CLI-only is not. The ports need the handover spec
-  (exact flags, output strings, exit codes) plus shared-fixture coverage in
-  `test/cli-parity.sh`.
+  Notes above, shipping one-CLI-only is not. A handover spec covering exact
+  flags, output strings byte-for-byte, exit codes, version-ordering rules,
+  lifecycle-bucket classification, and the write order was produced alongside
+  the Rust phase and is the contract the ports implement. One prerequisite:
+  the pre-sweep v0.5.0 corpus that proves the closeout currently lives inline
+  in `cli/src/release.rs`'s test module, and must be lifted into
+  `test/fixtures/release/` so bash, PowerShell, and Rust assert against the
+  same bytes — the Rust side is then a path swap.
+- **Beyond scope, found by running it:** the root `Cli` sets
+  `propagate_version = true`, which auto-adds `--version` to every subcommand
+  and collides with a positional argument named `version`. clap only detects
+  that at parse time, so it was a runtime panic rather than a build error, and
+  it surfaced only because the real binary was exercised. Fixed with
+  `disable_version_flag` on the four variants and pinned by a new
+  `clap_surface_builds` test calling `Cli::command().debug_assert()`, which
+  now guards the entire CLI surface, not just `release`.
+- **Deviations from the spec, recorded deliberately:** (1) the v0.5.0 sweep is
+  reproduced semantically, not textually — the hand sweep wrote free-form
+  status prose, inconsistently between its two items, with evidence inside the
+  Status value, whereas the tool writes canonical `Complete: <date>` plus a
+  separate `**Released:**` line that is lint-correct and idempotent. Same
+  items, same rows, same facts, different text; worth a decision record if the
+  original phrasing should be preserved instead. (2) `notes` windows by date
+  rather than by git tag range, because shelling out to git would breach the
+  no-runtime-dependencies constraint; undated Complete items are listed under
+  an explicit "verify manually" subsection rather than silently dropped or
+  included. (3) `release.rs` carries its own release-filename check rather
+  than reusing the private one in `lint.rs`; deliberate small duplication to
+  fold together next time that file is open.
 
 ## Execution Strategy
 
