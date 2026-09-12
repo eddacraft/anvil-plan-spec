@@ -403,6 +403,36 @@ PowerShell rather than diverging from.
 
 ---
 
+### ISS-016: Local clippy silently disagrees with CI's
+
+| Field      | Value      |
+| ---------- | ---------- |
+| Status     | Open       |
+| Severity   | Medium     |
+| Discovered | 2026-09-12 |
+| Module     | CIB        |
+| Work Item  | CIB-009    |
+
+**Context:** CI installs `dtolnay/rust-toolchain@stable` and the repo pins no
+toolchain, so CI ran clippy 0.1.98 while a contributor environment had 0.1.94.
+`clippy::unnecessary_sort_by` does not exist in the older version, so
+`cargo clippy --locked --all-targets -- -D warnings` reported zero errors
+locally and failed the `Rust CLI` job on the identical commit.
+
+**Impact:** Every pre-push gate can pass and still turn CI red, which is the
+one outcome the gates exist to prevent. It costs a CI cycle and teaches
+contributors to distrust local validation. The failure mode is silent: there is
+no warning that the local lint set is a subset of CI's.
+
+**Implementation:** Proposed fix is `rust-toolchain.toml` with
+`channel = "stable"`, so rustup resolves the same current stable CI uses,
+plus a `CONTRIBUTING.md` note. Pinning an exact version is the alternative and
+needs CI pinned to match. Decision recorded in CIB-009.
+
+**Tracking:** [CIB-009](./modules/continuous-improvement-backlog.aps.md)
+
+---
+
 ## Questions
 
 ### Q-001: Which shared claim transport should team mode use?

@@ -361,6 +361,7 @@ is promoted back to the relevant module.
   possibly `.github/workflows/ci.yml`
 - **Confidence:** medium
 - **Dependencies:** none
+- **Identified in:** ISS-016
 - **Notes:** Decision needed on whether to track stable (`channel = "stable"`,
   local follows CI, but a new stable can introduce lints that break CI
   unannounced) or pin an exact version (reproducible, but CI must pin the same
