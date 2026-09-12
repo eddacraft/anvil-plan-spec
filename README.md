@@ -1,7 +1,7 @@
 <!-- markdownlint-disable MD041 -->
 
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.8.1-green.svg)](https://github.com/EddaCraft/anvil-plan-spec/releases/tag/v0.8.1)
+[![Version](https://img.shields.io/badge/version-0.9.0-green.svg)](https://github.com/EddaCraft/anvil-plan-spec/releases/tag/v0.9.0)
 [![Made for AI agents](https://img.shields.io/badge/made%20for-AI%20agents-purple.svg)](docs/ai-agent-guide.md)
 
 <!-- markdownlint-enable MD041 -->
@@ -271,19 +271,29 @@ need one.
 
 APS needs no hosted service, proprietary format, or mandatory integration.
 
-## What's in v0.8.1
+## What's in v0.9.0
 
-Patch release (**2026-07-31**) on top of v0.8.0's harness expansion:
+Feature release (**2026-09-12**) — self-update and trustworthy diagnostics:
 
-- **Skill embeds carry YAML frontmatter:** the bundled `SKILL.md` files now
-  ship the `---`-delimited `name`/`description` block that Agent Skills
-  harnesses require to discover them — without it they silently skip the skill.
-- **`aps update` respects the version pin:** update now gates on a
-  `cli_version` pin mismatch instead of refreshing against the wrong toolchain.
+- **`aps update --global`:** the CLI upgrades itself. The machine-wide install
+  at `$APS_HOME/bin` (default `~/.aps/bin`) refreshes from GitHub releases,
+  while project `aps update` is unchanged. Fails closed rather than replacing a
+  working binary: symlink payloads in release archives are refused, and the
+  bash and PowerShell fallbacks never overwrite a native install with the
+  script runtime.
+- **`plan-doctor` judges plans by the documented vocabulary:** status is
+  normalised through the accepted aliases (`Proposed` → `Draft`,
+  `Done` → `Complete`) before any rule evaluates, dependencies on `Done` items
+  count as terminal, and the filename-prefix check is advisory. A healthy plan
+  now reports clean instead of flagging every module.
+- **Release-plan lint in all three CLIs:** the bash and PowerShell linters
+  discover `plans/releases/v*.md` and apply R001–R004 with the same codes and
+  messages as the Rust binary, pinned by release fixtures in the shared parity
+  suite. A malformed release plan can no longer pass the fallback CLIs.
 
-The v0.8.0 line (still current):
+The v0.8 line (still current):
 
-- **Seven new harnesses:** `init`/`setup`/wizard now support **Antigravity, Amp,
+- **Twelve harnesses:** `init`/`setup`/wizard support **Antigravity, Amp,
   Gemini CLI, Windsurf, Roo Code, OpenClaw, and Cursor** alongside Claude Code,
   Copilot, Codex, OpenCode, and Grok — twelve tools sharing one planning
   contract. Each was added under the D-045 native-discovery gate (reads
@@ -291,14 +301,14 @@ The v0.8.0 line (still current):
   full Rust/bash/PowerShell parity.
 - **Refreshed APS planning stack:** the bundled `aps-planning` skill and the
   `aps-planner`/`aps-librarian`/`aps-conductor` agents are re-vended from the
-  canonical eddacraft source, and a new **`plan-doctor`** skill (structural plan
-  diagnostics) now installs alongside `aps-planning`.
-- **Coherent command surface:** the CLI-001 redesign map (`update` vs `migrate`
-  vs `upgrade`, profile-aware surfacing) is recorded as the north star for
-  ongoing command-surface work.
+  canonical eddacraft source, and a **`plan-doctor`** skill (structural plan
+  diagnostics) installs alongside `aps-planning`.
+- **Skill embeds carry YAML frontmatter:** bundled `SKILL.md` files ship the
+  `---`-delimited `name`/`description` block that Agent Skills harnesses
+  require to discover them.
 
 Full notes: [CHANGELOG.md](CHANGELOG.md) ·
-[release narrative](plans/releases/v0.8.1.md).
+[release narrative](plans/releases/v0.9.0.md).
 
 ## Templates
 

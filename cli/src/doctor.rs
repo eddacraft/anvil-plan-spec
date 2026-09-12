@@ -30,6 +30,7 @@ pub const REQUIRED_LIB_FILES: &[&str] = &[
     "rules/workitem.sh",
     "rules/issues.sh",
     "rules/design.sh",
+    "rules/release.sh",
 ];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

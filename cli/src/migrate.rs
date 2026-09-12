@@ -31,6 +31,7 @@ const APS_LIB_FILES: &[&str] = &[
     "rules/workitem.sh",
     "rules/issues.sh",
     "rules/design.sh",
+    "rules/release.sh",
 ];
 
 /// True when every file under `dir` is a recognised APS bash-lib file — so the

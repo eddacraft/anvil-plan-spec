@@ -124,6 +124,7 @@ install_cli() {
     "lib/rules/index.sh"
     "lib/rules/workitem.sh"
     "lib/rules/design.sh"
+    "lib/rules/release.sh"
   )
 
   for f in "${cli_files[@]}"; do

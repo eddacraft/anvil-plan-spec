@@ -848,6 +848,45 @@ echo -n "Test: cross-CLI parity harness present and wired into CI... "
 grep -q 'cli-parity.sh' "$PROJECT_ROOT/.github/workflows/ci.yml" || fail "ci.yml does not run test/cli-parity.sh"
 pass
 
+# Test 53b: REL-003 / D-039 — release-plan rules (R001-R004) exist in all three
+# linters, ship in the installer manifests, and the parity harness carries
+# release fixtures. Byte-for-byte behaviour is asserted by test/cli-parity.sh;
+# these are the cheap string guards that keep a port from silently
+# disappearing again (the rules were Rust-only from REL-003 until v0.9.0).
+echo -n "Test: release-plan rules present in all three CLIs... "
+[[ -f "$PROJECT_ROOT/lib/rules/release.sh" ]] || fail "lib/rules/release.sh missing"
+[[ -f "$PROJECT_ROOT/lib/rules/Release.psm1" ]] || fail "lib/rules/Release.psm1 missing"
+for code in R001 R002 R003 R004; do
+  grep -q "\"$code\"" "$PROJECT_ROOT/cli/src/lint.rs" || fail "lint.rs missing $code"
+  grep -q "\"$code\"" "$PROJECT_ROOT/lib/rules/release.sh" || fail "release.sh missing $code"
+  grep -q "\"$code\"" "$PROJECT_ROOT/lib/rules/Release.psm1" || fail "Release.psm1 missing $code"
+done
+grep -q 'lint_release' "$PROJECT_ROOT/lib/lint.sh" || fail "lib/lint.sh does not dispatch release files"
+grep -q 'Invoke-ApsReleaseLint' "$PROJECT_ROOT/lib/Lint.psm1" || fail "Lint.psm1 does not dispatch release files"
+grep -q 'release-invalid/plans' "$PROJECT_ROOT/test/cli-parity.sh" || fail "cli-parity.sh missing release fixtures"
+output=$($APS lint "$SCRIPT_DIR/fixtures/release-invalid/plans" 2>&1) || true
+for code in R001 R002 R003 R004; do
+  echo "$output" | grep -q "$code" || fail "$code not raised on the malformed release fixture"
+done
+output=$($APS lint "$SCRIPT_DIR/fixtures/release/plans" 2>&1) || true
+echo "$output" | grep -q "no issues" || fail "clean release fixture did not lint cleanly (got: $output)"
+pass
+
+# Test 53c: a new lib/rules/*.sh sourced by bin/aps must also ship in every
+# installer manifest, or a vendored/scaffolded bash CLI dies on startup with
+# "No such file or directory". Caught exactly that for release.sh in v0.9.0.
+echo -n "Test: every rule module sourced by bin/aps ships in the manifests... "
+while IFS= read -r rule; do
+  grep -q "lib/rules/$rule" "$PROJECT_ROOT/lib/scaffold.sh" || fail "lib/scaffold.sh manifest missing $rule"
+  grep -q "lib/rules/$rule" "$PROJECT_ROOT/scaffold/init.sh" || fail "scaffold/init.sh manifest missing $rule"
+  grep -q "lib/rules/$rule" "$PROJECT_ROOT/scaffold/install" || fail "scaffold/install manifest missing $rule"
+  grep -q "lib/rules/$rule" "$PROJECT_ROOT/scaffold/update" || fail "scaffold/update manifest missing $rule"
+  grep -q "rules/$rule" "$PROJECT_ROOT/scaffold/upgrade" || fail "scaffold/upgrade manifest missing $rule"
+  grep -q "rules/$rule" "$PROJECT_ROOT/cli/src/migrate.rs" || fail "migrate.rs APS_LIB_FILES missing $rule"
+  grep -q "rules/$rule" "$PROJECT_ROOT/cli/src/doctor.rs" || fail "doctor.rs APS_LIB_FILES missing $rule"
+done < <(grep -oE 'rules/[a-z]+\.sh' "$PROJECT_ROOT/bin/aps" | sed 's|rules/||' | sort -u)
+pass
+
 # Test 54: PKG-002 — W022 Packages: tag validation (bash, canonical behaviour).
 # A tag that resolves to no workspace directory warns; resolvable tags and
 # single-package projects (no packages/ or apps/ dirs) stay silent. PowerShell

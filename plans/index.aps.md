@@ -5,7 +5,7 @@
 | Status  | Active     |
 | Owner   | @aneki     |
 | Created | 2025-12-31 |
-| Updated | 2026-08-07 |
+| Updated | 2026-09-12 |
 
 ## Problem
 
@@ -82,12 +82,12 @@ release narratives live in [`plans/releases/`](./releases/).
 | --------------------------------------------- | --------------------------------------------------------- | -------- |
 | [spec](./modules/spec.aps.md)                 | Canonical vocabulary + schema (status reconciliation)     | Complete |
 | [tasks](./modules/tasks.aps.md)               | Claude Code Tasks integration                             | Complete |
-| [examples](./modules/examples.aps.md)         | Additional worked examples                                | In Progress |
-| [prompts](./modules/prompts.aps.md)           | Tool-specific prompt variants                             | In Progress |
+| [examples](./modules/examples.aps.md)         | Additional worked examples                                | Complete    |
+| [prompts](./modules/prompts.aps.md)           | Tool-specific prompt variants                             | Complete    |
 | [integrations](./modules/integrations.aps.md) | JSON export, GitHub Action, lint/rollup CI surface        | Complete    |
 | [team-coordination](./modules/team-coordination.aps.md) | Multi-human, multi-agent claims, handoffs, and visibility | Draft |
 | [progress-journal](./modules/progress-journal.aps.md) | Standing modules, create-only progress journals, computed counts | Draft |
-| [cli-redesign](./modules/cli-redesign.aps.md)         | Solo/team CLI command rethink, binary upgrade, harness expansion | Draft |
+| [cli-redesign](./modules/cli-redesign.aps.md)         | Solo/team CLI command rethink, binary upgrade, harness expansion | In Progress |
 | [monorepo](./modules/monorepo.aps.md)         | Nested index.aps.md plans, federated lint + orchestration | Complete |
 | [package-views](./modules/package-views.aps.md) | CLI tooling for the tagged monorepo tier (`Packages:` lint, next filter, generated views) | Complete |
 | [ci-parity](./modules/ci-parity.aps.md)       | Behavioural pwsh + cross-CLI parity checks in CI          | Complete |
@@ -156,4 +156,4 @@ These are explicitly out of scope:
 - **D-042:** Managed skill markers are a three-CLI parity surface — _decided 2026-07-20: `.aps-managed.json` is written on skill install and reconciled on update by Rust, bash, and PowerShell alike, byte-identical across producers; PowerShell is first-class (adopting audience), bash is the deliberate fallback. Extends D-039 lockstep to the install/update surface. See [install.aps.md](./modules/install.aps.md) INSTALL-019/020_
 - **D-043:** Curl entrypoints always deliver the current layout — _decided 2026-07-20: `scaffold/update` / `update.ps1` bring v1 and v2 projects to the latest layout (skill trees, `.aps/scripts/`, `.aps/config.yml`, markers) from the packaged `scaffold/aps-planning/` payload; they never maintain v1 in place. See [install.aps.md](./modules/install.aps.md) INSTALL-021_
 - **D-044:** Single on-disk version surface — _decided 2026-07-20: `cli_version` in `.aps/config.yml` is the only version stamp APS writes into a project; `plans/.aps-version` is retired and the skill staleness check compares config against the running CLI. See [install.aps.md](./modules/install.aps.md) INSTALL-022_
-- **D-045 (proposed):** CLI redesign + harness expansion — _proposed 2026-07-22: rethink the `aps` command surface so it reads coherently for solo and team users (profile-aware vocabulary over `.aps/config.yml` `profile:`), ship it as a binary upgrade, and widen the harness set beyond the D-040 core (Claude Code, Copilot, Codex, OpenCode, Grok). Additions gated by the native-discovery test (reads the `AGENTS.md` family + `.agents/skills/` natively → zero-asset add like Grok). Candidates for the CLI-005 spike: Antigravity, Hermes, OpenClaw, and others. See [cli-redesign.aps.md](./modules/cli-redesign.aps.md)._
+- **D-045:** CLI redesign + harness expansion — _decided 2026-07-23 (proposed 2026-07-22): rethink the `aps` command surface so it reads coherently for solo and team users (profile-aware vocabulary over `.aps/config.yml` `profile:`), ship it as a binary upgrade, and widen the harness set beyond the D-040 core (Claude Code, Copilot, Codex, OpenCode, Grok). Additions gated by the native-discovery test (reads the `AGENTS.md` family + `.agents/skills/` natively → zero-asset add like Grok). Candidates for the CLI-005 spike: Antigravity, Hermes, OpenClaw, and others. Accepted with the CLI-001 redesign map on 2026-07-23 (D-CLI-a…d accepted, OQ-1 routed to CLI-003/CLI-006); CLI-005 evaluated the candidates and CLI-006/CLI-007 added seven harnesses in v0.8.0, taking the supported set to twelve. CLI-002 (profile-aware vocabulary) is the remaining item and is gated on TEAM. See [cli-redesign.aps.md](./modules/cli-redesign.aps.md)._

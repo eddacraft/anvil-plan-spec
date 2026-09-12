@@ -7,7 +7,7 @@
 | ------- | ---------- |
 | Scope   | ALL        |
 | Status  | Active     |
-| Updated | 2026-07-17 |
+| Updated | 2026-09-12 |
 
 ## Purpose
 
@@ -25,10 +25,26 @@ section below.
 
 ## Unreleased
 
-_Will roll into the next cut. See [`plans/index.aps.md`](./index.aps.md) for
-the active roadmap._
+_Will roll into the next cut — queued for
+[v0.9.0](./releases/v0.9.0.md). Items stay here until the release closes out;
+`Merged` items (CLI-003) advance to Complete at closeout and live in
+[`plans/index.aps.md`](./index.aps.md) until then._
 
-### Team Rollout (v0.7.0)
+| Task         | Module                 | Description                                      | Status               |
+| ------------ | ---------------------- | ------------------------------------------------ | -------------------- |
+| CIB-005      | continuous-improvement | plan-doctor rules realigned with aps-rules.md    | Complete: 2026-09-12 |
+| CIB-006      | continuous-improvement | Release-plan lint rules in bash and PowerShell   | Complete: 2026-09-12 |
+| PROMPTS-001  | prompts                | Normalize OpenCode + Claude Code prompt variants | Complete: 2026-08-03 |
+| EXAMPLES-001 | examples               | Expand worked examples (four workflow shapes)    | Complete: 2026-09-12 |
+
+---
+
+## v0.7.0 — Team Foundations
+
+_See [`plans/releases/v0.7.0.md`](./releases/v0.7.0.md) for theme, success
+criteria, and risks._
+
+### Team Rollout
 
 | Task             | Module                 | Description                                      | Status               |
 | ---------------- | ---------------------- | ------------------------------------------------ | -------------------- |
@@ -43,6 +59,16 @@ the active roadmap._
 | CIB-002          | continuous-improvement | Public installer → native TUI handoff            | Complete: 2026-07-17 |
 | CIB-003          | continuous-improvement | Monorepo shape seeds monorepo root index         | Complete: 2026-07-17 |
 | CIB-004          | continuous-improvement | Native Windows PowerShell user journeys          | Complete: 2026-07-17 |
+
+---
+
+## Pre-v0.7.0 — compacted by theme
+
+_These task tables were archived by theme before the per-release roll became
+routine, so they are grouped by concern rather than by release. Per-release
+attribution lives in the narratives under [`plans/releases/`](./releases/).
+Rows are preserved as originally written (see Conventions: don't rewrite
+history)._
 
 ### Compound-Engineering Library
 

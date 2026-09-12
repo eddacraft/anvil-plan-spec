@@ -4,9 +4,9 @@
 
 | ID  | Owner  | Priority | Status |
 | --- | ------ | -------- | ------ |
-| CLI | @aneki | high     | Draft  |
+| CLI | @aneki | high     | In Progress |
 
-**Last reviewed:** 2026-09-03
+**Last reviewed:** 2026-09-12
 
 ## Purpose
 
