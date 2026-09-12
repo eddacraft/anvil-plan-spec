@@ -79,12 +79,14 @@ CLI_BASH_FILES=(
   lib/scaffold.sh
   lib/rules/common.sh lib/rules/module.sh lib/rules/index.sh
   lib/rules/workitem.sh lib/rules/issues.sh lib/rules/design.sh
+  lib/rules/release.sh
 )
 CLI_PS_FILES=(
   bin/aps.ps1
   lib/Output.psm1 lib/Lint.psm1 lib/Scaffold.psm1
   lib/rules/Common.psm1 lib/rules/Module.psm1 lib/rules/Index.psm1
   lib/rules/WorkItem.psm1 lib/rules/Issues.psm1 lib/rules/Design.psm1
+  lib/rules/Release.psm1
 )
 
 # Hook script basenames (both shells) as shipped into .aps/scripts/.
@@ -303,7 +305,7 @@ write_min_config() {
   # when it is an explicit semver. Otherwise fall back to the release version.
   case "$VERSION" in
     v[0-9]*|[0-9]*) cli_version="${VERSION#v}" ;;
-    *)              cli_version="0.8.1" ;;
+    *)              cli_version="0.9.0" ;;
   esac
   mkdir -p "$TARGET/.aps"
   touch "$TARGET/.aps/.gitignore"
@@ -319,7 +321,7 @@ write_min_config() {
     echo "tooling_root: .aps/"
     echo ""
     echo "aps:"
-    echo "  version: \"0.8.1\""
+    echo "  version: \"0.9.0\""
     echo "  config_schema: 1"
     echo "  installed: \"$today\""
     echo "  updated: \"$today\""

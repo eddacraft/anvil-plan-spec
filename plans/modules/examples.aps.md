@@ -2,9 +2,9 @@
 
 | ID       | Owner  | Priority | Status |
 | -------- | ------ | -------- | ------ |
-| EXAMPLES | @aneki | medium   | In Progress |
+| EXAMPLES | @aneki | medium   | Complete    |
 
-**Last reviewed:** 2026-07-16
+**Last reviewed:** 2026-09-12
 
 ## Purpose
 
@@ -30,20 +30,30 @@ execution plans, decisions, and design documents.
 - `examples/user-auth/`
 - `examples/opencode-companion/`
 - `examples/team-payments/`
+- `examples/monorepo-nested/`
 - `test/fixtures/valid/`
 - `docs/team-rollout.md`
 
 ## Work Items
 
-### EXAMPLES-001: Expand worked examples — Draft
+### EXAMPLES-001: Expand worked examples — Complete 2026-09-12
 
-- **Status:** Draft
+- **Status:** Complete: 2026-09-12
 - **Intent:** Show APS in more than one project shape and tool workflow
 - **Expected Outcome:** Examples cover single-feature, multi-module, agent-led,
   and execution-plan workflows with valid markdown.
 - **Validation:** `./bin/aps lint examples test/fixtures/valid`
 - **Files:** examples/, test/fixtures/valid/
 - **Confidence:** medium
+- **Results:** All four target shapes are covered: single-feature
+  (`examples/user-auth/`), multi-module with a conductor and in-flight statuses
+  (`examples/team-payments/`), agent-led (`examples/opencode-companion/`), and
+  execution plans (`user-auth/execution/`, `opencode-companion/execution/`).
+  `examples/monorepo-nested/` additionally covers the federated nested-index
+  tier from MONO. Validation passes with no errors. Completed on review
+  2026-09-12 rather than by a dedicated change — the coverage arrived
+  incrementally with the modules that needed each shape, which is why
+  `aps audit` had been reporting the item as understated.
 
 ### EXAMPLES-002: Team rollout guide + multi-owner example — Complete 2026-07-16
 

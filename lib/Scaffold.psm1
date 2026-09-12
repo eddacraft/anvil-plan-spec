@@ -11,7 +11,7 @@ $script:ApsBaseUrl = "https://raw.githubusercontent.com/EddaCraft/anvil-plan-spe
 # Semver of the PowerShell CLI release, stamped into managed skill markers.
 # Mirrors APS_CLI_VERSION in lib/scaffold.sh; the native binary stamps its
 # crate version. One semver across channels (D-036).
-$script:ApsCliVersion = if ($env:APS_CLI_VERSION) { $env:APS_CLI_VERSION } else { "0.8.1" }
+$script:ApsCliVersion = if ($env:APS_CLI_VERSION) { $env:APS_CLI_VERSION } else { "0.9.0" }
 
 # Files to download for plans/
 $script:PlanFiles = @(
@@ -53,6 +53,7 @@ $script:CliFilesPowerShell = @(
     "lib/rules/WorkItem.psm1"
     "lib/rules/Issues.psm1"
     "lib/rules/Design.psm1"
+    "lib/rules/Release.psm1"
 )
 
 # --- v2 file lists (.aps/ layout, parity with lib/scaffold.sh) ---
@@ -584,7 +585,7 @@ function Write-ApsConfigV2 {
         "tooling_root: .aps/"
         ""
         "aps:"
-        "  version: `"0.8.1`""
+        "  version: `"0.9.0`""
         "  config_schema: 1"
         "  installed: `"$today`""
         "  updated: `"$today`""

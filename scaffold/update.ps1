@@ -67,12 +67,14 @@ $CliFilesBash = @(
     "lib/scaffold.sh"
     "lib/rules/common.sh", "lib/rules/module.sh", "lib/rules/index.sh"
     "lib/rules/workitem.sh", "lib/rules/issues.sh", "lib/rules/design.sh"
+    "lib/rules/release.sh"
 )
 $CliFilesPowerShell = @(
     "bin/aps.ps1"
     "lib/Output.psm1", "lib/Lint.psm1", "lib/Scaffold.psm1"
     "lib/rules/Common.psm1", "lib/rules/Module.psm1", "lib/rules/Index.psm1"
     "lib/rules/WorkItem.psm1", "lib/rules/Issues.psm1", "lib/rules/Design.psm1"
+    "lib/rules/Release.psm1"
 )
 
 # Hook script basenames (both shells) as shipped into .aps/scripts/.
@@ -301,7 +303,7 @@ function Write-MinConfig {
     $today = Get-Date -Format "yyyy-MM-dd"
     # $Version is a git ref ("main") by default; only use it as the contract
     # pin when it is an explicit semver. Otherwise fall back to the release.
-    $cliVersion = if ($Version -cmatch '^v?[0-9]') { $Version -creplace '^v', '' } else { "0.8.1" }
+    $cliVersion = if ($Version -cmatch '^v?[0-9]') { $Version -creplace '^v', '' } else { "0.9.0" }
     $apsDir = Join-Path $Target ".aps"
     New-Item -ItemType Directory -Path $apsDir -Force | Out-Null
     $gitignore = Join-Path $apsDir ".gitignore"
@@ -323,7 +325,7 @@ function Write-MinConfig {
         "tooling_root: .aps/"
         ""
         "aps:"
-        "  version: `"0.8.1`""
+        "  version: `"0.9.0`""
         "  config_schema: 1"
         "  installed: `"$today`""
         "  updated: `"$today`""

@@ -6,6 +6,15 @@
 # Associative array to store file types for JSON output
 declare -A FILE_TYPES
 
+# True when a path sits anywhere under a `releases/` directory. Mirrors
+# in_releases_dir() in cli/src/parser.rs, including the bare-relative case
+# ("releases/v0.3.0.md") for a lint target inside plans/.
+# Usage: in_releases_dir "path/to/file.md"
+in_releases_dir() {
+  local path="${1//\\//}"
+  [[ "$path" == *"/releases/"* || "$path" == releases/* ]]
+}
+
 # Determine file type based on path
 # Usage: get_file_type "path/to/file.aps.md"
 get_file_type() {
@@ -51,6 +60,16 @@ get_file_type() {
     return
   fi
 
+  # Release narratives live in releases/ as `v<version>.md` (REL-003).
+  # README.md is the directory guide, and `.`-prefixed templates were already
+  # classified above. Anything else here is a (possibly misnamed) release
+  # file — R001 flags the naming. Checked before the modules/ rule so it
+  # matches the Rust classifier's precedence (D-039).
+  if in_releases_dir "$file" && [[ "$basename" == *.md && "$basename" != "README.md" ]]; then
+    echo "release"
+    return
+  fi
+
   # Module files (in modules/ directory)
   if [[ "$dirname" == *"/modules" || "$dirname" == *"/modules/"* ]]; then
     echo "module"
@@ -71,8 +90,18 @@ get_file_type() {
 find_aps_files() {
   local dir="$1"
 
-  # Find .aps.md, .actions.md, .design.md, and issues.md files, excluding dotfiles
-  find "$dir" -type f \( -name "*.aps.md" -o -name "*.actions.md" -o -name "*.design.md" -o -name "issues.md" \) ! -name ".*" 2>/dev/null | sort
+  # Find .aps.md, .actions.md, .design.md, issues.md and release narratives
+  # (any *.md under a releases/ dir except README.md), excluding dotfiles.
+  # The releases/ clause mirrors find_aps_files() in cli/src/parser.rs — both
+  # the "*/releases/*" and bare "releases/*" shapes, so a target of plans/ and
+  # a target of plans/releases/ discover the same set (REL-003 / D-039).
+  # LC_ALL=C so the sort is byte-order, matching the Rust Vec<String> sort.
+  find "$dir" -type f \
+    \( \
+      -name "*.aps.md" -o -name "*.actions.md" -o -name "*.design.md" -o -name "issues.md" \
+      -o \( -name "*.md" ! -name "README.md" \
+            \( -path "*/releases/*" -o -path "releases/*" \) \) \
+    \) ! -name ".*" 2>/dev/null | LC_ALL=C sort
 }
 
 # Cross-file ID index: work item and decision IDs from the whole plan tree.
@@ -351,6 +380,9 @@ lint_file() {
       ;;
     design)
       lint_design "$file"
+      ;;
+    release)
+      lint_release "$file"
       ;;
     actions)
       # Actions files have minimal validation for now

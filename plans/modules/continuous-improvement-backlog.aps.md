@@ -4,7 +4,7 @@
 | --- | --------- | ------ | -------- | ----------- |
 | CIB | Conductor | @aneki | medium   | In Progress |
 
-**Last reviewed:** 2026-07-17
+**Last reviewed:** 2026-09-12
 
 ## Purpose
 
@@ -183,12 +183,171 @@ is promoted back to the relevant module.
   journey. The final CI run passed the full native journey under both
   PowerShell 7 and Windows PowerShell 5.1.
 
+### CIB-005: Realign plan-doctor rules with the documented status vocabulary
+
+- **Status:** Complete: 2026-09-12
+- **Intent:** Make the bundled `plan-doctor` skill usable on a healthy consumer
+  plan by judging it against `plans/aps-rules.md` rather than a stricter
+  private convention.
+- **Expected Outcome:** W03 accepts the documented aliases (`Proposed` → `Draft`,
+  `Done` → `Complete`) after normalising through the alias table, W04 counts
+  `Done` as terminal, the undocumented `Archived` case reports under its own
+  quieter code, and the "no numeric filename prefix" half of W02 is advisory
+  rather than a warning. A structurally healthy plan produces no warnings.
+- **Validation:** `npx markdownlint-cli "scaffold/plan-doctor/SKILL.md"` and
+  `cargo test --manifest-path cli/Cargo.toml` pass; the rule table and every
+  worked example in the skill agree with `plans/aps-rules.md` § Status
+  Vocabulary; a consumer plan using `Done`/`Proposed` statuses reports clean.
+- **Identified From:** [Issue #132](https://github.com/eddacraft/anvil-plan-spec/issues/132),
+  filed 2026-07-26 from the `anvil-001` vendoring review — roughly 385 warnings
+  fired on a plan with no real defects (162 `Done` + 132 `Proposed` statuses
+  false-flagged by W03, every one of 91 modules flagged by W02).
+- **Files:** `scaffold/plan-doctor/SKILL.md`
+- **Confidence:** high
+- **Dependencies:** none
+- **Notes:** The skill bytes are managed and embedded in the binary
+  (`include_str!` in `cli/src/scaffold.rs`), so hand-editing them in a consumer
+  repo desyncs `.aps-managed.json` and is overwritten on the next vend — the
+  fix has to ship from here and reaches users only on a release.
+- **Results:** `scaffold/plan-doctor/SKILL.md` now opens `## What to check`
+  with a "Normalise status before judging it" section quoting
+  `plans/aps-rules.md` § Status Vocabulary, and instructs that the alias table
+  be applied before W03, W04, W05, and W07 evaluate. W03 narrows to values
+  still unrecognised after normalisation (`WIP`, `Almost done`); W04 counts
+  `Done` as terminal alongside `Merged`/`Released`/`Shipped`; W02 keeps only
+  the prefix-versus-dependency-order conflict. Two Info codes were added: I04
+  for a missing `NN-` filename prefix (reported once per directory with a
+  count) and I05 for a consistently-applied undocumented status such as
+  `Archived`. A collapsing rule was added to the report section — a finding
+  that hits 100% of files is house style, not signal — which addresses the
+  root cause rather than just the three symptoms. The skill now agrees with
+  its sibling `aps-planning` skill, which already recognised the aliases.
+  Frontmatter untouched; `cli/src/scaffold.rs` needed no change (its
+  assertions check file count and frontmatter shape, not bytes).
+  markdownlint and `cargo test` (201 tests) pass.
+
+### CIB-006: Port release-plan lint rules to bash and PowerShell
+
+- **Status:** Complete: 2026-09-12
+- **Intent:** Retire the last known three-way lockstep gap so a malformed
+  release plan cannot pass the fallback CLIs.
+- **Expected Outcome:** The bash and PowerShell linters discover
+  `plans/releases/v*.md` (excluding `README.md` and the dotfile template) and
+  implement R001–R004 with the same codes, severities, and messages as the Rust
+  linter. All three CLIs report identical findings and identical file counts on
+  this repo's `plans/`, and release fixtures in the shared parity suite keep
+  them that way.
+- **Validation:** `./bin/aps lint plans` and the Rust binary agree on file count
+  and findings; `./test/cli-parity.sh` covers a valid release plan plus a
+  malformed one exercising each of R001–R004; `./test/run.sh` and
+  `./test/ps-parity.ps1` pass.
+- **Identified From:** Release review 2026-09-12 — bash reported 42 files
+  checked against the Rust binary's 49, the difference being exactly the seven
+  `plans/releases/v*.md` records. REL-003 implemented the rules Rust-only, which
+  D-039 later superseded.
+- **Files:** `lib/rules/release.sh`, `lib/rules/Release.psm1`, `lib/lint.sh`,
+  `bin/aps`, `bin/aps.ps1`, `test/cli-parity.sh`, `test/fixtures/**`
+- **Confidence:** high
+- **Dependencies:** none
+- **Notes:** D-039 makes bash and PowerShell maintained peers, not frozen
+  fallbacks — REL-003's "aps lint is now the Rust CLI" rationale predates it.
+- **Results:** Added `lib/rules/release.sh` and `lib/rules/Release.psm1` as
+  hand-ports of `lint_release`, wired into `lib/lint.sh`, `lib/Lint.psm1`,
+  `bin/aps`, and `bin/aps.ps1`. Discovery was the larger half of the defect:
+  `get_file_type` needed a `release` branch at the Rust classifier's
+  precedence (between `actions` and `module`) and `find_aps_files` needed a
+  `releases/` clause, pinned to `LC_ALL=C sort` to match Rust's byte-order
+  sort. File counts went 42 → 50 in bash and PowerShell, matching Rust, and
+  `diff` of the full output (plus `--json`) is byte-identical across all
+  three on `plans`, `plans/releases`, a single record, a relative target, and
+  the no-arg default. Two further causes of CI blindness were fixed: the
+  parity harness carried no release fixtures, and its `findings()` regex
+  matched only `(E|W)[0-9]{3}`, so R-codes were invisible even when present.
+  Fixtures `release/plans` (clean, plus the `README.md` and dotfile-template
+  exclusions) and `release-invalid/plans` (one record per failure mode, ten
+  findings) now pin the behaviour. The PowerShell port needed `-cmatch`/`-cne`
+  for the Target/Status rows, the `.md` extension, and `README.md` — the same
+  case-insensitivity class of bug recorded at `lib/rules/Common.psm1:115`;
+  without it `| target |` would have satisfied R002. Verified against Rust on
+  a scratch fixture of `V0.3.0.md`, `v.md`, `readme.md`, `README.MD`,
+  `v1.2.0-beta.md`, `v9.aps.md`, and `sub/v2.0.0.md`.
+- **Follow-ups:** Sourcing a new rule module from `bin/aps` without adding it
+  to the installer manifests broke a vendored bash CLI on startup; fixed
+  across all fourteen manifest sites (`lib/scaffold.sh` ×4, `lib/Scaffold.psm1`,
+  `scaffold/{init.sh,install,install.ps1,update,update.ps1,upgrade}`,
+  `cli/src/migrate.rs`, `cli/src/doctor.rs`) and pinned by a new `test/run.sh`
+  guard that derives the rule list from `bin/aps` itself, so the next rule
+  module cannot repeat it. Rule weaknesses and residual cross-CLI divergences
+  were reported rather than unilaterally fixed in one CLI — see CIB-008.
+
+### CIB-007: Give the fallback CLIs a version surface
+
+- **Status:** Draft
+- **Intent:** Let the bash and PowerShell CLIs report which version they are,
+  so the toolchain a project is actually running is always observable.
+- **Expected Outcome:** `aps --version` (and the bare `version` command if the
+  Rust binary accepts one) reports the CLI's own version from all three
+  implementations, with identical formatting. The value is the same
+  `APS_CLI_VERSION` the fallbacks already stamp into `.aps/config.yml`.
+- **Validation:** `aps --version` emits the same string from the Rust binary,
+  `bin/aps`, and `bin/aps.ps1`; a parity fixture or test leg pins the three-way
+  identity; `./test/run.sh` and `./test/ps-parity.ps1` pass.
+- **Identified From:** Release review 2026-09-12 — the Rust binary answers
+  `aps --version` with `aps 0.9.0`, while `bin/aps --version` and
+  `bin/aps --help` have no version surface at all (`--version` errors with
+  "Unknown command"). The fallbacks already know their version: both default
+  `APS_CLI_VERSION` and write it as `cli_version`.
+- **Files:** `bin/aps`, `bin/aps.ps1`, `lib/scaffold.sh`, `lib/Scaffold.psm1`,
+  `test/cli-parity.sh`
+- **Confidence:** high
+- **Dependencies:** none
+- **Notes:** Small but load-bearing for D-044's "single on-disk version
+  surface" and for CLI-003's honest-version-surface intent: a user debugging a
+  `cli_version` pin mismatch on a fallback CLI currently has no way to ask the
+  CLI what it is.
+
+### CIB-008: Harden the release-plan rules and close residual lint divergences
+
+- **Status:** Draft
+- **Intent:** Tighten release-plan validation beyond the structural minimum and
+  retire the three-CLI lint divergences surfaced while porting R001–R004.
+- **Expected Outcome:** R001 validates a plausible version rather than
+  `v` + one digit; a `*.aps.md` file under `releases/` is not silently denied
+  module linting; R002 requires the Target and Status rows to belong to the
+  same header table. Separately, the three known cross-CLI divergences are
+  either fixed in all three implementations or documented as accepted
+  differences with a parity-suite note: symlinked directory traversal on
+  `aps lint .`, PowerShell's culture-aware file sort versus byte-order sorting
+  in Rust and bash, and the W020/W021 grouping order.
+- **Validation:** Fixtures covering `v0garbage.md`, `v9.aps.md`, and a record
+  whose Target and Status rows sit in different tables; `./test/cli-parity.sh`
+  green with mixed-case sibling filenames and a symlinked directory in scope;
+  `./test/run.sh` and `./test/ps-parity.ps1` pass.
+- **Identified From:** CIB-006 (2026-09-12). The porter mirrored the Rust
+  reference exactly, as D-039 requires, and reported the weaknesses rather than
+  silently "improving" one implementation — which would itself have created a
+  divergence.
+- **Files:** `cli/src/lint.rs`, `cli/src/parser.rs`, `lib/rules/release.sh`,
+  `lib/rules/Release.psm1`, `lib/lint.sh`, `lib/Lint.psm1`,
+  `test/cli-parity.sh`, `test/fixtures/**`
+- **Confidence:** medium
+- **Dependencies:** CIB-006
+- **Notes:** Any change here lands in all three CLIs in the same work item —
+  fixing the Rust rule alone would re-open the gap CIB-006 just closed.
+  The PowerShell sort fix (`[StringComparer]::Ordinal`) changes ordering for
+  every file type, not just release plans, so it needs its own parity pass.
+
 ## Status Roll-up
 
 - **Concern:** Standing APS maintenance intake
-- **Progress:** 3/4 work items Complete
+- **Progress:** 5/8 work items Complete
 - **Readout:** CIB-002, CIB-003, and CIB-004 are complete with native Windows
-  CI evidence. CIB-001 remains Draft and isolated in its own worktree.
+  CI evidence. CIB-001 remains Draft and isolated in its own worktree. CIB-005
+  (plan-doctor false positives, issue #132) and CIB-006 (release-lint three-CLI
+  parity) were intaken from the 2026-09-12 release review and are Ready.
+  CIB-005 and CIB-006 completed on 2026-09-12. CIB-007 (version surface on the
+  fallback CLIs) and CIB-008 (release-rule hardening plus residual lint
+  divergences) were intaken from the same review and are Draft.
 
 ## Decisions
 

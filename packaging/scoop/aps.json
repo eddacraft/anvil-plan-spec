@@ -1,5 +1,5 @@
 {
-    "version": "0.8.1",
+    "version": "0.9.0",
     "description": "Anvil Plan Spec — native CLI and TUI wizard for AI-assisted planning",
     "homepage": "https://github.com/EddaCraft/anvil-plan-spec",
     "license": "Apache-2.0",
@@ -11,7 +11,7 @@
     ],
     "architecture": {
         "64bit": {
-            "url": "https://github.com/EddaCraft/anvil-plan-spec/releases/download/v0.8.1/aps-x86_64-pc-windows-gnu.zip",
+            "url": "https://github.com/EddaCraft/anvil-plan-spec/releases/download/v0.9.0/aps-x86_64-pc-windows-gnu.zip",
             "hash": "c10e5e7db2a78f2088db4cd816c31b5ca3dfd97c26c5c295b00e75da09562679",
             "bin": "aps.exe"
         }

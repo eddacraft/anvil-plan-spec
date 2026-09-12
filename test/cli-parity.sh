@@ -67,6 +67,16 @@ fail=0
 # Fixture directories whose lint output must be identical across every CLI.
 # (Command-specific fixtures — audit/, orchestrate/, config/ — are excluded;
 # this harness covers `aps lint` only.)
+#
+# release/plans        one well-formed `releases/v<version>.md`, plus the
+#                      README.md guide and a dotfile template that every CLI
+#                      must exclude from discovery. Lints clean everywhere.
+# release-invalid/plans  one release narrative per R00x failure mode plus a
+#                      combined case, so R001 (naming), R002 (Target+Status
+#                      header table), R003 (## Release Theme) and R004
+#                      (## What Ships) each fire in isolation and together.
+#                      This is the coverage whose absence let R001-R004 ship
+#                      Rust-only (REL-003 / D-039).
 FIXTURES=(
   "valid"
   "invalid"
@@ -78,12 +88,17 @@ FIXTURES=(
   "pkgtags/plans"
   "pkgtags-clean/plans"
   "pkgtags-nomarker/plans"
+  "release/plans"
+  "release-invalid/plans"
 )
 
 # Order-preserving finding lines: `CODE: message (line N)`. Strips the file-path
 # group headers and summary lines, leaving the sequence of findings each CLI
 # emits — which must match byte-for-byte, order included.
-findings() { grep -oE '(E|W)[0-9]{3}:.*' || true; }
+# Code prefixes: E (error), W (warning), R (release-plan rule, REL-003). A new
+# prefix must be added here or its findings are invisible to this harness —
+# which is how R001-R004 stayed bash/PowerShell-less without CI noticing.
+findings() { grep -oE '(E|W|R)[0-9]{3}:.*' || true; }
 
 # Run one CLI lint invocation, validate its exit status, and store its findings
 # in the named variable. `aps lint` exits 0 (clean/warnings) or 1 (errors); any

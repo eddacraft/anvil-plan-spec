@@ -6,6 +6,15 @@
 # Dependencies (Output, Common, rules/*) must be imported by the entry point
 # before this module is loaded. See bin/aps.ps1.
 
+# True when a path sits anywhere under a `releases/` directory. Mirrors
+# in_releases_dir() in cli/src/parser.rs / lib/lint.sh, including the
+# bare-relative case ("releases/v0.3.0.md") and Windows backslashes.
+function Test-ApsInReleasesDir {
+    param([string]$FilePath)
+    $p = $FilePath -replace '\\', '/'
+    return ($p -match '/releases/' -or $p -match '^releases/')
+}
+
 function Get-ApsFileType {
     param([string]$FilePath)
     $name = Split-Path $FilePath -Leaf
@@ -29,6 +38,17 @@ function Get-ApsFileType {
     # Actions files
     if ($FilePath -match '[/\\]execution[/\\]' -and $name -match '\.actions\.md$') { return "actions" }
 
+    # Release narratives live in releases/ as `v<version>.md` (REL-003).
+    # README.md is the directory guide, and `.`-prefixed templates were already
+    # classified above. Anything else here is a (possibly misnamed) release
+    # file — R001 flags the naming. Checked before the modules/ rule so it
+    # matches the Rust classifier's precedence (D-039).
+    # -cmatch/-cne: Rust and bash both compare the extension and README.md
+    # case-sensitively, so `README.MD` is NOT a release narrative (it is not
+    # `*.md`) while `readme.md` IS one. PowerShell's default -match/-ne would
+    # fold both and diverge.
+    if ((Test-ApsInReleasesDir -FilePath $FilePath) -and $name -cmatch '\.md$' -and $name -cne 'README.md') { return "release" }
+
     # Module files
     if ($dir -match '[/\\]modules($|[/\\])') { return "module" }
 
@@ -43,7 +63,17 @@ function Find-ApsFiles {
     Get-ChildItem -Path $Directory -Recurse -File -ErrorAction SilentlyContinue |
         Where-Object {
             -not $_.Name.StartsWith('.') -and
-            ($_.Name -match '\.aps\.md$' -or $_.Name -match '\.actions\.md$' -or $_.Name -match '\.design\.md$' -or $_.Name -eq 'issues.md')
+            (
+                $_.Name -match '\.aps\.md$' -or $_.Name -match '\.actions\.md$' -or
+                $_.Name -match '\.design\.md$' -or $_.Name -eq 'issues.md' -or
+                # Release narratives: any *.md under a releases/ dir except the
+                # README guide. Mirrors find_aps_files() in cli/src/parser.rs and
+                # the releases/ clause in lib/lint.sh's find (REL-003 / D-039).
+                (
+                    (Test-ApsInReleasesDir -FilePath $_.FullName) -and
+                    $_.Name -cmatch '\.md$' -and $_.Name -cne 'README.md'
+                )
+            )
         } |
         Sort-Object FullName |
         ForEach-Object { $_.FullName }
@@ -293,6 +323,7 @@ function Invoke-ApsFileLint {
         "simple"   { return (Invoke-ApsModuleLint -File $File -TreeIds $TreeIds -ChildIds $ChildIds) }
         "issues"   { return (Invoke-ApsIssuesLint -File $File) }
         "design"   { return (Invoke-ApsDesignLint -File $File) }
+        "release"  { return (Invoke-ApsReleaseLint -File $File) }
         "actions"  { return $true }
         "archive"  { return $true }
         "template" { return $true }

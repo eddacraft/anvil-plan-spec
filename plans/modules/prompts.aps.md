@@ -2,9 +2,9 @@
 
 | ID      | Owner  | Priority | Status |
 | ------- | ------ | -------- | ------ |
-| PROMPTS | @aneki | medium   | In Progress |
+| PROMPTS | @aneki | medium   | Complete    |
 
-**Last reviewed:** 2026-07-16
+**Last reviewed:** 2026-09-12
 
 ## Purpose
 
@@ -68,9 +68,9 @@ harness now has a prompt entry point (D-006 closed by PROMPTS-003).
 
 ## Work Items
 
-### PROMPTS-001: Normalize existing prompt variants — In Progress
+### PROMPTS-001: Normalize existing prompt variants — Complete 2026-08-03
 
-- **Status:** In Progress
+- **Status:** Complete: 2026-08-03
 - **Intent:** Keep the OpenCode and Claude Code variants consistent with the
   generic APS rules so tool prompts state only their tool-specific deltas and
   otherwise defer to shared APS concepts.
@@ -86,8 +86,9 @@ harness now has a prompt entry point (D-006 closed by PROMPTS-003).
 - **Results:** Normalized eight OpenCode and Claude Code variants to defer to
   their generic prompts while retaining harness-specific deltas. APS lint,
   the full CLI suite, repository-wide Markdown lint, diff checks, and fresh
-  independent verification pass. Review:
-  [#143](https://github.com/eddacraft/anvil-plan-spec/pull/143) (base: `main`).
+  independent verification pass. Merged via
+  [#143](https://github.com/eddacraft/anvil-plan-spec/pull/143) (`5db8a3b`,
+  ancestor of `main`).
 
 ### PROMPTS-002: Document variant-vs-stub policy — Complete 2026-07-16
 
@@ -133,4 +134,5 @@ harness now has a prompt entry point (D-006 closed by PROMPTS-003).
 ## Notes
 
 Promoted Draft → Ready on 2026-06-27. PROMPTS-002 and PROMPTS-003 completed on
-2026-07-16; PROMPTS-001 is the remaining item and is now In Progress.
+2026-07-16; PROMPTS-001 merged via #143 on 2026-08-03, completing the module.
+The module status lagged the merge until the 2026-09-12 release review.

@@ -54,7 +54,7 @@ if [[ ! -d "$TARGET/plans" ]]; then
 fi
 
 # Known APS bash-lib filenames (relative to a lib/ dir).
-APS_LIB_FILES="output.sh lint.sh orchestrate.sh audit.sh scaffold.sh rules/common.sh rules/module.sh rules/index.sh rules/workitem.sh rules/issues.sh rules/design.sh"
+APS_LIB_FILES="output.sh lint.sh orchestrate.sh audit.sh scaffold.sh rules/common.sh rules/module.sh rules/index.sh rules/workitem.sh rules/issues.sh rules/design.sh rules/release.sh"
 
 dir_only_aps_lib() {
   local d="$1" rel f

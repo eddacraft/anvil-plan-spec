@@ -234,6 +234,175 @@ PowerShell 5.1 journey passes.
 
 ---
 
+### ISS-010: plan-doctor rules disagree with the documented status vocabulary
+
+| Field      | Value               |
+| ---------- | ------------------- |
+| Status     | Closed (2026-09-12) |
+| Severity   | High       |
+| Discovered | 2026-07-26 |
+| Module     | CIB        |
+| Work Item  | CIB-005    |
+
+**Context:** The bundled `plan-doctor` skill hard-codes a status set and a
+filename convention that `plans/aps-rules.md` does not require. W03 omits the
+documented `Proposed` → `Draft` and `Done` → `Complete` aliases, W04 inherits
+the same gap by treating only `Complete`/`Merged`/`Released`/`Shipped` as
+terminal, and W02 flags every module whose filename lacks a numeric prefix —
+a convention no consumer plan follows.
+
+**Impact:** Roughly 385 warnings fire on a consumer plan with no real defects
+(162 `Done` and 132 `Proposed` statuses, plus all 91 module filenames), which
+makes the skill unusable and trains readers to ignore its output. The skill
+bytes are managed and embedded in the binary, so a consumer cannot patch it
+locally without desyncing `.aps-managed.json`.
+
+**Tracking:** [CIB-005](./modules/continuous-improvement-backlog.aps.md),
+[issue #132](https://github.com/eddacraft/anvil-plan-spec/issues/132)
+
+---
+
+### ISS-011: Release-plan lint rules exist only in the Rust CLI
+
+| Field      | Value               |
+| ---------- | ------------------- |
+| Status     | Closed (2026-09-12) |
+| Severity   | Medium     |
+| Discovered | 2026-09-12 |
+| Module     | CIB        |
+| Work Item  | CIB-006    |
+
+**Context:** R001–R004 were implemented in `cli/src/lint.rs` only. The bash and
+PowerShell linters never discover `plans/releases/v*.md`, so on this repo's own
+plans bash reports 42 files checked where the Rust binary reports 49. The
+cross-CLI parity suite carries no release fixtures, so CI cannot see the gap.
+
+**Impact:** A malformed release plan passes both fallback CLIs silently,
+breaking the D-039 lockstep guarantee that one command surface behaves
+identically across the three implementations.
+
+**Tracking:** [CIB-006](./modules/continuous-improvement-backlog.aps.md)
+
+---
+
+### ISS-012: Completed-work archive was never rolled for v0.4.0–v0.8.1
+
+| Field      | Value      |
+| ---------- | ---------- |
+| Status     | Open       |
+| Severity   | Low        |
+| Discovered | 2026-09-12 |
+| Module     | REL        |
+| Work Item  | REL-005    |
+
+**Context:** `plans/completed.aps.md` jumps from theme-compacted pre-v0.7.0
+tables to v0.7.0 and then to the v0.9.0 roll. The task tables for v0.4.0,
+v0.5.0, v0.6.0, v0.8.0, and v0.8.1 were never archived — roughly sixty items
+across `MONO`, `PKG`, `CIP`, `COND`, `INSTALL`, `REL`, `SPEC`, `TASKS`, and
+`CLI` are Complete in their modules but absent from the archive. Until the
+2026-09-12 release review, everything up to and including v0.7.0 also sat
+under a `## Unreleased` heading, which is how the omission stayed invisible.
+
+**Impact:** The archive cannot be used to answer "what shipped when" for five
+releases, and the roll-up convention in `AGENTS.md` ("roll the task table into
+`plans/completed.aps.md`") is not being met. Low severity because the module
+files remain authoritative and the release narratives record the content.
+
+**Implementation:** Backfill mechanically rather than by hand — this is the
+closeout sweep REL-005's `aps release close` is specified to perform from the
+prose release records, and the v0.5.0 record is already its acceptance target.
+Reconstructing attribution by hand risks fabricating it, so the false
+`Unreleased` label was corrected on review and the backfill left to the tool.
+
+**Tracking:** [REL-005](./modules/release-planning.aps.md)
+
+---
+
+### ISS-013: Fallback CLIs cannot report their own version
+
+| Field      | Value      |
+| ---------- | ---------- |
+| Status     | Open       |
+| Severity   | Low        |
+| Discovered | 2026-09-12 |
+| Module     | CIB        |
+| Work Item  | CIB-007    |
+
+**Context:** The Rust binary answers `aps --version` with `aps 0.9.0`. The bash
+CLI rejects both `--version` and `version` as unknown commands and lists no
+version entry in `aps --help`; the PowerShell CLI has no version surface
+either. Both fallbacks nonetheless know their version — each defaults
+`APS_CLI_VERSION` and writes it as `cli_version` into `.aps/config.yml`.
+
+**Impact:** A user on a fallback CLI who hits the `cli_version` pin-mismatch
+warning has no way to ask the CLI which version it is, which is the one
+question the warning raises. It also breaks the D-039 expectation that one
+command surface behaves identically across the three implementations.
+
+**Tracking:** [CIB-007](./modules/continuous-improvement-backlog.aps.md)
+
+---
+
+### ISS-014: Three residual lint divergences across the CLI implementations
+
+| Field      | Value      |
+| ---------- | ---------- |
+| Status     | Open       |
+| Severity   | Low        |
+| Discovered | 2026-09-12 |
+| Module     | CIB        |
+| Work Item  | CIB-008    |
+
+**Context:** Surfaced while porting R001–R004 for CIB-006, on targets outside
+that item's scope. (1) `cli/scaffold` is a symlink to `../scaffold`; Rust's
+`is_dir()` follows it, so `aps lint .` lints two extra files and raises a W019
+that bash `find` and PowerShell `Get-ChildItem -Recurse` never see. (2)
+PowerShell's `Find-ApsFiles` uses `Sort-Object FullName`, which is
+culture-aware, while Rust and bash sort byte-order — with mixed-case sibling
+filenames in one directory this reorders findings. (3) bash and PowerShell run
+the cross-tree W020/W021 collision checks before the per-file loop, so a
+federation parent's group is emitted first, whereas Rust emits in path order.
+
+**Impact:** `aps lint .` and mixed-case plan trees can produce different output
+from different CLIs, which is the condition D-039 exists to prevent. Low
+severity: none of the three affects `aps lint plans` on a conventional tree,
+which is the documented invocation, and the parity suite is green.
+
+**Implementation:** Fix in all three CLIs together or record as accepted
+differences with a note in the parity suite. The PowerShell ordinal-sort fix
+changes ordering for every file type, so it needs its own parity pass.
+
+**Tracking:** [CIB-008](./modules/continuous-improvement-backlog.aps.md)
+
+---
+
+### ISS-015: Release-plan rules are weaker than they read
+
+| Field      | Value      |
+| ---------- | ---------- |
+| Status     | Open       |
+| Severity   | Low        |
+| Discovered | 2026-09-12 |
+| Module     | CIB        |
+| Work Item  | CIB-008    |
+
+**Context:** R001 only requires a literal `v`, one ASCII digit, and a `.md`
+extension, so `v0garbage.md` and `v9.aps.md` pass as well-formed release
+filenames — it does not validate a version. R002 is satisfied by any two lines
+in the first twenty that start `| Target |` and `| Status |`; they need not sit
+in the same table, or in a table at all. Separately, Rust classifies
+`plans/releases/foo.aps.md` as a release file, so a module placed under
+`releases/` silently loses all module linting.
+
+**Impact:** A malformed release record can pass the structural gate, and a
+misfiled module is validated by the wrong rule set with no warning. Not a
+regression — this is the behaviour CIB-006 deliberately mirrored into bash and
+PowerShell rather than diverging from.
+
+**Tracking:** [CIB-008](./modules/continuous-improvement-backlog.aps.md)
+
+---
+
 ## Questions
 
 ### Q-001: Which shared claim transport should team mode use?

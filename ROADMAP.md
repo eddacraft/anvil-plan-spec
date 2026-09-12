@@ -5,15 +5,16 @@ to plan APS.
 
 ## Quick Overview
 
-| Horizon               | Focus                                                             | Status  |
-| --------------------- | ----------------------------------------------------------------- | ------- |
-| **v0.2 Usability**    | Scaffold, templates, docs, validation                             | Done    |
-| **v0.3 Distribution** | Install overhaul, multi-harness agents                            | Done    |
-| **Near Term**         | Orchestration CLI (`next`/`start`/`complete`/`graph`), TUI wizard | Current |
-| **Future**            | Conductor agent, MCP server, GitHub Action, formal spec           | Planned |
-
-See [plans/index.aps.md](plans/index.aps.md) for the full breakdown with modules,
-status, and work items.
+| Horizon                   | Focus                                                                  | Status  |
+| ------------------------- | ---------------------------------------------------------------------- | ------- |
+| **v0.2 Usability**        | Scaffold, templates, docs, validation                                  | Done    |
+| **v0.3 Orchestration**    | Orchestration CLI (`next`/`start`/`complete`/`graph`), multi-agent reach | Done    |
+| **v0.4 Distribution**     | Crosscutting conductor modules, binary-first install, TUI wizard        | Done    |
+| **v0.5–v0.6 Monorepo**    | Federated nested plans, the tagged package tier, full-lifecycle tooling | Done    |
+| **v0.7 Team Foundations** | Managed skill freshness, JSON export, GitHub Action, MCP server         | Done    |
+| **v0.8 Harnesses**        | Twelve supported harnesses from one shared planning asset               | Done    |
+| **Near Term**             | Release tooling (`aps release`), plan-doctor accuracy, lint parity      | Current |
+| **Future**                | Team coordination plane, progress journals, profile-aware CLI           | Planned |
 
 ## Non-Goals
 

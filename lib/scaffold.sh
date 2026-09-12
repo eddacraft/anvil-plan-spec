@@ -9,7 +9,7 @@ APS_BASE_URL="https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/$APS_V
 # Semver of the bash CLI release, stamped into .aps/config.yml as the project
 # contract's cli_version (INSTALL-014). The native binary stamps its own crate
 # version; this is the bash-fallback equivalent.
-APS_CLI_VERSION="${APS_CLI_VERSION:-0.8.1}"
+APS_CLI_VERSION="${APS_CLI_VERSION:-0.9.0}"
 
 # --- v2 file lists (.aps/ layout) ---
 
@@ -60,6 +60,7 @@ V2_CLI_FILES=(
   "lib/rules/workitem.sh"
   "lib/rules/issues.sh"
   "lib/rules/design.sh"
+  "lib/rules/release.sh"
 )
 
 # Agent files (Claude Code)
@@ -110,6 +111,7 @@ CLI_FILES=(
   "lib/rules/workitem.sh"
   "lib/rules/issues.sh"
   "lib/rules/design.sh"
+  "lib/rules/release.sh"
 )
 
 # Canonical tool identifiers
@@ -561,7 +563,7 @@ write_config() {
     echo "tooling_root: .aps/"
     echo ""
     echo "aps:"
-    echo "  version: \"0.8.1\""
+    echo "  version: \"0.9.0\""
     echo "  config_schema: 1"
     echo "  installed: \"$today\""
     echo "  updated: \"$today\""
@@ -1797,7 +1799,8 @@ cmd_migrate() {
   if [[ -d "$target/lib" ]] && [[ -f "$target/lib/output.sh" ]]; then
     local aps_lib_files=(output.sh Output.psm1 lint.sh Lint.psm1 orchestrate.sh scaffold.sh Scaffold.psm1)
     local aps_rule_files=(common.sh Common.psm1 module.sh Module.psm1 index.sh Index.psm1
-                          workitem.sh WorkItem.psm1 issues.sh Issues.psm1 design.sh Design.psm1)
+                          workitem.sh WorkItem.psm1 issues.sh Issues.psm1 design.sh Design.psm1
+                          release.sh Release.psm1)
     for f in "${aps_lib_files[@]}"; do rm -f "$target/lib/$f"; done
     for f in "${aps_rule_files[@]}"; do rm -f "$target/lib/rules/$f"; done
     rmdir "$target/lib/rules" 2>/dev/null
@@ -2059,7 +2062,7 @@ EOF
 APS_LIB_FILES=(
   output.sh lint.sh orchestrate.sh audit.sh scaffold.sh
   rules/common.sh rules/module.sh rules/index.sh
-  rules/workitem.sh rules/issues.sh rules/design.sh
+  rules/workitem.sh rules/issues.sh rules/design.sh rules/release.sh
 )
 
 # True when every file under "$1" is a known APS lib file.

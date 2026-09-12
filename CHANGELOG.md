@@ -6,12 +6,59 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-09-12
+
+**Release narrative:** [plans/releases/v0.9.0.md](./plans/releases/v0.9.0.md).
+
 ### Added
 
 - **`aps update --global`** upgrades the machine-wide CLI at `~/.aps` (or
   `$APS_HOME`) from GitHub releases. Project `aps update` is unchanged. Bash
   and PowerShell `--global` no longer overwrite a native binary with the
-  script runtime.
+  script runtime. Fails closed rather than damaging a working install:
+  `--global` is rejected alongside a project directory, symlink payloads in
+  release archives are refused, and an unreadable native binary aborts the
+  update (CLI-003).
+- **Release-plan lint in the bash and PowerShell CLIs (CIB-006)** — both
+  fallback linters now discover `plans/releases/v*.md` (excluding `README.md`
+  and the dotfile template) and apply R001–R004 with the same codes,
+  severities, and messages as the Rust binary. Release fixtures in the shared
+  parity suite pin the three-way identity. Previously these rules existed in
+  Rust only, so bash checked 42 of this repo's 50 plan files and a malformed
+  release plan passed the fallback CLIs silently — closing the last known
+  D-039 lockstep gap.
+
+### Fixed
+
+- **`plan-doctor` no longer floods healthy plans with false warnings
+  (CIB-005)** — status is normalised through the documented alias table
+  (`Proposed` → `Draft`, `Done` → `Complete`) before any rule evaluates, W04
+  counts `Done` as terminal, the "no `NN-` filename prefix" half of W02 is
+  demoted to an Info code reported once per directory, and a consistently
+  applied undocumented status (`Archived` on archived index rows) reports under
+  its own Info code instead of W03. A consumer plan previously drew roughly 385
+  warnings with no real defects, which made the bundled skill unusable.
+  Resolves [#132](https://github.com/eddacraft/anvil-plan-spec/issues/132).
+- **Installer manifests carry every bash rule module** — a rule module sourced
+  by `bin/aps` but absent from the installer file lists broke a vendored or
+  scaffolded bash CLI on startup with "No such file or directory". All fourteen
+  manifest sites now list `lib/rules/release.sh` (and `Release.psm1`), and a
+  new test derives the required list from `bin/aps` itself so the next rule
+  module cannot repeat it.
+- **Dependency patches** — markdownlint-cli 0.49.1 pulls patched js-yaml,
+  linkify-it, and brace-expansion; the MCP SDK transitives are overridden to
+  patched hono, `@hono/node-server`, fast-uri, ip-address, and body-parser.
+  Together these resolve 17 Dependabot alerts.
+
+### Changed
+
+- **Plan accuracy sweep** — PROMPTS-001 and EXAMPLES-001 are marked Complete
+  (both had landed but the status lagged), the `prompts` and `examples` modules
+  close, `cli-redesign` moves Draft → In Progress, D-045 is recorded as decided
+  rather than proposed, and the roadmap overview is rewritten to match what
+  actually shipped through v0.8. The completed-work archive no longer files
+  v0.3.0–v0.7.0 task tables under an `Unreleased` heading; the missing
+  v0.4.0–v0.8.1 roll is tracked as ISS-012 against REL-005.
 
 ## [0.8.1] - 2026-07-31
 

@@ -40,6 +40,7 @@ Import-Module (Join-Path $RulesDir "Module.psm1") -Force -Global
 Import-Module (Join-Path $RulesDir "Index.psm1") -Force -Global
 Import-Module (Join-Path $RulesDir "Issues.psm1") -Force -Global
 Import-Module (Join-Path $RulesDir "Design.psm1") -Force -Global
+Import-Module (Join-Path $RulesDir "Release.psm1") -Force -Global
 Import-Module (Join-Path $LibDir "Lint.psm1") -Force -Global
 Import-Module (Join-Path $LibDir "Scaffold.psm1") -Force -Global
 
