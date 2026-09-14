@@ -4,6 +4,8 @@ Work can begin when: status=Ready AND work items exist.
 Module ID: Use 2-6 uppercase chars (AUTH, PAY, UI, CORE, etc.)
 File naming: NN-name.aps.md by dependency order (01-core.aps.md, 02-auth.aps.md)
 Packages: For monorepos, list affected packages (see docs/monorepo.md)
+Model / Reasoning: Optional routing hints. Add `Model` and/or `Reasoning`
+  columns to the table for a module-wide default; work items inherit them.
 -->
 
 # [Module Title]
@@ -50,12 +52,17 @@ Change status to **Ready** when:
 
 <!--
 Required: Intent, Expected Outcome, Validation
-Optional: Non-scope, Files, Dependencies, Confidence, Risks
+Optional: Non-scope, Files, Dependencies, Confidence, Risks, Model, Reasoning
 
 Confidence levels:
 - high: Clear requirements, familiar patterns
 - medium: Some unknowns, moderate risk
 - low: Exploratory, high uncertainty
+
+Model / Reasoning (optional, but preferred — they let harnesses route work):
+- Model: the AI model to execute this item (e.g. claude-opus-5)
+- Reasoning: low | medium | high | max — effort the executing model should spend
+- Omit either to inherit the module table column of the same name
 -->
 
 ### AUTH-001: [Work item title]
@@ -65,6 +72,8 @@ Confidence levels:
 - **Validation:** `[test command]`
 - **Confidence:** medium
 - **Packages:** [Affected packages] _(monorepo only — inherits from module if omitted)_
+- **Model:** [model id, e.g. claude-opus-5] _(optional — preferred; inherits the module `Model` column)_
+- **Reasoning:** medium _(optional — preferred; low / medium / high / max; inherits the module `Reasoning` column)_
 - **Non-scope:** [What won't change] _(optional)_
 - **Files:** [Likely files] _(optional — best effort)_
 - **Dependencies:** AUTH-XXX _(optional)_

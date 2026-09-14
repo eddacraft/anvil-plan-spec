@@ -223,6 +223,65 @@ function Test-W022Packages {
     }
 }
 
+# W023: a `Reasoning:` level (metadata-table column or work-item field) outside
+# the canonical `low | medium | high | max` vocabulary (SPEC-002). The field is
+# optional; only a present, malformed value warns. Values with characters
+# outside [A-Za-z] are placeholder prose (`_(optional)_`, `low | medium | high`)
+# and are skipped, mirroring W022. `Model:` is deliberately unchecked — model
+# identifiers are harness-specific. Mirrors the Rust/bash check_w023_reasoning.
+function Test-W023Reasoning {
+    param([string]$File)
+
+    $lines = Get-Content -LiteralPath $File -ErrorAction SilentlyContinue
+    if (-not $lines) { return }
+
+    # Collect (line, value) pairs: the metadata table's first data row in the
+    # Reasoning column, plus every `- **Reasoning:**` work-item field.
+    $found = [System.Collections.ArrayList]::new()
+    $col = -1
+    $headerSeen = $false
+    $tableDone = $false
+    for ($i = 0; $i -lt $lines.Count; $i++) {
+        $line = $lines[$i]
+        if (-not $tableDone) {
+            $isIdHeader = $line -match '^\| *ID *\|'
+            if (-not $headerSeen) {
+                if ($isIdHeader) {
+                    $cols = ($line -split '\|') | ForEach-Object { $_.Trim() }
+                    for ($j = 0; $j -lt $cols.Count; $j++) {
+                        if ($cols[$j] -ceq 'Reasoning') { $col = $j }
+                    }
+                    $headerSeen = $true
+                    continue
+                }
+            } elseif ($line -match '^\|') {
+                if ($line -match '^[|: -]+$' -or $isIdHeader) { continue }
+                if ($col -ge 0) {
+                    $vals = ($line -split '\|') | ForEach-Object { $_.Trim() }
+                    if ($col -lt $vals.Count -and $vals[$col] -ne '') {
+                        $null = $found.Add(@(($i + 1), $vals[$col]))
+                    }
+                }
+                $tableDone = $true
+            }
+        }
+        if ($line -match '^\s*- \*\*Reasoning:\*\*\s*(.*)$' -and $Matches[1] -ne '') {
+            $null = $found.Add(@(($i + 1), $Matches[1]))
+        }
+    }
+
+    foreach ($pair in $found) {
+        $lineNum = $pair[0]
+        $value = $pair[1].Trim().Trim('`').Trim()
+        if ($value -eq '') { continue }
+        if ($value -notmatch '^[A-Za-z]+$') { continue }
+        if (@('low', 'medium', 'high', 'max') -notcontains $value.ToLowerInvariant()) {
+            Add-ApsResult -Path $File -Type "warning" -Code "W023" `
+                -Message "Reasoning level '$value' is not one of low, medium, high, max" -Line "$lineNum"
+        }
+    }
+}
+
 # W005: Status=Ready but no work items
 function Test-W005ReadyNoItems {
     param([string]$File)
@@ -252,6 +311,7 @@ function Invoke-ApsModuleLint {
     Test-W017LastReviewed -File $File
     Test-W002ConductorRefs -File $File -TreeIds $TreeIds
     Test-W022Packages -File $File
+    Test-W023Reasoning -File $File
 
     if (Test-ApsSection -FilePath $File -SectionHeader "## Work Items") {
         if (-not (Invoke-ApsWorkItemLint -File $File -TreeIds $TreeIds -ChildIds $ChildIds)) { $hasErrors = $true }

@@ -1060,5 +1060,28 @@ grep -q 'aps-version' "$PROJECT_ROOT/aps-planning/SKILL.md" && fail "root SKILL.
 rm -rf "$AV_DIR"
 pass
 
+# Test 61: SPEC-002 — Model: / Reasoning: routing hints. W023 warns only on a
+# malformed Reasoning level (table column or item field; placeholders skipped);
+# `next` prints the effective hints with module-column inheritance; `export`
+# carries them as `model` / `reasoning`. Rust behaviour is asserted by cargo
+# tests over the same fixture; cross-CLI lint/export parity by test/cli-parity.sh.
+echo -n "Test: Model/Reasoning hints (W023, next inheritance, export)... "
+output=$($APS lint "$SCRIPT_DIR/fixtures/routing/plans" 2>&1) || true
+[[ $(echo "$output" | grep -c "W023") -eq 2 ]] || fail "expected exactly two W023 findings (got: $output)"
+echo "$output" | grep -q "Extreme" || fail "W023 missed the metadata-table Reasoning column"
+echo "$output" | grep -q "hihg" || fail "W023 missed the item-level Reasoning field"
+echo "$output" | grep -q "optional" && fail "W023 fired on placeholder prose"
+echo "$output" | grep -q "claude-opus-5" && fail "Model: must never be vocabulary-checked"
+output=$($APS next --plans "$SCRIPT_DIR/fixtures/routing/plans" 2>&1) || fail "next failed"
+echo "$output" | grep -q "^AUTH-001:" || fail "next did not resolve AUTH-001"
+echo "$output" | grep -qx "Model: claude-opus-5 | Reasoning: high" || fail "next did not print inherited hints (got: $output)"
+output=$($APS next --plans "$SCRIPT_DIR/fixtures/pkgnext/plans" 2>&1) || fail "next (pkgnext) failed"
+echo "$output" | grep -q "^Model:" && fail "next printed a Model line for a plan without hints"
+output=$($APS export --plans "$SCRIPT_DIR/fixtures/routing/plans" 2>&1) || fail "export failed"
+echo "$output" | grep -qF '"id":"AUTH-001","title":"Login","status":"Ready","line":16,"dependencies":[],"packages":null,"model":"claude-opus-5","reasoning":"high"' \
+  || fail "export missing inherited model/reasoning on AUTH-001 (got: $output)"
+echo "$output" | grep -qF '"model":"claude-sonnet-5","reasoning":"Low"' || fail "export missing item-level override on AUTH-002"
+pass
+
 echo ""
 echo -e "${GREEN}All tests passed!${NC}"

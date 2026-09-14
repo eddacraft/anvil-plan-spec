@@ -15,9 +15,16 @@ declare -a ORCH_ITEM_FILES=()
 declare -a ORCH_ITEM_CHILDREN=()
 # Item-level Packages: scope tags (PKG-001); empty = inherit from the module.
 declare -a ORCH_ITEM_PACKAGES=()
+# Item-level Model: / Reasoning: routing hints (SPEC-002); empty = inherit
+# from the module metadata columns.
+declare -a ORCH_ITEM_MODEL=()
+declare -a ORCH_ITEM_REASONING=()
 declare -A ORCH_MODULE_STATUSES=()
 # Module-level Packages: metadata column, keyed like ORCH_MODULE_STATUSES.
 declare -A ORCH_MODULE_PACKAGES=()
+# Module-level Model / Reasoning metadata columns, keyed like ORCH_MODULE_STATUSES.
+declare -A ORCH_MODULE_MODEL=()
+declare -A ORCH_MODULE_REASONING=()
 
 orch_reset_state() {
   ORCH_ITEM_IDS=()
@@ -29,8 +36,12 @@ orch_reset_state() {
   ORCH_ITEM_FILES=()
   ORCH_ITEM_CHILDREN=()
   ORCH_ITEM_PACKAGES=()
+  ORCH_ITEM_MODEL=()
+  ORCH_ITEM_REASONING=()
   ORCH_MODULE_STATUSES=()
   ORCH_MODULE_PACKAGES=()
+  ORCH_MODULE_MODEL=()
+  ORCH_MODULE_REASONING=()
 }
 
 # --- Packages: scope tags (PKG-001, tagged monorepo tier) --------------------
@@ -58,6 +69,38 @@ orch_item_packages() {
     pkgs="${ORCH_MODULE_PACKAGES[$key]:-}"
   fi
   printf '%s' "$pkgs"
+}
+
+# --- Model: / Reasoning: routing hints (SPEC-002) ----------------------------
+
+# Effective Model: for item $1 — the item's own field, else its module.s
+# metadata-table column (items inherit when the field is omitted).
+orch_item_model() {
+  local i="$1"
+  local value="${ORCH_ITEM_MODEL[$i]}"
+  if [[ -z "$value" ]]; then
+    local key
+    key=$(orch_module_status_key "${ORCH_ITEM_MODULES[$i]}" "${ORCH_ITEM_CHILDREN[$i]}")
+    value="${ORCH_MODULE_MODEL[$key]:-}"
+  fi
+  printf '%s' "$value"
+}
+
+# Effective Reasoning: for item $1 — same inheritance as orch_item_model.
+orch_item_reasoning() {
+  local i="$1"
+  local value="${ORCH_ITEM_REASONING[$i]}"
+  if [[ -z "$value" ]]; then
+    local key
+    key=$(orch_module_status_key "${ORCH_ITEM_MODULES[$i]}" "${ORCH_ITEM_CHILDREN[$i]}")
+    value="${ORCH_MODULE_REASONING[$key]:-}"
+  fi
+  printf '%s' "$value"
+}
+
+# Display form of an optional routing hint: the value, or None when unset.
+orch_or_none() {
+  printf '%s' "${1:-None}"
 }
 
 # True when item $1's effective Packages: include $2 (normalised comparison).
@@ -320,15 +363,19 @@ orch_load_root_work_items() {
 
   local file
   while IFS= read -r file; do
-    local module_id module_status module_packages
+    local module_id module_status module_packages module_model module_reasoning
     module_id=$(get_module_id "$file")
     module_status=$(get_status "$file")
     module_status=$(orch_normalize_status "$module_status" "Draft")
     module_packages=$(get_module_packages "$file")
+    module_model=$(get_module_model "$file")
+    module_reasoning=$(get_module_reasoning "$file")
 
     [[ -n "$module_id" ]] || module_id=$(basename "$file" .aps.md | tr '[:lower:]' '[:upper:]')
     orch_set_module_status "$module_id" "$module_status" "$child_name"
     ORCH_MODULE_PACKAGES["$(orch_module_status_key "$module_id" "$child_name")"]="$module_packages"
+    ORCH_MODULE_MODEL["$(orch_module_status_key "$module_id" "$child_name")"]="$module_model"
+    ORCH_MODULE_REASONING["$(orch_module_status_key "$module_id" "$child_name")"]="$module_reasoning"
 
     if [[ "$load_all" != "true" ]]; then
       [[ "$module_status" == "Complete" || "$module_status" == "Draft" || "$module_status" == "Blocked" ]] && continue
@@ -360,6 +407,8 @@ orch_load_root_work_items() {
       ORCH_ITEM_FILES+=("$file")
       ORCH_ITEM_CHILDREN+=("$child_name")
       ORCH_ITEM_PACKAGES+=("$(orch_field_value "$content" "Packages")")
+      ORCH_ITEM_MODEL+=("$(orch_field_value "$content" "Model")")
+      ORCH_ITEM_REASONING+=("$(orch_field_value "$content" "Reasoning")")
     done <<< "$(get_work_items "$file")"
   done < <(find "$module_dir" -type f -name "*.aps.md" ! -name ".*" 2>/dev/null | sort)
 }
@@ -696,6 +745,12 @@ EOF
       i="${candidates[0]}"
       echo "${ORCH_ITEM_IDS[$i]}: ${ORCH_ITEM_TITLES[$i]}"
       echo "Module: ${ORCH_ITEM_MODULES[$i]} | Dependencies: $(orch_deps_display "${ORCH_ITEM_DEPS[$i]}") | Status: ${ORCH_ITEM_STATUSES[$i]}"
+      local model reasoning
+      model=$(orch_item_model "$i")
+      reasoning=$(orch_item_reasoning "$i")
+      if [[ -n "$model" || -n "$reasoning" ]]; then
+        echo "Model: $(orch_or_none "$model") | Reasoning: $(orch_or_none "$reasoning")"
+      fi
       echo "File: ${ORCH_ITEM_FILES[$i]}"
     fi
     return 0

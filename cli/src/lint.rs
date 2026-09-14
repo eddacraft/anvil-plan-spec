@@ -716,6 +716,7 @@ fn lint_module(
     }
 
     check_w022_packages(report, plan);
+    check_w023_reasoning(report, plan);
 
     if plan.has_section("## Work Items") {
         lint_work_items(report, plan, tree_ids, child_ids);
@@ -818,6 +819,72 @@ fn check_w022_packages(report: &mut LintReport, plan: &PlanFile) {
             if !value.is_empty() {
                 check_w022_entries(report, &plan.path, &value, ln, &root);
             }
+        }
+    }
+}
+
+/// Canonical `Reasoning:` vocabulary (SPEC-002). Matched case-insensitively;
+/// harnesses map `max` onto their own top tier (`xhigh`, `max`, …).
+pub const REASONING_LEVELS: [&str; 4] = ["low", "medium", "high", "max"];
+
+/// One `Reasoning:` value. Values with characters outside `[A-Za-z]` are
+/// placeholder prose (e.g. `_(optional)_`, `low | medium | high`), not a level
+/// — skipped, mirroring W022's placeholder rule.
+fn check_w023_value(report: &mut LintReport, path: &str, value: &str, line: usize) {
+    let value = value.trim().trim_matches('`').trim();
+    if value.is_empty() || !value.chars().all(|c| c.is_ascii_alphabetic()) {
+        return;
+    }
+    if !REASONING_LEVELS.contains(&value.to_ascii_lowercase().as_str()) {
+        report.add(
+            path,
+            Severity::Warning,
+            "W023",
+            format!(
+                "Reasoning level '{value}' is not one of {}",
+                REASONING_LEVELS.join(", ")
+            ),
+            Some(line),
+        );
+    }
+}
+
+/// W023: a `Reasoning:` level (metadata-table column or work-item field)
+/// outside the canonical `low | medium | high | max` vocabulary (SPEC-002).
+/// The field is optional; only a present, malformed value warns. `Model:` is
+/// deliberately unchecked — model identifiers are harness-specific.
+fn check_w023_reasoning(report: &mut LintReport, plan: &PlanFile) {
+    let is_id_header = |line: &str| {
+        line.starts_with('|') && line.split('|').nth(1).is_some_and(|c| c.trim() == "ID")
+    };
+
+    let mut col: Option<usize> = None;
+    let mut header_seen = false;
+    let mut table_done = false;
+    for (index, line) in plan.lines.iter().enumerate() {
+        let ln = index + 1;
+        if !table_done {
+            if !header_seen {
+                if is_id_header(line) {
+                    col = line.split('|').position(|c| c.trim() == "Reasoning");
+                    header_seen = true;
+                    continue;
+                }
+            } else if line.starts_with('|') {
+                // Skip separator rows and repeated headers; the first data row
+                // is authoritative (mirrors `module_reasoning`).
+                if line.chars().all(|c| matches!(c, '|' | ':' | '-' | ' ')) || is_id_header(line) {
+                    continue;
+                }
+                if let Some(col) = col {
+                    let value = line.split('|').nth(col).unwrap_or("").trim().to_string();
+                    check_w023_value(report, &plan.path, &value, ln);
+                }
+                table_done = true;
+            }
+        }
+        if let Some(rest) = line.trim_start().strip_prefix("- **Reasoning:**") {
+            check_w023_value(report, &plan.path, rest, ln);
         }
     }
 }
@@ -1867,6 +1934,32 @@ mod tests {
             "gate must silence W022 without packages/ or apps/"
         );
         let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn w023_flags_reasoning_levels_outside_the_vocabulary() {
+        let report = lint_text(
+            "plans/modules/auth.aps.md",
+            "# Auth\n\n| ID | Status | Model | Reasoning |\n| --- | --- | --- | --- |\n| AUTH | Complete | claude-opus-5 | Extreme |\n\n## Purpose\n\nx\n\n## Work Items\n\n### AUTH-001: a\n\n- **Status:** Complete\n- **Model:** anything-goes\n- **Reasoning:** High\n\n### AUTH-002: b\n\n- **Status:** Complete\n- **Reasoning:** hihg\n\n### AUTH-003: c\n\n- **Status:** Complete\n- **Reasoning:** low | medium | high | max\n",
+        );
+        let w023: Vec<&Finding> = report
+            .findings
+            .iter()
+            .filter(|f| f.code == "W023")
+            .collect();
+        // Table 'Extreme' and item 'hihg' warn; 'High' is a case-insensitive
+        // match; the placeholder prose is skipped; Model is never checked.
+        assert_eq!(w023.len(), 2, "got {:?}", codes(&report));
+        assert!(w023[0].message.contains("'Extreme'"));
+        assert_eq!(w023[0].line, Some(5));
+        assert!(w023[1].message.contains("'hihg'"));
+        assert_eq!(w023[1].line, Some(22));
+        assert!(
+            !report
+                .findings
+                .iter()
+                .any(|f| f.message.contains("anything-goes"))
+        );
     }
 
     #[test]

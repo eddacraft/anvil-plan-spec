@@ -90,6 +90,7 @@ FIXTURES=(
   "pkgtags-nomarker/plans"
   "release/plans"
   "release-invalid/plans"
+  "routing/plans"
 )
 
 # Order-preserving finding lines: `CODE: message (line N)`. Strips the file-path

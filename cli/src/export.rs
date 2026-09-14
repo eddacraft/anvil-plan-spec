@@ -92,15 +92,25 @@ pub fn cmd_export(plan_root: &str) -> i32 {
                 .as_ref()
                 .and_then(|p| p.module_packages())
                 .unwrap_or_default();
+            let mmodel = plan
+                .as_ref()
+                .and_then(|p| p.module_model())
+                .unwrap_or_default();
+            let mreasoning = plan
+                .as_ref()
+                .and_then(|p| p.module_reasoning())
+                .unwrap_or_default();
 
             json.push_str(&format!(
-                "{{\"id\":\"{}\",\"child\":{},\"file\":\"{}\",\"status\":\"{}\",\"type\":{},\"packages\":{},\"work_items\":[",
+                "{{\"id\":\"{}\",\"child\":{},\"file\":\"{}\",\"status\":\"{}\",\"type\":{},\"packages\":{},\"model\":{},\"reasoning\":{},\"work_items\":[",
                 esc(&item.module),
                 string_or_null(&item.child),
                 esc(&item.file),
                 esc(&mstatus),
                 string_or_null(&mtype),
                 string_or_null(&mpkgs),
+                string_or_null(&mmodel),
+                string_or_null(&mreasoning),
             ));
         }
 
@@ -110,14 +120,18 @@ pub fn cmd_export(plan_root: &str) -> i32 {
         first_item = false;
 
         let pkgs = graph.item_packages(item);
+        let model = graph.item_model(item);
+        let reasoning = graph.item_reasoning(item);
         json.push_str(&format!(
-            "{{\"id\":\"{}\",\"title\":\"{}\",\"status\":\"{}\",\"line\":{},\"dependencies\":[{}],\"packages\":{}}}",
+            "{{\"id\":\"{}\",\"title\":\"{}\",\"status\":\"{}\",\"line\":{},\"dependencies\":[{}],\"packages\":{},\"model\":{},\"reasoning\":{}}}",
             esc(&item.id),
             esc(&item.title),
             esc(&item.status),
             item.line,
             deps_elements(&item.deps),
             string_or_null(&pkgs),
+            string_or_null(&model),
+            string_or_null(&reasoning),
         ));
     }
 

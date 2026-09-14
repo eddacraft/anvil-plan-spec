@@ -26,6 +26,12 @@ pub struct WorkItem {
     /// Item-level `Packages:` scope tags (PKG-001); empty = inherit from the
     /// module's metadata column.
     pub packages: String,
+    /// Item-level `Model:` routing hint (SPEC-002); empty = inherit from the
+    /// module's `Model` metadata column.
+    pub model: String,
+    /// Item-level `Reasoning:` level (SPEC-002); empty = inherit from the
+    /// module's `Reasoning` metadata column.
+    pub reasoning: String,
 }
 
 /// Outcome of resolving a work-item reference across a federation (MONO-003).
@@ -82,6 +88,10 @@ pub struct PlanGraph {
     pub module_statuses: HashMap<String, String>,
     /// Module-level `Packages:` metadata column, keyed like `module_statuses`.
     pub module_packages: HashMap<String, String>,
+    /// Module-level `Model` metadata column, keyed like `module_statuses`.
+    pub module_model: HashMap<String, String>,
+    /// Module-level `Reasoning` metadata column, keyed like `module_statuses`.
+    pub module_reasoning: HashMap<String, String>,
 }
 
 impl PlanGraph {
@@ -155,6 +165,14 @@ impl PlanGraph {
                     module_status_key(&module_id, &child),
                     plan.module_packages().unwrap_or_default(),
                 );
+                graph.module_model.insert(
+                    module_status_key(&module_id, &child),
+                    plan.module_model().unwrap_or_default(),
+                );
+                graph.module_reasoning.insert(
+                    module_status_key(&module_id, &child),
+                    plan.module_reasoning().unwrap_or_default(),
+                );
 
                 for item in plan.work_items() {
                     let Some(id) = parser::parse_work_item_id(&item.header) else {
@@ -178,6 +196,8 @@ impl PlanGraph {
                         line: item.line,
                         child: child.clone(),
                         packages: parser::field_value(&content, "Packages"),
+                        model: parser::field_value(&content, "Model"),
+                        reasoning: parser::field_value(&content, "Reasoning"),
                     });
                 }
             }
@@ -364,6 +384,30 @@ impl PlanGraph {
             .unwrap_or_default()
     }
 
+    /// Effective `Model:` routing hint for an item — its own field, else its
+    /// module's `Model` metadata column (SPEC-002).
+    pub fn item_model(&self, item: &WorkItem) -> String {
+        if !item.model.is_empty() {
+            return item.model.clone();
+        }
+        self.module_model
+            .get(&module_status_key(&item.module, &item.child))
+            .cloned()
+            .unwrap_or_default()
+    }
+
+    /// Effective `Reasoning:` level for an item — its own field, else its
+    /// module's `Reasoning` metadata column (SPEC-002).
+    pub fn item_reasoning(&self, item: &WorkItem) -> String {
+        if !item.reasoning.is_empty() {
+            return item.reasoning.clone();
+        }
+        self.module_reasoning
+            .get(&module_status_key(&item.module, &item.child))
+            .cloned()
+            .unwrap_or_default()
+    }
+
     /// True when the item's effective `Packages:` include `filter`
     /// (normalised comparison). An untagged item matches no package filter.
     fn matches_package(&self, item: &WorkItem, filter: &str) -> bool {
@@ -395,6 +439,12 @@ fn module_status_key(module: &str, child: &str) -> String {
     } else {
         format!("{}:{}", child.to_ascii_lowercase(), module.to_uppercase())
     }
+}
+
+/// Display form of an optional routing hint: the value, or `None` when unset
+/// (mirrors `orch_or_none`).
+fn or_none(value: &str) -> &str {
+    if value.is_empty() { "None" } else { value }
 }
 
 /// Render a Dependencies field for display (`orch_deps_display`): newlines
@@ -482,6 +532,15 @@ pub fn cmd_next(
                 deps_display(&item.deps),
                 item.status
             );
+            let model = graph.item_model(item);
+            let reasoning = graph.item_reasoning(item);
+            if !model.is_empty() || !reasoning.is_empty() {
+                println!(
+                    "Model: {} | Reasoning: {}",
+                    or_none(&model),
+                    or_none(&reasoning)
+                );
+            }
             println!("File: {}", item.file);
         }
         return 0;
@@ -532,6 +591,24 @@ mod tests {
         assert!(all.iter().any(|i| i.id == "MISC-001"));
         let misc = all.iter().find(|i| i.id == "MISC-001").unwrap();
         assert!(graph.item_packages(misc).is_empty());
+    }
+
+    #[test]
+    fn model_and_reasoning_inherit_from_the_module_column() {
+        let graph = PlanGraph::load(&PathBuf::from("../test/fixtures/routing/plans")).unwrap();
+        let find = |id: &str| graph.items.iter().find(|i| i.id == id).unwrap();
+        // AUTH-001 carries no fields — both hints come from the module table.
+        assert_eq!(graph.item_model(find("AUTH-001")), "claude-opus-5");
+        assert_eq!(graph.item_reasoning(find("AUTH-001")), "high");
+        // AUTH-002 overrides both at item level; the raw value is preserved.
+        assert_eq!(graph.item_model(find("AUTH-002")), "claude-sonnet-5");
+        assert_eq!(graph.item_reasoning(find("AUTH-002")), "Low");
+        // A module with neither column yields empty hints (pkgnext/MISC).
+        let plain = PlanGraph::load(&PathBuf::from("../test/fixtures/pkgnext/plans")).unwrap();
+        let misc = plain.items.iter().find(|i| i.id == "MISC-001").unwrap();
+        assert!(plain.item_model(misc).is_empty());
+        assert!(plain.item_reasoning(misc).is_empty());
+        assert_eq!(or_none(""), "None");
     }
 
     #[test]
@@ -645,6 +722,8 @@ mod tests {
             line: 1,
             child: child.to_string(),
             packages: String::new(),
+            model: String::new(),
+            reasoning: String::new(),
         };
         // Declaration order puts core (Ready) before api (Complete).
         graph.items.push(mk("AUTH-001", "Ready", "", "core"));
@@ -692,6 +771,8 @@ mod tests {
             line: 1,
             child: "core".to_string(),
             packages: String::new(),
+            model: String::new(),
+            reasoning: String::new(),
         });
         graph.items.push(WorkItem {
             id: "AUTH-002".to_string(),
@@ -703,6 +784,8 @@ mod tests {
             line: 1,
             child: "api".to_string(),
             packages: String::new(),
+            model: String::new(),
+            reasoning: String::new(),
         });
 
         assert_eq!(

@@ -196,16 +196,16 @@ get_module_type() {
   ' "$file"
 }
 
-# Extract the `Packages` column value from the metadata table, or empty.
-# Same first-data-row semantics as get_module_type. (PKG-001)
-# Usage: get_module_packages "file"
-get_module_packages() {
-  local file="$1"
-  awk -F '|' '
+# Generic metadata-table column read: find the `| ID |` header row, locate the
+# named column, print the first data row's value (empty when the column is
+# absent). Mirrors the Rust `metadata_column`. Usage: get_module_column "file" "Name"
+get_module_column() {
+  local file="$1" name="$2"
+  awk -F '|' -v want="$name" '
     !found && /^\| *ID *\|/ {
       for (i = 1; i <= NF; i++) {
         c = $i; gsub(/^[[:space:]]+|[[:space:]]+$/, "", c)
-        if (c == "Packages") pcol = i
+        if (c == want) pcol = i
       }
       found = 1
       next
@@ -217,6 +217,24 @@ get_module_packages() {
       print v; exit
     }
   ' "$file"
+}
+
+# Module-level `Model` / `Reasoning` routing hints (SPEC-002): the metadata-table
+# columns work items inherit when they omit the field.
+# Usage: get_module_model "file" / get_module_reasoning "file"
+get_module_model() {
+  get_module_column "$1" "Model"
+}
+
+get_module_reasoning() {
+  get_module_column "$1" "Reasoning"
+}
+
+# Extract the `Packages` column value from the metadata table, or empty.
+# Same first-data-row semantics as get_module_type. (PKG-001)
+# Usage: get_module_packages "file"
+get_module_packages() {
+  get_module_column "$1" "Packages"
 }
 
 # True when a module file carries `Type: Conductor` (case-insensitive).

@@ -104,6 +104,7 @@ narratives). `README.md` and the `.release.template.md` are not linted.
 | W020 | Index          | Work-item ID defined in more than one child tree of a federated (nested-plans) monorepo — collisions make `<name>:<ID>` cross-tree references ambiguous (warning; each child tree stays independently valid) |
 | W021 | Index          | Module ID defined in more than one child tree of a federated monorepo — a warning because IDs remain bare per tree, but orchestration resolves each status within its owning child |
 | W022 | Module         | A `Packages:` scope tag (metadata-table column or work-item field) that resolves to no workspace directory — checked as given plus `packages/<entry>` and `apps/<entry>`; silent unless the workspace has a `packages/` or `apps/` directory (tagged monorepo tier, see [docs/monorepo.md](./monorepo.md)) |
+| W023 | Module         | A `Reasoning:` level (metadata-table column or work-item field) outside the canonical `low \| medium \| high \| max` vocabulary (case-insensitive) — the field is optional, only a present, malformed value warns; `Model:` is never vocabulary-checked |
 
 > **Nested plans (monorepos).** When `aps lint` is pointed at a federated
 > **parent** `index.aps.md` (one with a `## Child Plans` section), it follows
@@ -201,6 +202,7 @@ forces a state change.
 $ aps next
 AUTH-003: Implement token refresh
 Module: AUTH | Dependencies: AUTH-001, AUTH-002, CORE-001 | Status: Ready
+Model: claude-opus-5 | Reasoning: high
 File: plans/modules/auth.aps.md
 
 $ aps next auth          # Scope to one module
@@ -222,6 +224,15 @@ is case-insensitive and `packages/core` matches `core`. `--by-package` prints
 every ready item grouped under its package headings, with untagged items in a
 final `(untagged)` bucket so partial adoption stays visible. Untagged items
 never match a `--package` filter.
+
+When a work item or its module carries routing hints, `next` adds a
+`Model: … | Reasoning: …` line so the executing harness can pick the model and
+effort level. Both fields are optional but preferred: set `- **Model:**` /
+`- **Reasoning:**` on the item, or `Model` / `Reasoning` columns in the module
+metadata table as a module-wide default the items inherit. `Reasoning` takes
+`low | medium | high | max` (**W023** warns on anything else); `Model` is a
+free-form identifier. Unset hints show as `None`; the line is omitted when
+neither is set.
 
 ### `aps start <ID>` — claim a work item
 

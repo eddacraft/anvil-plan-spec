@@ -190,6 +190,59 @@ check_w022_packages() {
   return 0
 }
 
+# W023: a `Reasoning:` level (metadata-table column or work-item field) outside
+# the canonical `low | medium | high | max` vocabulary (SPEC-002). The field is
+# optional; only a present, malformed value warns. Values with characters
+# outside [A-Za-z] are placeholder prose (`_(optional)_`, `low | medium | high`)
+# and are skipped, mirroring W022. `Model:` is deliberately unchecked — model
+# identifiers are harness-specific. Mirrors the Rust check_w023_reasoning.
+check_w023_reasoning() {
+  local file="$1"
+  local line_num value
+  while IFS=: read -r line_num value; do
+    # shellcheck disable=SC2016 # the backtick is a literal in the sed class
+    value=$(printf '%s' "$value" | sed -E 's/^[[:space:]`]+//; s/[[:space:]`]+$//')
+    [[ -n "$value" ]] || continue
+    [[ "$value" =~ ^[A-Za-z]+$ ]] || continue
+    case "${value,,}" in
+      low|medium|high|max) ;;
+      *) add_result "$file" "warning" "W023" "Reasoning level '$value' is not one of low, medium, high, max" "$line_num" ;;
+    esac
+  done < <(awk -F'|' '
+    # Metadata table: first data row of the Reasoning column is authoritative
+    # (mirrors get_module_reasoning). Repeated headers and separators are skipped.
+    !hdr && /^\|/ {
+      c1 = $2; gsub(/^[[:space:]]+|[[:space:]]+$/, "", c1)
+      if (c1 == "ID") {
+        for (i = 1; i <= NF; i++) {
+          c = $i; gsub(/^[[:space:]]+|[[:space:]]+$/, "", c)
+          if (c == "Reasoning") rc = i
+        }
+        hdr = 1
+      }
+      next
+    }
+    hdr && !done && /^\|/ {
+      if ($0 ~ /^[|: -]+$/) next
+      c1 = $2; gsub(/^[[:space:]]+|[[:space:]]+$/, "", c1)
+      if (c1 == "ID") next
+      if (rc) {
+        v = $rc; gsub(/^[[:space:]]+|[[:space:]]+$/, "", v)
+        if (v != "") print NR ":" v
+      }
+      done = 1
+      next
+    }
+    # Work-item fields: every `- **Reasoning:** ...` line.
+    /^[[:space:]]*- \*\*Reasoning:\*\*/ {
+      line = $0
+      sub(/^[[:space:]]*- \*\*Reasoning:\*\*[[:space:]]*/, "", line)
+      if (line != "") print NR ":" line
+    }
+  ' "$file")
+  return 0
+}
+
 # W005: Status=Ready but no work items
 check_w005_ready_no_items() {
   local file="$1"
@@ -222,6 +275,7 @@ lint_module() {
   check_w017_last_reviewed "$file"
   check_w002_conductor_refs "$file"
   check_w022_packages "$file"
+  check_w023_reasoning "$file"
 
   # Check work items if the section exists
   if has_section "$file" "## Work Items"; then
