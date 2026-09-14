@@ -61,6 +61,8 @@ A Work Item is the contract: what will be achieved and how success is verified.
 - Dependencies
 - Confidence
 - Files (best-effort)
+- Model (preferred AI model, e.g. `claude-opus-5`; inherits the module column)
+- Reasoning (`low | medium | high | max`; inherits the module column)
 - Risks
 - Deliverables
 

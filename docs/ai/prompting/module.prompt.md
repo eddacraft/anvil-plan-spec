@@ -48,3 +48,5 @@ Each work item must include:
 - "Do not touch" boundaries
 - Validation (tests, checks)
 - Risks & mitigations
+- Model and Reasoning hints (preferred; omit only to inherit the module's
+  `Model` / `Reasoning` table columns)

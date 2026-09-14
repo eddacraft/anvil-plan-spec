@@ -133,6 +133,11 @@ Flow: `Draft` → `Ready` → `In Progress` → `Complete`. Only `aps start` and
 - **Dependencies:** Other work item IDs that must complete first
 - **Confidence:** low/medium/high
 - **Files:** Best-effort list (not exhaustive)
+- **Model:** AI model that should execute the item (e.g. `claude-opus-5`) —
+  optional but preferred; inherits the module table's `Model` column
+- **Reasoning:** `low | medium | high | max` — optional but preferred; inherits
+  the module table's `Reasoning` column. `aps lint` warns (W023) on any other
+  value; `Model` is never vocabulary-checked (identifiers are harness-specific)
 
 ### Work Item Anti-Patterns
 

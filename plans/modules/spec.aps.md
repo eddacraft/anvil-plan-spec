@@ -4,7 +4,7 @@
 | ---- | ------ | -------- | ------ |
 | SPEC | @aneki | medium   | Complete |
 
-**Last reviewed:** 2026-06-15
+**Last reviewed:** 2026-09-07
 
 ## Purpose
 
@@ -43,6 +43,8 @@ incremental — both vocabularies exist side-by-side today.
 - Canonical vocabulary for module and work-item Status
 - Documenting accepted aliases (if any) and the parser's normalization rules
 - Optional `Last reviewed:` metadata convention (77/85 anvil-001 modules use it)
+- Optional-but-preferred execution routing hints (`Model:` / `Reasoning:`) on
+  work items and as module metadata columns (SPEC-002, D-047)
 - Versioning strategy for the spec itself (header convention, validator
   behaviour on unknown versions)
 - A machine-readable schema artifact (JSON Schema preferred over Zod for
@@ -85,6 +87,16 @@ incremental — both vocabularies exist side-by-side today.
 
 - **D-028:** Spec version header — **deferred.** Defer until SPEC-001 lands;
   needed before we ever break compatibility.
+- **D-047:** `Model:` / `Reasoning:` routing hints — **decided 2026-09-07.**
+  Optional but preferred, never required: minimal templates stay minimal and
+  no existing plan gains a warning by omission. Both live on the work item and
+  as module metadata-table columns, with item-over-module inheritance (the
+  `Packages:` pattern). `Reasoning` has a canonical four-level vocabulary
+  (`low | medium | high | max`, case-insensitive; harnesses map `max` onto
+  their own top tier) validated by W023; `Model` is free-form because
+  identifiers are harness-specific. Rejected: a required field (noise for
+  every existing plan), and validating `Model` against a model list (rots
+  faster than the spec).
 
 ## Work Items
 
@@ -109,12 +121,35 @@ incremental — both vocabularies exist side-by-side today.
   `scaffold/plans/aps-rules.md` document canonical + alias set; orchestrate
   fixture tests cover Proposed modules and Done dependencies.
 
+### SPEC-002: Model and reasoning routing hints
+
+- **Intent:** Let a plan say which AI model should execute a work item and
+  how hard it should think, so harnesses can route work without out-of-band
+  configuration.
+- **Expected Outcome:** `- **Model:**` and `- **Reasoning:**` are documented
+  optional-but-preferred work-item fields; `Model` / `Reasoning` module
+  metadata columns act as inheritable defaults. `aps next` prints the effective
+  hints, `aps export` carries them as `model` / `reasoning`, and W023 warns on
+  a `Reasoning` value outside `low | medium | high | max` — in all three CLIs.
+- **Validation:** `cargo test` (cli/), `./test/run.sh`, `./test/cli-parity.sh`
+  over `test/fixtures/routing/`
+- **Confidence:** high
+- **Dependencies:** D-047
+- **Files:** cli/src/{parser,next,export,lint}.rs, lib/orchestrate.sh,
+  lib/export.sh, lib/rules/{common,module}.sh, lib/rules/Module.psm1,
+  templates/module.template.md, plans/aps-rules.md, docs/usage.md,
+  docs/integrations.md, docs/TERMINOLOGY.md, docs/ai/prompting/
+- **Status:** Complete: 2026-09-07 — landed with `test/fixtures/routing/`
+  covering inheritance, override, W023 (table + field, placeholder skipped),
+  `next` output, and export parity.
+
 ## Ready Checklist
 
 - [x] Purpose and scope are clear
 - [x] Dependencies identified
 - [x] D-026 resolved (Approach A)
 - [ ] D-027 resolved (`Last reviewed:` semantics)
+- [x] D-047 resolved (routing hints)
 - [x] Work items defined with validation
 
 ## Notes

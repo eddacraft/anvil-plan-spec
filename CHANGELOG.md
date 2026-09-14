@@ -18,6 +18,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   `--force`. The prose record drives the closeout — no JSON sidecar.
   **Not yet in the bash or PowerShell CLIs**, so per D-039 the work item stays
   In Progress until all three agree with shared-fixture coverage.
+- **`Model:` / `Reasoning:` routing hints** (SPEC-002) — optional-but-preferred
+  work-item fields (and module metadata-table columns work items inherit) that
+  tell a harness which AI model should execute an item and at what reasoning
+  level (`low | medium | high | max`). `aps next` prints the effective hints as
+  a `Model: … | Reasoning: …` line, `aps export` carries them as `model` /
+  `reasoning` on modules and work items, and a new **W023** lint warning flags
+  a `Reasoning` value outside the vocabulary (`Model` is free-form). Landed in
+  lockstep across the Rust, bash, and PowerShell CLIs.
 
 ## [0.9.0] - 2026-09-12
 

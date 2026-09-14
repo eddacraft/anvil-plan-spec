@@ -24,6 +24,7 @@ ID: Use 2-6 uppercase chars (DARK, EXPORT, NOTIFY, etc.)
 
 <!--
 Confidence: high (clear, familiar) / medium (some unknowns) / low (exploratory)
+Model / Reasoning: optional routing hints (e.g. claude-opus-5 / low | medium | high | max)
 -->
 
 ### FEAT-001: [First work item]

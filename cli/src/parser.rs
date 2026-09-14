@@ -297,6 +297,19 @@ impl PlanFile {
         self.metadata_column("Packages")
     }
 
+    /// The `Model` column of the metadata table — the module-wide model
+    /// routing hint (SPEC-002). Work items inherit it when they omit `Model:`.
+    pub fn module_model(&self) -> Option<String> {
+        self.metadata_column("Model")
+    }
+
+    /// The `Reasoning` column of the metadata table — the module-wide
+    /// reasoning-level hint (SPEC-002). Work items inherit it when they omit
+    /// `Reasoning:`.
+    pub fn module_reasoning(&self) -> Option<String> {
+        self.metadata_column("Reasoning")
+    }
+
     /// Generic metadata-table column read: find the `| ID |` header row,
     /// locate the named column, return the first data row's value.
     fn metadata_column(&self, name: &str) -> Option<String> {

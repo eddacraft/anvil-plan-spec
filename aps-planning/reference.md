@@ -46,6 +46,8 @@ Every work item **must** have:
 - **Dependencies:** OTHER-001, OTHER-002
 - **Files:** src/auth.ts, tests/auth.test.ts
 - **Non-scope:** [What won't change]
+- **Model:** claude-opus-5
+- **Reasoning:** low | medium | high | max
 - **Status:** Draft | Ready | In Progress | Blocked | Complete
 ```
 
@@ -56,6 +58,9 @@ Every work item **must** have:
 |----|-------|----------|--------|----------|
 | AUTH | @user | medium | Draft | *(monorepo only)* |
 ```
+
+Optional `Model` and `Reasoning` columns set module-wide routing hints; work
+items inherit them unless they carry their own field.
 
 ## Status Values
 

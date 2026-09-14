@@ -92,6 +92,8 @@ pipe through `jq .` for readability (the example below is pretty-printed).
       "status": "In Progress",
       "type": null,
       "packages": null,
+      "model": null,
+      "reasoning": null,
       "work_items": [
         {
           "id": "AUTH-001",
@@ -99,7 +101,9 @@ pipe through `jq .` for readability (the example below is pretty-printed).
           "status": "Ready",
           "line": 21,
           "dependencies": ["AUTH-002", "core:SSO-001"],
-          "packages": null
+          "packages": null,
+          "model": null,
+          "reasoning": null
         }
       ]
     }
@@ -117,6 +121,9 @@ Field notes:
 - `dependencies` — tokens as written, including cross-tree `child:ID` refs.
 - `packages` — the effective `Packages:` tags (item field, else module
   column), `null` when untagged.
+- `model` / `reasoning` — the effective routing hints (item field, else
+  module column), as written; `null` when unset. On a module entry they are
+  the raw column values.
 - `child` — the child-plan name in a federated tree, `null` in a
   single-root plan.
 - Absent values are `null`, never omitted — consumers can rely on the keys.

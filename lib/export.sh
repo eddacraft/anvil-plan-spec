@@ -121,10 +121,12 @@ EOF
       cur_key="$key"
       first_item=true
 
-      local mstatus mtype mpkgs
+      local mstatus mtype mpkgs mmodel mreasoning
       mstatus=$(orch_module_status "$module" "$child")
       mtype=$(get_module_type "$file")
       mpkgs="${ORCH_MODULE_PACKAGES[$(orch_module_status_key "$module" "$child")]:-}"
+      mmodel="${ORCH_MODULE_MODEL[$(orch_module_status_key "$module" "$child")]:-}"
+      mreasoning="${ORCH_MODULE_REASONING[$(orch_module_status_key "$module" "$child")]:-}"
 
       json+='{"id":"'"$(export_json_escape "$module")"'"'
       json+=',"child":'"$(export_string_or_null "$child")"
@@ -132,14 +134,18 @@ EOF
       json+=',"status":"'"$(export_json_escape "$mstatus")"'"'
       json+=',"type":'"$(export_string_or_null "$mtype")"
       json+=',"packages":'"$(export_string_or_null "$mpkgs")"
+      json+=',"model":'"$(export_string_or_null "$mmodel")"
+      json+=',"reasoning":'"$(export_string_or_null "$mreasoning")"
       json+=',"work_items":['
     fi
 
     $first_item || json+=','
     first_item=false
 
-    local pkgs
+    local pkgs model reasoning
     pkgs=$(orch_item_packages "$i")
+    model=$(orch_item_model "$i")
+    reasoning=$(orch_item_reasoning "$i")
 
     json+='{"id":"'"$(export_json_escape "${ORCH_ITEM_IDS[$i]}")"'"'
     json+=',"title":"'"$(export_json_escape "${ORCH_ITEM_TITLES[$i]}")"'"'
@@ -147,6 +153,8 @@ EOF
     json+=',"line":'"${ORCH_ITEM_LINES[$i]}"
     json+=',"dependencies":['"$(export_deps_elements "${ORCH_ITEM_DEPS[$i]}")"']'
     json+=',"packages":'"$(export_string_or_null "$pkgs")"
+    json+=',"model":'"$(export_string_or_null "$model")"
+    json+=',"reasoning":'"$(export_string_or_null "$reasoning")"
     json+='}'
   done
 

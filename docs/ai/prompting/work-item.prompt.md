@@ -29,6 +29,17 @@ A work item is **execution authority**. Keep it small.
 - Dependencies (on other work items, decisions, artefacts)
 - Provenance note template (for future suppressions/exceptions)
 
+## Preferred routing hints
+
+Optional, but include them whenever you can judge them — harnesses use them to
+route the item:
+
+- Model — the AI model that should execute the item (e.g. `claude-opus-5`)
+- Reasoning — `low | medium | high | max`, the effort the executing model
+  should spend
+
+Omit either to inherit the module table's `Model` / `Reasoning` column.
+
 ## Output style
 
 - Be crisp and specific
