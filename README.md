@@ -31,6 +31,122 @@ before code changes. Agents get clear authority without being trapped by stale
 instructions. The same plan survives changes in model, harness, team, and
 implementation detail.
 
+## Install
+
+macOS / Linux:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install | bash
+```
+
+Windows PowerShell:
+
+```powershell
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install.ps1)))
+```
+
+Or install with Scoop:
+
+```powershell
+scoop bucket add eddacraft https://github.com/eddacraft/scoop-bucket
+scoop install eddacraft/aps
+```
+
+To install the manifest directly without adding the bucket:
+
+```powershell
+scoop install https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/packaging/scoop/aps.json
+```
+
+In an interactive terminal, the one-line installers install the native binary
+and open the `aps init` wizard in the same run. Use `--cli` when you only want
+the command.
+
+The installer can also initialise a repository, bootstrap an agent, upgrade,
+or add a tool integration. Use `--cli`, `--init`, `--agent`, `--upgrade`, or
+`--setup <tool>` to select an explicit flow, or `--menu` for the advanced
+picker.
+
+Want to inspect the installer first, pin a version, or run non-interactively?
+See [docs/installation.md](docs/installation.md).
+
+## The 5-minute tour
+
+### 1. Define the intent
+
+```markdown
+# Account security
+
+## Problem
+
+Users cannot see or terminate active sessions, leaving compromised sessions
+active until they expire.
+
+## Success Criteria
+
+- [ ] Users can see their active sessions
+- [ ] Users can revoke any session except the one making the request
+- [ ] Revoked sessions stop working immediately
+
+## Constraints
+
+- Existing clients must remain compatible
+- Session identifiers must never be exposed in logs
+```
+
+This is a specification. It can be reviewed, challenged, or approved, but it
+does not authorise an agent to start changing code.
+
+### 2. Authorise a bounded outcome
+
+```markdown
+### AUTH-003: Revoke an active session
+
+- **Status:** Ready
+- **Intent:** Let an authenticated user terminate an unwanted session
+- **Expected Outcome:** Revoking a listed session invalidates it immediately
+  while leaving the current session active
+- **Validation:** `npm test -- session-revocation`
+- **Non-scope:** Changing session duration or authentication providers
+- **Dependencies:** AUTH-002
+```
+
+The Ready work item is execution authority. It describes what must be achieved,
+how success is checked, and where the boundary sits. It does not dictate the
+implementation.
+
+### 3. Execute through the CLI
+
+```bash
+aps lint plans/                       # validate every spec
+aps next                              # find the next ready work item
+aps start AUTH-003                    # claim it and build focused context
+aps complete AUTH-003 --learning "Revocation needed cache invalidation"
+aps graph auth                        # inspect dependencies
+```
+
+`aps start` verifies that dependencies are Complete, marks the item In
+Progress, and writes a focused context package to `.aps/context/AUTH-003.md`.
+It includes module scope, decisions, upstream learnings, and related files.
+
+`aps complete` records the completion date and captures a learning that can be
+surfaced to downstream work. The implementation can change; the intent,
+evidence, and history remain legible.
+
+Full reference: [docs/usage.md](docs/usage.md).
+
+### 4. Use the same contract with any AI
+
+```text
+Implement the Ready work item AUTH-003 in plans/modules/auth.aps.md.
+Use .aps/context/AUTH-003.md for its bounded context.
+Choose an implementation consistent with the repository, run the specified
+validation, and report the evidence.
+```
+
+That instruction works in Claude Code, Cursor, Copilot, Codex, OpenCode, Grok,
+or a chat window. The harness can change without changing the plan.
+
 ## Most AI planning collapses three decisions into one
 
 A typical ticket or prompt mixes together:
@@ -112,122 +228,6 @@ target.**
 
 APS is not a project management system disguised as markdown. It is the
 planning and authorisation layer between human intent and agent execution.
-
-## The 5-minute tour
-
-### 1. Define the intent
-
-```markdown
-# Account security
-
-## Problem
-
-Users cannot see or terminate active sessions, leaving compromised sessions
-active until they expire.
-
-## Success Criteria
-
-- [ ] Users can see their active sessions
-- [ ] Users can revoke any session except the one making the request
-- [ ] Revoked sessions stop working immediately
-
-## Constraints
-
-- Existing clients must remain compatible
-- Session identifiers must never be exposed in logs
-```
-
-This is a specification. It can be reviewed, challenged, or approved, but it
-does not authorise an agent to start changing code.
-
-### 2. Authorise a bounded outcome
-
-```markdown
-### AUTH-003: Revoke an active session
-
-- **Status:** Ready
-- **Intent:** Let an authenticated user terminate an unwanted session
-- **Expected Outcome:** Revoking a listed session invalidates it immediately
-  while leaving the current session active
-- **Validation:** `npm test -- session-revocation`
-- **Non-scope:** Changing session duration or authentication providers
-- **Dependencies:** AUTH-002
-```
-
-The Ready work item is execution authority. It describes what must be achieved,
-how success is checked, and where the boundary sits. It does not dictate the
-implementation.
-
-### 3. Execute through the CLI
-
-```bash
-aps lint plans/                       # validate every spec
-aps next                              # find the next ready work item
-aps start AUTH-003                    # claim it and build focused context
-aps complete AUTH-003 --learning "Revocation needed cache invalidation"
-aps graph auth                        # inspect dependencies
-```
-
-`aps start` verifies that dependencies are Complete, marks the item In
-Progress, and writes a focused context package to `.aps/context/AUTH-003.md`.
-It includes module scope, decisions, upstream learnings, and related files.
-
-`aps complete` records the completion date and captures a learning that can be
-surfaced to downstream work. The implementation can change; the intent,
-evidence, and history remain legible.
-
-Full reference: [docs/usage.md](docs/usage.md).
-
-### 4. Use the same contract with any AI
-
-```text
-Implement the Ready work item AUTH-003 in plans/modules/auth.aps.md.
-Use .aps/context/AUTH-003.md for its bounded context.
-Choose an implementation consistent with the repository, run the specified
-validation, and report the evidence.
-```
-
-That instruction works in Claude Code, Cursor, Copilot, Codex, OpenCode, Grok,
-or a chat window. The harness can change without changing the plan.
-
-## Install
-
-macOS / Linux:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install | bash
-```
-
-Windows PowerShell:
-
-```powershell
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install.ps1)))
-```
-
-Or install with Scoop:
-
-```powershell
-scoop bucket add eddacraft https://github.com/eddacraft/scoop-bucket
-scoop install eddacraft/aps
-```
-
-To install the manifest directly without adding the bucket:
-
-```powershell
-scoop install https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/packaging/scoop/aps.json
-```
-
-In an interactive terminal, the one-line installers install the native binary
-and open the `aps init` wizard in the same run. Use `--cli` when you only want
-the command.
-
-The installer can also initialise a repository, bootstrap an agent, upgrade,
-or add a tool integration. Use `--cli`, `--init`, `--agent`, `--upgrade`, or
-`--setup <tool>` to select an explicit flow, or `--menu` for the advanced
-picker.
-
-Want to inspect the installer first, pin a version, or run non-interactively?
-See [docs/installation.md](docs/installation.md).
 
 ## How APS differs from related formats
 

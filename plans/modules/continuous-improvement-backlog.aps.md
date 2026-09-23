@@ -4,7 +4,7 @@
 | --- | --------- | ------ | -------- | ----------- |
 | CIB | Conductor | @aneki | medium   | In Progress |
 
-**Last reviewed:** 2026-09-12
+**Last reviewed:** 2026-09-18
 
 ## Purpose
 
@@ -369,10 +369,120 @@ is promoted back to the relevant module.
   is the smaller change; pinning trades that for reproducibility. Either beats
   the status quo, where local and CI silently disagree.
 
+### CIB-010: Filter Windows key-release events in the setup picker
+
+- **Status:** In Progress
+- **Intent:** Make interactive `aps setup` navigation consume one action per
+  physical keypress on Windows terminals.
+- **Expected Outcome:** The setup picker handles `KeyEventKind::Press` and
+  ignores `Repeat` and `Release` events in both its normal navigation loop and
+  running-state loop, matching the existing `aps init` policy. A single
+  arrow-key press moves exactly one option in Warp on Windows PowerShell.
+- **Validation:** Unit coverage feeds Press/Repeat/Release events through the
+  setup input boundary and asserts one navigation step; `cargo test
+  --manifest-path cli/Cargo.toml setup` passes; a native Windows smoke check in
+  Warp confirms arrow keys no longer skip options.
+- **Identified From:** ISS-017, reported 2026-09-18 from a Windows PowerShell
+  user running `aps setup` in Warp; source comparison found the press-only
+  filter in `cli/src/wizard.rs` but not `cli/src/setup.rs`.
+- **Files:** `cli/src/setup.rs`
+- **Confidence:** high
+- **Dependencies:** none
+- **Notes:** The direct `aps setup <tool>` path is unaffected and remains the
+  workaround. This is a native TUI input fix, not a bash/PowerShell fallback
+  CLI parity change.
+- **Results (implementation, 2026-09-18):** Both setup event-loop branches now
+  route key events through one press-only boundary. A regression sends Down as
+  Press, Repeat, and Release and proves the selection advances once; all 15
+  setup tests pass with the locked dependency graph. The required native
+  Windows PowerShell/Warp smoke check remains outstanding, so this item stays
+  In Progress.
+
+### CIB-011: Put install first and stop false "no Windows binary" failures
+
+- **Status:** Complete: 2026-09-18
+- **Intent:** Make first-run install discoverable on the README, and stop the
+  Windows installer telling a user the native binary is unavailable when the
+  asset exists or is already installed.
+- **Expected Outcome:** The README's first section is Install (curl, PowerShell,
+  Scoop) followed by the 5-minute tour; conceptual comparison sits after that.
+  The PowerShell installer maps WOW64 (`PROCESSOR_ARCHITEW6432`) and ARM64
+  Windows to the published `x86_64-pc-windows-gnu` asset, replaces an existing
+  `aps.exe` via rename so a loaded binary can be updated, and reuses an
+  existing native binary instead of falling back and then failing onboarding
+  with "Windows release binary" unavailable.
+- **Validation:** `npx markdownlint-cli "README.md"`; first README `##` heading
+  is `## Install`; `./test/run.sh` Test 32b and Test 39 pass.
+- **Identified From:** User report 2026-09-18 — install methods sat below the
+  intent-first README pitch (DOCS-002), and a Windows user was told the native
+  binary was unavailable (unclear whether missing or already installed).
+- **Files:** `README.md`, `scaffold/install.ps1`, `test/run.sh`,
+  `test/windows-user-journey.ps1`
+- **Confidence:** high
+- **Dependencies:** none
+- **Identified in:** ISS-018
+- **Results:** README now leads with Install then the 5-minute tour; the
+  intent-first comparison remains, but after a reader can actually get the
+  CLI. The PowerShell installer no longer treats 32-bit PowerShell on 64-bit
+  Windows or ARM64 Windows as "no binary", replaces `aps.exe` via
+  `aps.exe.old` like `aps update --global`, and keeps an existing native
+  binary when download or replace fails instead of claiming none exists.
+
+### CIB-012: Consume the accessible eddacraft-tui release
+
+- **Status:** Complete: 2026-09-18
+- **Intent:** Bring APS onto the shared TUI release that contains the accessible
+  option styling already proven in anvil.
+- **Expected Outcome:** APS depends on published `eddacraft-tui` 0.5.3, so its
+  setup and init pickers inherit the WCAG-AA palette and selected-row
+  descriptions remain readable on the accent background. No local colour fork
+  is introduced in APS.
+- **Validation:** `cli/Cargo.lock` resolves `eddacraft-tui` 0.5.3; a render test
+  asserts the selected description keeps the highlight foreground; `cargo test
+  --manifest-path cli/Cargo.toml`; `cargo clippy --manifest-path
+  cli/Cargo.toml --locked --all-targets -- -D warnings`; `cargo fmt
+  --manifest-path cli/Cargo.toml --check`.
+- **Identified From:** Comparison on 2026-09-18 of APS's locked 0.4.0 against
+  anvil's integrated shared crate and the published 0.5.3 release.
+- **Files:** `cli/Cargo.toml`, `cli/Cargo.lock`, `cli/src/setup.rs`
+- **Confidence:** high
+- **Dependencies:** none
+- **Notes:** `eddacraft-tui` 0.5.3 contains both upstream fixes: selected-row
+  descriptions no longer use muted grey on the accent, and the default accent
+  and error colours clear the WCAG AA contrast floor.
+- **Results:** APS now resolves published `eddacraft-tui` 0.5.3. A render-level
+  regression proves the selected description shares the selected label's
+  foreground and background, which fails under the old muted-on-accent style.
+  All 233 Rust tests pass; clippy with locked all-targets and rustfmt check are
+  clean.
+
+### CIB-013: Use horizontal step navigation in the setup TUI
+
+- **Status:** Complete: 2026-09-18
+- **Intent:** Match anvil's wizard convention by making Left and Right navigate
+  between setup steps while Up and Down continue to navigate options.
+- **Expected Outcome:** Right advances exactly like Enter; Left returns from
+  tool selection or confirmation to the setup menu. Left at the root is a safe
+  no-op, and neither directional key suggests that completed setup side effects
+  can be rolled back from Run or Summary.
+- **Validation:** A production-key-path unit test maps real Left and Right arrow
+  events through `KeyHandler`, proves Right enters tool selection, Left returns
+  to the menu, and Left at the root does not quit; setup and full Rust suites
+  pass; the footer advertises the arrow bindings.
+- **Identified From:** User-requested parity with anvil on 2026-09-18.
+- **Files:** `cli/src/setup.rs`
+- **Confidence:** high
+- **Dependencies:** CIB-012
+- **Results:** The setup picker now treats Right as Enter and Left as a safe
+  previous-step action from Tools and Confirm. The root, Run, and Summary states
+  do not claim reversible navigation. A production-key-path regression covers
+  both arrows and the footer advertises them. All 235 Rust tests and the full
+  repository suite pass; clippy and rustfmt are clean.
+
 ## Status Roll-up
 
 - **Concern:** Standing APS maintenance intake
-- **Progress:** 5/9 work items Complete
+- **Progress:** 8/13 work items Complete
 - **Readout:** CIB-002, CIB-003, and CIB-004 are complete with native Windows
   CI evidence. CIB-001 remains Draft and isolated in its own worktree. CIB-005
   (plan-doctor false positives, issue #132) and CIB-006 (release-lint three-CLI
@@ -380,7 +490,13 @@ is promoted back to the relevant module.
   CIB-005 and CIB-006 completed on 2026-09-12. CIB-007 (version surface on the
   fallback CLIs) and CIB-008 (release-rule hardening plus residual lint
   divergences) were intaken from the same review and are Draft, as is CIB-009
-  (local Rust toolchain drifting from CI's).
+  (local Rust toolchain drifting from CI's). CIB-010 records the Windows setup
+  picker consuming key-release events as duplicate navigation and is In
+  Progress.
+  CIB-011 (README install placement plus false "no Windows binary" installer
+  failures) completed on 2026-09-18. CIB-012 (accessible eddacraft-tui 0.5.3
+  adoption) completed on 2026-09-18. CIB-013 (anvil-style Left/Right setup step
+  navigation) completed on 2026-09-18.
 
 ## Decisions
 
