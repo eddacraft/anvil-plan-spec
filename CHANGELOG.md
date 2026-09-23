@@ -18,16 +18,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   `--force`. The prose record drives the closeout — no JSON sidecar.
   **Not yet in the bash or PowerShell CLIs**, so per D-039 the work item stays
   In Progress until all three agree with shared-fixture coverage.
-- **`Model:` / `Reasoning:` routing hints** (SPEC-002) — optional-but-preferred
-  work-item fields (and module metadata-table columns work items inherit) that
-  tell a harness which AI model should execute an item and at what reasoning
-  level (`low | medium | high | max`). `aps next` prints the effective hints as
-  a `Model: … | Reasoning: …` line, `aps export` carries them as `model` /
-  `reasoning` on modules and work items, and a new **W023** lint warning flags
-  a `Reasoning` value outside the vocabulary (`Model` is free-form). Landed in
-  lockstep across the Rust, bash, and PowerShell CLIs.
 
-## [0.9.0] - 2026-09-12
+## [0.9.0] - 2026-09-23
 
 **Release narrative:** [plans/releases/v0.9.0.md](./plans/releases/v0.9.0.md).
 
@@ -48,6 +40,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   Rust only, so bash checked 42 of this repo's 50 plan files and a malformed
   release plan passed the fallback CLIs silently — closing the last known
   D-039 lockstep gap.
+- **`Model:` / `Reasoning:` routing hints** (SPEC-002) — optional-but-preferred
+  work-item fields (and module metadata-table columns work items inherit) that
+  tell a harness which AI model should execute an item and at what reasoning
+  level (`low | medium | high | max`). `aps next` prints the effective hints as
+  a `Model: … | Reasoning: …` line, `aps export` carries them as `model` /
+  `reasoning` on modules and work items, and a new **W023** lint warning flags
+  a `Reasoning` value outside the vocabulary (`Model` is free-form). Landed in
+  lockstep across the Rust, bash, and PowerShell CLIs.
 
 ### Fixed
 
@@ -70,6 +70,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   linkify-it, and brace-expansion; the MCP SDK transitives are overridden to
   patched hono, `@hono/node-server`, fast-uri, ip-address, and body-parser.
   Together these resolve 17 Dependabot alerts.
+- **Windows installer no longer claims the native binary is missing** (CIB-011)
+  — 32-bit PowerShell on 64-bit Windows (WOW64) and ARM64 Windows now map to
+  the published `x86_64-pc-windows-gnu` asset; an existing `aps.exe` is
+  replaced via rename so a loaded binary can be updated, and a failed download
+  keeps the existing native binary instead of falling back and failing
+  onboarding.
+- **Setup picker consumes one action per physical keypress** (CIB-010) — both
+  event-loop branches ignore `Repeat` and `Release`, matching `aps init`, so
+  Windows terminals that emit press+release no longer skip options.
 
 ### Changed
 
@@ -80,6 +89,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   actually shipped through v0.8. The completed-work archive no longer files
   v0.3.0–v0.7.0 task tables under an `Unreleased` heading; the missing
   v0.4.0–v0.8.1 roll is tracked as ISS-012 against REL-005.
+- **README leads with Install** (CIB-011) — curl, PowerShell, and Scoop sit
+  under the short pitch, then the 5-minute tour; the intent-first comparison
+  follows.
+- **Accessible TUI** (CIB-012) — `eddacraft-tui` 0.5.3, so selected-row
+  descriptions keep the highlight foreground.
+- **Setup Left/Right step navigation** (CIB-013) — Right advances like Enter;
+  Left returns from tool selection or confirmation to the menu.
 
 ## [0.8.1] - 2026-07-31
 
@@ -554,7 +570,10 @@ First release of Anvil Plan Spec (APS).
 - Workflow guide with day-in-the-life scenarios
 - Monorepo support guide
 
-[Unreleased]: https://github.com/eddacraft/anvil-plan-spec/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/eddacraft/anvil-plan-spec/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/eddacraft/anvil-plan-spec/compare/v0.8.1...v0.9.0
+[0.8.1]: https://github.com/eddacraft/anvil-plan-spec/compare/v0.8.0...v0.8.1
+[0.8.0]: https://github.com/eddacraft/anvil-plan-spec/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/eddacraft/anvil-plan-spec/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/eddacraft/anvil-plan-spec/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/eddacraft/anvil-plan-spec/compare/v0.4.0...v0.5.0

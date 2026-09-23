@@ -6,7 +6,7 @@
 | --- | ------ | -------- | ------ |
 | CLI | @aneki | high     | In Progress |
 
-**Last reviewed:** 2026-09-12
+**Last reviewed:** 2026-09-23
 
 ## Purpose
 
@@ -136,7 +136,7 @@ Change status to **Ready** when:
   `aps update --help` shows `--global`; `aps update --global` with no
   `$APS_HOME/bin` exits 1.
 - **Confidence:** medium
-- **Status:** Merged: 2026-09-07
+- **Status:** Complete: 2026-09-23
 - **Files:** `cli/src/self_update.rs`, `cli/src/main.rs`, `lib/scaffold.sh`,
   `lib/Scaffold.psm1`, `scaffold/update`, `scaffold/update.ps1`,
   `docs/installation.md`, `docs/usage.md`, `CHANGELOG.md`, `test/run.sh`,

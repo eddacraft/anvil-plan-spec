@@ -7,7 +7,7 @@
 | ------- | ---------- |
 | Scope   | ALL        |
 | Status  | Active     |
-| Updated | 2026-09-12 |
+| Updated | 2026-09-23 |
 
 ## Purpose
 
@@ -25,15 +25,24 @@ section below.
 
 ## Unreleased
 
-_Will roll into the next cut — queued for
-[v0.9.0](./releases/v0.9.0.md). Items stay here until the release closes out;
-`Merged` items (CLI-003) advance to Complete at closeout and live in
-[`plans/index.aps.md`](./index.aps.md) until then._
+_Queued for a later cut. REL-005 (`aps release`) remains In Progress
+(Rust-only until D-039 lockstep)._
+
+---
+
+## v0.9.0 — Self-update and trustworthy diagnostics
+
+_See [`plans/releases/v0.9.0.md`](./releases/v0.9.0.md). Cut 2026-09-23._
 
 | Task         | Module                 | Description                                      | Status               |
 | ------------ | ---------------------- | ------------------------------------------------ | -------------------- |
+| CLI-003      | cli-redesign           | `aps update --global` binary self-update         | Complete: 2026-09-23 |
+| SPEC-002     | spec                   | `Model:` / `Reasoning:` routing hints            | Complete: 2026-09-07 |
 | CIB-005      | continuous-improvement | plan-doctor rules realigned with aps-rules.md    | Complete: 2026-09-12 |
 | CIB-006      | continuous-improvement | Release-plan lint rules in bash and PowerShell   | Complete: 2026-09-12 |
+| CIB-011      | continuous-improvement | README Install first; honest Windows binary path | Complete: 2026-09-18 |
+| CIB-012      | continuous-improvement | Accessible `eddacraft-tui` 0.5.3                 | Complete: 2026-09-18 |
+| CIB-013      | continuous-improvement | Setup Left/Right step navigation                 | Complete: 2026-09-18 |
 | PROMPTS-001  | prompts                | Normalize OpenCode + Claude Code prompt variants | Complete: 2026-08-03 |
 | EXAMPLES-001 | examples               | Expand worked examples (four workflow shapes)    | Complete: 2026-09-12 |
 
