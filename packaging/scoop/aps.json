@@ -12,7 +12,7 @@
     "architecture": {
         "64bit": {
             "url": "https://github.com/EddaCraft/anvil-plan-spec/releases/download/v0.9.0/aps-x86_64-pc-windows-gnu.zip",
-            "hash": "c10e5e7db2a78f2088db4cd816c31b5ca3dfd97c26c5c295b00e75da09562679",
+            "hash": "b03497107b0fbbc3919b0d51e964542f3b1a7a687e678691a5616ec4204f1235",
             "bin": "aps.exe"
         }
     },
