@@ -433,6 +433,74 @@ needs CI pinned to match. Decision recorded in CIB-009.
 
 ---
 
+### ISS-017: Windows setup picker handles key-release events as navigation
+
+| Field      | Value      |
+| ---------- | ---------- |
+| Status     | Open       |
+| Severity   | Medium     |
+| Discovered | 2026-09-18 |
+| Module     | CIB        |
+| Work Item  | CIB-010    |
+
+**Context:** A Windows user running PowerShell in Warp reported that arrow-key
+navigation in the interactive `aps setup` picker repeatedly skipped options.
+The setup event loop passes every Crossterm `KeyEvent` to `KeyHandler::map`,
+so terminals that emit both `Press` and `Release` events advance the selection
+twice. The `aps init` wizard already filters for `KeyEventKind::Press` and
+documents the Windows behaviour; the separate setup picker lacks that filter
+in both its normal and running-state input branches.
+
+**Impact:** Interactive setup is unreliable in affected Windows terminals:
+navigation can skip the desired integration and selection keys can be handled
+more than once. Direct commands such as `aps setup codex` remain a usable
+workaround.
+
+**Implementation:** Both setup input branches now share a press-only event
+boundary, and regression coverage proves that one Press/Repeat/Release sequence
+produces exactly one navigation action. The automated setup suite passes; the
+native Windows PowerShell/Warp smoke check is still required before closing the
+issue.
+
+**Tracking:** [CIB-010](./modules/continuous-improvement-backlog.aps.md)
+
+---
+
+### ISS-018: Windows installer reports native binary unavailable incorrectly
+
+| Field      | Value      |
+| ---------- | ---------- |
+| Status     | Closed (2026-09-18) |
+| Severity   | Medium     |
+| Discovered | 2026-09-18 |
+| Module     | CIB        |
+| Work Item  | CIB-011    |
+
+**Context:** A Windows user running the public installer was told the Windows
+binary was not available. The latest published release (v0.8.1) includes
+`aps-x86_64-pc-windows-gnu.zip`. Three installer defects produce that message
+anyway:
+
+1. `Get-ApsReleaseTarget` only matched `PROCESSOR_ARCHITECTURE=AMD64`. 32-bit
+   PowerShell on 64-bit Windows reports `x86` (WOW64); ARM64 Windows reports
+   `ARM64`. Both returned `$null` and warned "No release binary for ...".
+2. `Install-ApsBinary` overwrote `aps.exe` in place. Windows will not replace
+   a loaded executable, so a reinstall over an existing `aps.exe` failed and
+   the catch reported it as a download failure.
+3. Default onboard then hard-failed with "native onboarding requires the
+   Windows release binary" even when `~\.aps\bin\aps.exe` was already present.
+
+**Impact:** First-run Windows install looks broken when the asset exists, and
+re-running the installer on a machine that already has APS looks like the
+binary was never published.
+
+**Resolution (CIB-011):** WOW64 and ARM64 mapping, rename-to-`.old` replace,
+and reuse of an existing native binary instead of falling back.
+
+**Tracking:** [CIB-011](./modules/continuous-improvement-backlog.aps.md)
+
+---
+
 ## Questions
 
 ### Q-001: Which shared claim transport should team mode use?

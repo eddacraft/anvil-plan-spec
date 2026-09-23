@@ -96,6 +96,45 @@ try {
     if (-not (Test-Path -LiteralPath $InstalledAps -PathType Leaf)) {
         throw "PowerShell installer did not extract aps.exe"
     }
+    Invoke-Checked -Label "PowerShell reinstall over existing binary" -Command {
+        & $Installer --cli --binary
+    }
+    if (-not (Test-Path -LiteralPath $InstalledAps -PathType Leaf)) {
+        throw "reinstall over existing aps.exe removed the binary"
+    }
+
+    $savedArch = $env:PROCESSOR_ARCHITECTURE
+    $savedWow = $env:PROCESSOR_ARCHITEW6432
+    try {
+        $env:PROCESSOR_ARCHITECTURE = "x86"
+        $env:PROCESSOR_ARCHITEW6432 = "AMD64"
+        Invoke-Checked -Label "WOW64 32-bit PowerShell arch mapping" -Command {
+            & $Installer --cli --binary
+        }
+        if (-not (Test-Path -LiteralPath $InstalledAps -PathType Leaf)) {
+            throw "WOW64 arch mapping did not keep aps.exe"
+        }
+
+        $env:PROCESSOR_ARCHITECTURE = "ARM64"
+        Remove-Item Env:\PROCESSOR_ARCHITEW6432 -ErrorAction SilentlyContinue
+        Invoke-Checked -Label "ARM64 uses x64 Windows asset" -Command {
+            & $Installer --cli --binary
+        }
+        if (-not (Test-Path -LiteralPath $InstalledAps -PathType Leaf)) {
+            throw "ARM64 mapping did not keep aps.exe"
+        }
+        if (-not ($global:ApsRequestedUris -match "aps-x86_64-pc-windows-gnu.zip")) {
+            throw "ARM64 mapping did not request the shipped Windows GNU archive"
+        }
+    } finally {
+        $env:PROCESSOR_ARCHITECTURE = $savedArch
+        if ([string]::IsNullOrEmpty($savedWow)) {
+            Remove-Item Env:\PROCESSOR_ARCHITEW6432 -ErrorAction SilentlyContinue
+        } else {
+            $env:PROCESSOR_ARCHITEW6432 = $savedWow
+        }
+    }
+
     Invoke-Checked -Label "aps --version" -Command { & $InstalledAps --version }
 
     # Default onboarding covers the single-project route. CI has redirected

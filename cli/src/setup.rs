@@ -442,6 +442,13 @@ impl SetupState {
                 }
                 SetupEvent::Continue
             }
+            Action::Left => {
+                if matches!(self.step, SetupStep::Tools | SetupStep::Confirm) {
+                    self.step = SetupStep::Menu;
+                    self.mode = None;
+                }
+                SetupEvent::Continue
+            }
             Action::Back => match self.step {
                 SetupStep::Menu => SetupEvent::Quit,
                 SetupStep::Tools | SetupStep::Confirm => {
@@ -452,7 +459,7 @@ impl SetupState {
                 SetupStep::Summary => SetupEvent::Complete,
                 SetupStep::Run => SetupEvent::Continue,
             },
-            Action::Select => self.advance(),
+            Action::Right | Action::Select => self.advance(),
             _ => SetupEvent::Continue,
         }
     }
@@ -639,6 +646,14 @@ pub fn run_picker() -> io::Result<()> {
     result
 }
 
+fn map_setup_key(key: crossterm::event::KeyEvent) -> Action {
+    if key.kind == crossterm::event::KeyEventKind::Press {
+        KeyHandler::map(key)
+    } else {
+        Action::None
+    }
+}
+
 fn run_loop(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> io::Result<()> {
     let theme = EddaCraftTheme;
     let mut state = SetupState::default();
@@ -652,7 +667,7 @@ fn run_loop(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> io::Result
                 let crossterm::event::Event::Key(key) = crossterm::event::read()? else {
                     continue;
                 };
-                if state.handle(KeyHandler::map(key)) == SetupEvent::Quit {
+                if state.handle(map_setup_key(key)) == SetupEvent::Quit {
                     return Ok(());
                 }
             }
@@ -663,7 +678,7 @@ fn run_loop(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> io::Result
             let crossterm::event::Event::Key(key) = crossterm::event::read()? else {
                 continue;
             };
-            match state.handle(KeyHandler::map(key)) {
+            match state.handle(map_setup_key(key)) {
                 SetupEvent::Continue => {}
                 SetupEvent::Complete | SetupEvent::Quit => return Ok(()),
             }
@@ -678,7 +693,7 @@ fn render(frame: &mut Frame<'_>, theme: &EddaCraftTheme, state: &mut SetupState)
         ShellBranding::Anvil,
         "APS",
         "Setup",
-        "j/k navigate  space toggle  enter select  esc back  q quit",
+        "↑/↓ navigate  space toggle  ←/esc back  →/enter select  q quit",
         theme,
         env!("CARGO_PKG_VERSION"),
     );
@@ -833,6 +848,83 @@ mod tests {
                 "setup menu missing {tool:?}"
             );
         }
+    }
+
+    #[test]
+    fn setup_select_uses_accessible_selected_description_style() {
+        use ratatui::buffer::Buffer;
+
+        let area = Rect::new(0, 0, 40, 1);
+        let mut buffer = Buffer::empty(area);
+        let mut state = SelectState::default();
+        let theme = EddaCraftTheme;
+
+        StatefulWidget::render(
+            Select::new(vec![SelectItem::new("Choice", "description")], &theme),
+            area,
+            &mut buffer,
+            &mut state,
+        );
+
+        // `▸ ` is two terminal columns, followed by the six-column label and
+        // two-column gap. eddacraft-tui 0.4 replaced only the selected
+        // description foreground with muted grey, producing 1.18:1 contrast.
+        // 0.5.3 keeps the highlight foreground while dropping label weight.
+        let label = &buffer[(2, 0)];
+        let description = &buffer[(10, 0)];
+        assert_eq!(description.fg, label.fg);
+        assert_eq!(description.bg, label.bg);
+    }
+
+    #[test]
+    fn setup_navigation_ignores_repeat_and_release_events() {
+        use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
+
+        let mut state = SetupState::default();
+        for kind in [
+            KeyEventKind::Press,
+            KeyEventKind::Repeat,
+            KeyEventKind::Release,
+        ] {
+            let key = KeyEvent::new_with_kind(KeyCode::Down, KeyModifiers::NONE, kind);
+            state.handle(map_setup_key(key));
+        }
+
+        assert_eq!(state.menu_index, 1);
+    }
+
+    #[test]
+    fn setup_left_and_right_arrows_navigate_steps() {
+        use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
+
+        let mut state = SetupState {
+            menu_index: SetupMode::ALL_MODES
+                .iter()
+                .position(|mode| *mode == SetupMode::ToolIntegrations)
+                .unwrap(),
+            ..SetupState::default()
+        };
+
+        let press = |code| KeyEvent::new_with_kind(code, KeyModifiers::NONE, KeyEventKind::Press);
+        assert_eq!(
+            state.handle(map_setup_key(press(KeyCode::Right))),
+            SetupEvent::Continue
+        );
+        assert_eq!(state.step(), SetupStep::Tools);
+
+        assert_eq!(
+            state.handle(map_setup_key(press(KeyCode::Left))),
+            SetupEvent::Continue
+        );
+        assert_eq!(state.step(), SetupStep::Menu);
+        assert_eq!(state.mode(), None);
+
+        // A directional key at the first step must not behave like quit.
+        assert_eq!(
+            state.handle(map_setup_key(press(KeyCode::Left))),
+            SetupEvent::Continue
+        );
+        assert_eq!(state.step(), SetupStep::Menu);
     }
 
     fn temp_root(tag: &str) -> PathBuf {

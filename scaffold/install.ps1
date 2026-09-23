@@ -148,17 +148,64 @@ function Request-YesNo {
 
 # --- Global install functions ---
 
+function Get-ApsMachineArch {
+    # 32-bit PowerShell on 64-bit Windows reports PROCESSOR_ARCHITECTURE=x86.
+    # PROCESSOR_ARCHITEW6432 holds the real machine architecture in that case.
+    if ($env:PROCESSOR_ARCHITEW6432) {
+        return $env:PROCESSOR_ARCHITEW6432
+    }
+    return $env:PROCESSOR_ARCHITECTURE
+}
+
 function Get-ApsReleaseTarget {
     <#
     .SYNOPSIS
         Map this machine to a published release target triple, or $null when
         no Windows binary is available (caller falls back to the PowerShell CLI).
     #>
-    $arch = $env:PROCESSOR_ARCHITECTURE
+    $arch = Get-ApsMachineArch
     switch ($arch) {
         "AMD64" { return "x86_64-pc-windows-gnu" }
+        "ARM64" {
+            # No ARM64 Windows asset is published; x64 binaries run under
+            # Windows on ARM emulation.
+            return "x86_64-pc-windows-gnu"
+        }
         default { return $null }
     }
+}
+
+function Test-ApsExistingBinary {
+    param([string]$Path)
+    return (Test-Path -LiteralPath $Path -PathType Leaf)
+}
+
+function Install-ApsBinaryReplace {
+    <#
+    .SYNOPSIS
+        Replace dest with source using a rename dance so a running aps.exe
+        can be updated (Windows will not overwrite a loaded executable).
+    #>
+    param(
+        [string]$Source,
+        [string]$Destination
+    )
+    $staging = "$Destination.new"
+    $backup = "$Destination.old"
+    Copy-Item -LiteralPath $Source -Destination $staging -Force
+    if (Test-Path -LiteralPath $Destination -PathType Leaf) {
+        Remove-Item -LiteralPath $backup -Force -ErrorAction SilentlyContinue
+        Move-Item -LiteralPath $Destination -Destination $backup -Force
+        try {
+            Move-Item -LiteralPath $staging -Destination $Destination -Force
+        } catch {
+            Move-Item -LiteralPath $backup -Destination $Destination -Force -ErrorAction SilentlyContinue
+            throw
+        }
+        Remove-Item -LiteralPath $backup -Force -ErrorAction SilentlyContinue
+        return
+    }
+    Move-Item -LiteralPath $staging -Destination $Destination -Force
 }
 
 function Install-ApsBinary {
@@ -167,12 +214,19 @@ function Install-ApsBinary {
         Download the prebuilt aps.exe from GitHub releases into $DestDir.
     .OUTPUTS
         $true on success, $false on any failure (so callers can fall back).
+        Reuses an existing native binary instead of claiming none is available.
     #>
     param([string]$DestDir)
 
+    $dest = Join-Path $DestDir "aps.exe"
+    $arch = Get-ApsMachineArch
     $target = Get-ApsReleaseTarget
     if (-not $target) {
-        Write-Warn "No release binary for $env:PROCESSOR_ARCHITECTURE; falling back to PowerShell CLI"
+        if (Test-ApsExistingBinary $dest) {
+            Write-Warn "No release binary for $arch; keeping the existing native binary"
+            return $true
+        }
+        Write-Warn "No release binary for $arch; falling back to PowerShell CLI"
         return $false
     }
 
@@ -187,14 +241,41 @@ function Install-ApsBinary {
     New-Item -ItemType Directory -Path $tmp -Force | Out-Null
     try {
         $zip = Join-Path $tmp "aps.zip"
-        Invoke-WebRequest -Uri $url -OutFile $zip -UseBasicParsing
+        try {
+            Invoke-WebRequest -Uri $url -OutFile $zip -UseBasicParsing
+        } catch {
+            Write-Warn "Failed to download release binary from $url"
+            if (Test-ApsExistingBinary $dest) {
+                Write-Warn "keeping the existing native binary at $dest"
+                return $true
+            }
+            Write-Warn "falling back to PowerShell CLI"
+            return $false
+        }
+
         Expand-Archive -Path $zip -DestinationPath $tmp -Force
+        $src = Join-Path $tmp "aps.exe"
+        if (-not (Test-Path -LiteralPath $src -PathType Leaf)) {
+            Write-Warn "Release archive did not contain aps.exe"
+            if (Test-ApsExistingBinary $dest) {
+                Write-Warn "keeping the existing native binary at $dest"
+                return $true
+            }
+            Write-Warn "falling back to PowerShell CLI"
+            return $false
+        }
+
         New-Item -ItemType Directory -Path $DestDir -Force | Out-Null
-        Move-Item -Path (Join-Path $tmp "aps.exe") -Destination (Join-Path $DestDir "aps.exe") -Force
-        Write-Info "aps native binary ($target) installed to $DestDir\aps.exe"
+        Install-ApsBinaryReplace -Source $src -Destination $dest
+        Write-Info "aps native binary ($target) installed to $dest"
         return $true
     } catch {
-        Write-Warn "Failed to download release binary from $url; falling back to PowerShell CLI"
+        Write-Warn "Failed to install release binary: $($_.Exception.Message)"
+        if (Test-ApsExistingBinary $dest) {
+            Write-Warn "keeping the existing native binary at $dest"
+            return $true
+        }
+        Write-Warn "falling back to PowerShell CLI"
         return $false
     } finally {
         Remove-Item -Path $tmp -Recurse -Force -ErrorAction SilentlyContinue
@@ -260,7 +341,7 @@ function Install-ApsGlobal {
         $kind = "binary"
     } elseif ($UseBinary -and -not $UseLocalCli) {
         # --binary requires the prebuilt binary: do not silently fall back.
-        Write-Err "--binary requested but no release binary is available for $env:PROCESSOR_ARCHITECTURE"
+        Write-Err "--binary requested but no release binary is available for $(Get-ApsMachineArch)"
         Write-Host "  Re-run without --binary to use the PowerShell CLI fallback."
         exit 1
     } else {

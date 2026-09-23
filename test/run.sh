@@ -424,6 +424,8 @@ for doc in "$PROJECT_ROOT/README.md" "$PROJECT_ROOT/docs/installation.md" "$PROJ
 done
 grep -qF 'scaffold/install.ps1' "$PROJECT_ROOT/README.md" \
   || fail "README missing PowerShell installer"
+first_h2=$(awk '/^## /{print; exit}' "$PROJECT_ROOT/README.md")
+[[ "$first_h2" == "## Install" ]] || fail "README first section is '$first_h2', expected ## Install"
 grep -qF 'scaffold/update.ps1' "$PROJECT_ROOT/docs/installation.md" \
   || fail "installation docs missing PowerShell updater"
 grep -qF 'No user command requires WSL or Git Bash' "$PROJECT_ROOT/docs/usage.md" \
@@ -612,6 +614,11 @@ grep -q 'lib/audit.sh' "$INSTALL" || fail "global lib manifest missing audit.sh"
 grep -q 'Install-ApsBinary' "$INSTALL_PS1" || fail "install.ps1 missing binary install"
 grep -q 'aps.exe' "$INSTALL_PS1" || fail "install.ps1 missing aps.exe"
 grep -q 'Get-ApsReleaseTarget' "$INSTALL_PS1" || fail "install.ps1 missing target detection"
+grep -q 'PROCESSOR_ARCHITEW6432' "$INSTALL_PS1" || fail "install.ps1 missing WOW64 arch detection"
+grep -q 'keeping the existing native binary' "$INSTALL_PS1" \
+  || fail "install.ps1 missing existing-binary reuse"
+grep -q 'Install-ApsBinaryReplace' "$INSTALL_PS1" || fail "install.ps1 missing locked-binary replace"
+grep -q 'ARM64' "$INSTALL_PS1" || fail "install.ps1 missing ARM64 Windows mapping"
 # Cargo.toml: binstall metadata + crates.io readiness, publish blocker documented
 CARGO="$PROJECT_ROOT/cli/Cargo.toml"
 grep -q 'package.metadata.binstall' "$CARGO" || fail "Cargo.toml missing binstall metadata"
