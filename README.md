@@ -273,7 +273,8 @@ APS needs no hosted service, proprietary format, or mandatory integration.
 
 ## What's in v0.9.0
 
-Feature release (**2026-09-12**) — self-update and trustworthy diagnostics:
+Feature release (**2026-09-23**) — self-update, trustworthy diagnostics, and
+an honest first-run:
 
 - **`aps update --global`:** the CLI upgrades itself. The machine-wide install
   at `$APS_HOME/bin` (default `~/.aps/bin`) refreshes from GitHub releases,
@@ -290,8 +291,16 @@ Feature release (**2026-09-12**) — self-update and trustworthy diagnostics:
   discover `plans/releases/v*.md` and apply R001–R004 with the same codes and
   messages as the Rust binary, pinned by release fixtures in the shared parity
   suite. A malformed release plan can no longer pass the fallback CLIs.
+- **`Model:` / `Reasoning:` routing hints:** work items can name the model and
+  reasoning level a harness should use; `aps next` prints them and W023 flags
+  an unknown `Reasoning` value.
+- **Windows first-run:** the PowerShell installer finds the published x64 zip
+  on WOW64 and ARM64, replaces a loaded `aps.exe`, and keeps an existing
+  native binary instead of claiming none exists. README Install is the first
+  section. Setup no longer double-steps on Windows key-release, and Left/Right
+  navigate steps.
 
-The v0.8 line (still current):
+The v0.8 line:
 
 - **Twelve harnesses:** `init`/`setup`/wizard support **Antigravity, Amp,
   Gemini CLI, Windsurf, Roo Code, OpenClaw, and Cursor** alongside Claude Code,
