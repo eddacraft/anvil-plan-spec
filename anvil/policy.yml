@@ -1,0 +1,12 @@
+# L4 acceptance policy (ADR-037). First matching branch wins.
+branches:
+  - pattern: main
+    require: l4_or_l3
+    on_no_witness: validate_at_l4
+    on_block: reject
+  - pattern: dependabot/*
+    require: l4_only
+    on_no_witness: validate_at_l4
+  - pattern: "*"
+    require: l4_or_l3
+    on_no_witness: validate_at_l4

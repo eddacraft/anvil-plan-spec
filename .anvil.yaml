@@ -1,0 +1,6 @@
+schema_version: "1.0.0"
+format: yaml
+checks: ["secret-detection","import-boundaries","antipattern-scan"]
+enforcement:
+  mode: "warn"
+planning_dir: "plans"

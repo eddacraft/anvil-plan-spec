@@ -1,0 +1,8 @@
+# anvil project identifier — see https://github.com/eddacraft/anvil
+# This file establishes the project's stable identity across machines
+# and forks. Do not edit unless you intend to fork the project.
+
+project_uuid: 01a0d367-ff23-70b3-b5ce-dbc5ddd33777
+created_at: 2026-09-24T12:33:23Z
+created_by_version: 0.12.0-beta
+scaffold_version: 1

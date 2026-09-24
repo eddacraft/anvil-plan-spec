@@ -1,0 +1,137 @@
+# Per-PR L4 validation plus CI merge gate (MLP-010 / GTAO-006).
+#
+# Two jobs, two layers — they are not substitutes (ADR-127):
+#   validate — `anvil hook pre-push`, the same L4 surface developers run
+#              locally. GitHub check name: `anvil / validate`.
+#   gate     — `anvil gate --profile ci`, the full merge judgement
+#              (lint, tests, coverage, policy, audit). GitHub check name:
+#              `anvil / gate`.
+# Do not delete L4 because CI now runs the gate, and do not treat a
+# green L4 check as a merge verdict. Branch protection that already
+# requires `anvil / validate` will not automatically require `anvil / gate`;
+# require both if both layers should block merge.
+#
+# The Marketplace action `eddacraft/anvil-action@v1` (when it ships) is
+# the L4 wrapper. Replace the **validate** install block with
+# `uses: eddacraft/anvil-action@v1` — that swap does **not** apply to
+# `gate`. The merge job must keep a binary install and run
+# `anvil gate --profile ci`.
+#
+# Until the Marketplace listing publishes, the placeholder install
+# step below downloads the latest released binary. The `curl … | sh`
+# pattern is supply-chain-sensitive; pin to a release asset by SHA-256
+# or install from a vendored binary.
+#
+# Inputs the `workflow_dispatch` block below accepts (mirrored from
+# the `eddacraft/anvil-action` Marketplace listing's input set so the
+# placeholder install path and the future `uses:` swap produce the
+# same shape):
+#   policy: path to anvil/policy.yml (default: anvil/policy.yml)
+#   fail-on-warning: 'true' surfaces warnings as failures; 'false'
+#                    (default) surfaces only blocks.
+#
+# Additional inputs the Marketplace action accepts that this template
+# does NOT expose (because they only make sense once `uses:
+# eddacraft/anvil-action@v1` replaces the validate install step):
+#   anvil-version: pin to a specific anvil release; defaults to the
+#                  action's bundled version.
+#
+# Outputs surfaced on the L4 GitHub check:
+#   verdict: 'pass' | 'warn' | 'block' | 'error'
+#   commits-walked: integer count of commits in the pushed range
+#   unwitnessed-commits: integer count blocked or routed to L4
+#
+# Active by default per ADR-037 §D-5. Comment out the `pull_request`
+# trigger to disable (e.g., to migrate L4 to the Marketplace action).
+
+name: anvil
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      policy:
+        description: 'Path to anvil/policy.yml'
+        required: false
+        default: 'anvil/policy.yml'
+      fail-on-warning:
+        description: 'Treat warnings as check failures'
+        required: false
+        default: 'false'
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Anvil walks the pushed commit range, so the full history
+          # of the PR head is required. `fetch-depth: 0` is the
+          # cheapest unconditional way to get it; if your repo is
+          # large enough that this is expensive, pin to
+          # `${{ github.event.pull_request.commits + 1 }}` instead.
+          fetch-depth: 0
+
+      # The official install path lands with MLP-010's
+      # `eddacraft/anvil-action` Marketplace listing — replace this
+      # **validate** step with `uses: eddacraft/anvil-action@v1` once
+      # that ships. Until then this is a deliberate **placeholder**:
+      # the `curl … | sh` pattern is supply-chain-sensitive. Adopters
+      # using this template before MLP-010 should pin to a release
+      # asset by SHA-256 or install from a vendored binary.
+      - name: Install anvil (placeholder — replace with eddacraft/anvil-action@v1)
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/eddacraft/anvil/main/install.sh | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Run L4 validation
+        env:
+          ANVIL_POLICY: ${{ github.event.inputs.policy || 'anvil/policy.yml' }}
+          ANVIL_FAIL_ON_WARNINGS: ${{ github.event.inputs.fail-on-warning || 'false' }}
+        run: |
+          # Synthesise the pre-push stdin from the PR's commit range.
+          # Format: `<local-ref> <local-sha> <remote-ref> <remote-sha>`
+          # per the git pre-push contract; the daemon reuses the same
+          # parser that the developer-side hook uses.
+          base_sha="${{ github.event.pull_request.base.sha }}"
+          head_sha="${{ github.event.pull_request.head.sha }}"
+          base_ref="refs/heads/${{ github.event.pull_request.base.ref }}"
+          head_ref="refs/heads/${{ github.event.pull_request.head.ref }}"
+          printf '%s %s %s %s\n' \
+            "$head_ref" "$head_sha" "$base_ref" "$base_sha" \
+            | anvil hook pre-push
+
+  # Merge judgement (GTAO-006 / ADR-127). Not a substitute for L4:
+  # `validate` walks the pushed commit range through pre-push; `gate`
+  # runs the full quality profile against the working tree.
+  # `eddacraft/anvil-action@v1` is L4-only — do not swap it in here.
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Working-tree merge gate; full history is L4-only.
+          fetch-depth: 1
+          persist-credentials: false
+
+      # Binary install for `anvil gate`. Not the Marketplace L4 action.
+      - name: Install anvil (placeholder — pin a release binary)
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/eddacraft/anvil/main/install.sh | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      # `anvil gate` is licence-gated. Exit 3 is auth, not a quality
+      # verdict. Fork PRs do not receive repository secrets.
+      - name: Run merge gate
+        env:
+          ANVIL_LICENSE: ${{ secrets.ANVIL_LICENSE }}
+          ANVIL_FAIL_ON_WARNINGS: ${{ github.event.inputs.fail-on-warning || 'false' }}
+        run: anvil gate --profile ci

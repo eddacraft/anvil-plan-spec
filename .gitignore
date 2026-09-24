@@ -155,3 +155,7 @@ vite.config.ts.timestamp-*
 
 # dev-loop orchestration state (checkpoints) — local, not tracked
 .dev-loop/
+.anvil/
+anvil/exceptions/.lock
+anvil/witness/.chain-initialised
+anvil/witness/.lock
