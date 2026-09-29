@@ -322,7 +322,7 @@ Reconstructing attribution by hand risks fabricating it, so the false
 
 | Field      | Value      |
 | ---------- | ---------- |
-| Status     | Open       |
+| Status     | Closed (2026-09-29) |
 | Severity   | Low        |
 | Discovered | 2026-09-12 |
 | Module     | CIB        |
@@ -338,6 +338,13 @@ either. Both fallbacks nonetheless know their version — each defaults
 warning has no way to ask the CLI which version it is, which is the one
 question the warning raises. It also breaks the D-039 expectation that one
 command surface behaves identically across the three implementations.
+
+**Resolution (2026-09-29):** CIB-007 adds `--version` and `-V` to the fallback
+CLIs, printing the same `aps <semver>` string as clap from `APS_CLI_VERSION` /
+`Get-ApsCliVersion`. PowerShell parses `$args` so `pwsh -File --version` is
+not swallowed. The bare `version` command stays rejected because the Rust
+binary does not accept it. Three-way identity is pinned by
+`test/cli-parity.sh`.
 
 **Tracking:** [CIB-007](./modules/continuous-improvement-backlog.aps.md)
 

@@ -16,6 +16,7 @@
 #   aps graph [module]    Show work item dependency graph
 #   aps rollup            Print a roll-up table for a federated (nested) parent
 #   aps audit [module]    Audit plan state against reality
+#   aps --version         Print the CLI version
 #   aps --help            Show this help
 #
 
@@ -65,11 +66,13 @@ Usage:
   aps rollup            Print a roll-up table for a federated (nested) parent
   aps audit [module]    Audit plan state (overstated/understated/stale)
   aps export [--json]   Emit a JSON snapshot of the plan tree (aps-export/v1)
+  aps --version         Print the CLI version
   aps --help            Show this help
 
 Options:
-  --json    Output results in JSON format
-  --help    Show help for a command
+  --json        Output results in JSON format
+  -V, --version Print the CLI version
+  --help        Show help for a command
 
 Environment:
   APS_VERSION   Git ref to download from (default: main)
@@ -149,6 +152,10 @@ main() {
     export)
       shift
       cmd_export "$@"
+      ;;
+    --version|-V)
+      echo "aps ${APS_CLI_VERSION}"
+      exit 0
       ;;
     --help|-h|help|"")
       show_help

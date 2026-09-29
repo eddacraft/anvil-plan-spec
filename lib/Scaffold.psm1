@@ -13,6 +13,10 @@ $script:ApsBaseUrl = "https://raw.githubusercontent.com/EddaCraft/anvil-plan-spe
 # crate version. One semver across channels (D-036).
 $script:ApsCliVersion = if ($env:APS_CLI_VERSION) { $env:APS_CLI_VERSION } else { "0.9.0" }
 
+function Get-ApsCliVersion {
+    $script:ApsCliVersion
+}
+
 # Files to download for plans/
 $script:PlanFiles = @(
     "scaffold/plans/aps-rules.md"
@@ -1277,6 +1281,7 @@ Export-ModuleMember -Function @(
     'Get-ApsManagedManifestJson'
     'Get-ApsSkillPayload'
     'Get-ApsSkillDirState'
+    'Get-ApsCliVersion'
     'Invoke-ApsSkillReconcile'
     'Install-ApsManagedSkill'
 )

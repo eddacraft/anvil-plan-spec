@@ -282,7 +282,7 @@ is promoted back to the relevant module.
 
 ### CIB-007: Give the fallback CLIs a version surface
 
-- **Status:** Draft
+- **Status:** Complete: 2026-09-29
 - **Intent:** Let the bash and PowerShell CLIs report which version they are,
   so the toolchain a project is actually running is always observable.
 - **Expected Outcome:** `aps --version` (and the bare `version` command if the
@@ -298,13 +298,28 @@ is promoted back to the relevant module.
   "Unknown command"). The fallbacks already know their version: both default
   `APS_CLI_VERSION` and write it as `cli_version`.
 - **Files:** `bin/aps`, `bin/aps.ps1`, `lib/scaffold.sh`, `lib/Scaffold.psm1`,
-  `test/cli-parity.sh`
+  `test/cli-parity.sh`, `test/run.sh`, `test/ps-parity.ps1`
 - **Confidence:** high
 - **Dependencies:** none
 - **Notes:** Small but load-bearing for D-044's "single on-disk version
   surface" and for CLI-003's honest-version-surface intent: a user debugging a
   `cli_version` pin mismatch on a fallback CLI currently has no way to ask the
   CLI what it is.
+- **Learning:** "Fallback CLIs must print the same clap-shaped `aps <semver>`
+  string as the native binary. A PowerShell `param()` block steals `-V` as
+  `-Verbose` and `pwsh -File` dashed flags; parse `$args` instead."
+- **Results:** `bin/aps` and `bin/aps.ps1` now accept `--version` and `-V` and
+  print `aps ${APS_CLI_VERSION}` / `Get-ApsCliVersion`, matching the Rust clap
+  output `aps 0.9.0`. PowerShell parses `$args` so `pwsh -File --version` and
+  `-V` work. The bare `version` command stays rejected — the Rust binary does
+  not accept it. Help lists `-V, --version`. `test/cli-parity.sh` pins
+  three-way identity against `cli/Cargo.toml` and prefers a crate-matching
+  binary over a stale `cli/target/release/aps`. `test/run.sh` Test 62 and
+  `test/ps-parity.ps1` cover `--version`, `-V`, and `pwsh -File`.
+  Verification (2026-09-29): `./test/run.sh` passed; `./test/cli-parity.sh`
+  matched bash = Rust = PowerShell 7.4.6 on `--version`/`-V`/`-File`
+  (`aps 0.9.0`) across 16 lint fixtures; `test/ps-parity.ps1` passed. Native
+  Windows execution was not performed in this run.
 
 ### CIB-008: Harden the release-plan rules and close residual lint divergences
 
@@ -499,17 +514,15 @@ is promoted back to the relevant module.
 ## Status Roll-up
 
 - **Concern:** Standing APS maintenance intake
-- **Progress:** 8/13 work items Complete
+- **Progress:** 10/13 work items Complete
 - **Readout:** CIB-002, CIB-003, and CIB-004 are complete with native Windows
   CI evidence. CIB-001 remains Draft and isolated in its own worktree. CIB-005
   (plan-doctor false positives, issue #132) and CIB-006 (release-lint three-CLI
-  parity) were intaken from the 2026-09-12 release review and are Ready.
-  CIB-005 and CIB-006 completed on 2026-09-12. CIB-007 (version surface on the
-  fallback CLIs) and CIB-008 (release-rule hardening plus residual lint
-  divergences) were intaken from the same review and are Draft, as is CIB-009
-  (local Rust toolchain drifting from CI's). CIB-010 records the Windows setup
-  picker consuming key-release events as duplicate navigation and is In
-  Progress.
+  parity) completed on 2026-09-12. CIB-007 (version surface on the fallback
+  CLIs) completed on 2026-09-29. CIB-008 (release-rule hardening plus residual
+  lint divergences) completed on 2026-09-29. CIB-009 (local Rust toolchain
+  drifting from CI's) remains Draft. CIB-010 records the Windows setup picker
+  consuming key-release events as duplicate navigation and is In Progress.
   CIB-011 (README install placement plus false "no Windows binary" installer
   failures) completed on 2026-09-18. CIB-012 (accessible eddacraft-tui 0.5.3
   adoption) completed on 2026-09-18. CIB-013 (anvil-style Left/Right setup step

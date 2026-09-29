@@ -306,6 +306,38 @@ if ($updExit -eq 0 -and (Get-Content -LiteralPath $ccMarker -Raw) -ceq $ccBefore
 Remove-Item -LiteralPath $initCc -Recurse -Force -ErrorAction SilentlyContinue
 Remove-Item Env:APS_LOCAL -ErrorAction SilentlyContinue
 
+Write-Host "`nVersion surface (CIB-007)...`n"
+
+Remove-Item Env:APS_CLI_VERSION -ErrorAction SilentlyContinue
+$ver = (& $ApsPs1 --version 2>&1 | Out-String).Trim()
+if ($ver -match '^aps \d+\.\d+\.\d+$') {
+    Pass "--version reports '$ver'"
+} else {
+    Fail "--version unexpected: $ver"
+}
+
+$vflag = (& $ApsPs1 -V 2>&1 | Out-String).Trim()
+if ($vflag -ceq $ver) {
+    Pass "-V matches --version"
+} else {
+    Fail "-V ($vflag) diverged from --version ($ver)"
+}
+
+$pwshExe = (Get-Process -Id $PID).Path
+$fileVer = (& $pwshExe -NoProfile -File $ApsPs1 --version 2>&1 | Out-String).Trim()
+if ($fileVer -ceq $ver) {
+    Pass "pwsh -File --version matches --version"
+} else {
+    Fail "pwsh -File --version ($fileVer) diverged from --version ($ver)"
+}
+
+$help = (& $ApsPs1 --help *>&1 | Out-String)
+if ($help -match '--version') {
+    Pass '--help lists --version'
+} else {
+    Fail "--help does not mention --version (got: $help)"
+}
+
 Write-Host ""
 if ($script:failed -gt 0) {
     Write-Host "$($script:failed) PowerShell parity test(s) failed" -ForegroundColor Red
