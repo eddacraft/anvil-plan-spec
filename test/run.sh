@@ -1090,5 +1090,21 @@ echo "$output" | grep -qF '"id":"AUTH-001","title":"Login","status":"Ready","lin
 echo "$output" | grep -qF '"model":"claude-sonnet-5","reasoning":"Low"' || fail "export missing item-level override on AUTH-002"
 pass
 
+# Test 62: CIB-007 — bash `aps --version` reports a clap-shaped `aps <semver>`
+# string, `-V` matches, and help lists the flag. Three-way identity with the
+# Rust binary (and PowerShell when pwsh is present) is pinned by
+# test/cli-parity.sh.
+echo -n "Test: --version reports the CLI version... "
+ver=$(env -u APS_CLI_VERSION "$APS" --version) || fail "aps --version exited non-zero"
+echo "$ver" | grep -qxE 'aps [0-9]+\.[0-9]+\.[0-9]+([.+-][0-9A-Za-z.-]+)?' \
+  || fail "unexpected --version: $ver"
+vflag=$(env -u APS_CLI_VERSION "$APS" -V) || fail "aps -V exited non-zero"
+[[ "$ver" == "$vflag" ]] || fail "-V ($vflag) diverged from --version ($ver)"
+"$APS" --help | grep -q -- '--version' || fail "aps --help does not mention --version"
+crate_ver=$(awk -F'"' '/^version = / {print $2; exit}' "$PROJECT_ROOT/cli/Cargo.toml")
+[[ -n "$crate_ver" ]] || fail "could not read version from cli/Cargo.toml"
+[[ "$ver" == "aps $crate_ver" ]] || fail "bash --version ($ver) != crate ($crate_ver)"
+pass
+
 echo ""
 echo -e "${GREEN}All tests passed!${NC}"

@@ -38,14 +38,27 @@ PS_APS="$ROOT/bin/aps.ps1"
 export APS_STALE_DAYS=60
 
 # --- Locate the Rust binary (canonical CLI, D-031) ---------------------------
+# Prefer a binary whose --version matches cli/Cargo.toml so a stale
+# cli/target/release/aps (CIB-007 / D-036) cannot win over a current debug build.
+crate_ver=$(awk -F'"' '/^version = / {print $2; exit}' "$ROOT/cli/Cargo.toml")
 RUST_APS="${APS_RUST_BIN:-}"
 if [[ -z "$RUST_APS" ]]; then
   for cand in "$ROOT/cli/target/release/aps" "$ROOT/cli/target/debug/aps"; do
-    [[ -x "$cand" ]] && RUST_APS="$cand" && break
+    [[ -x "$cand" ]] || continue
+    if [[ -n "$crate_ver" && "$("$cand" --version 2>/dev/null | tr -d '\r')" == "aps $crate_ver" ]]; then
+      RUST_APS="$cand"
+      break
+    fi
   done
 fi
 if [[ -z "$RUST_APS" ]]; then
-  echo "No prebuilt Rust binary found — building (cli/)..."
+  echo "No crate-matching Rust binary found — building (cli/)..."
+  (cd "$ROOT/cli" && cargo build --quiet) || { echo "cargo build failed"; exit 1; }
+  RUST_APS="$ROOT/cli/target/debug/aps"
+fi
+rust_ver=$("$RUST_APS" --version 2>/dev/null | tr -d '\r')
+if [[ -n "$crate_ver" && "$rust_ver" != "aps $crate_ver" ]]; then
+  echo "Rust binary at $RUST_APS reports ${rust_ver:-unknown}; rebuilding debug to match crate $crate_ver..."
   (cd "$ROOT/cli" && cargo build --quiet) || { echo "cargo build failed"; exit 1; }
   RUST_APS="$ROOT/cli/target/debug/aps"
 fi
@@ -246,6 +259,73 @@ if (( marker_fail == 0 )); then
 else
   fail=1
 fi
+
+echo ""
+
+# CIB-007: top-level `aps --version` is identical across the three CLIs.
+# Format is clap's `aps <semver>`. Unset APS_CLI_VERSION so the fallbacks use
+# their baked default, which must match the Rust crate version (D-036).
+version_fail=0
+bver=$(env -u APS_CLI_VERSION "$BASH_APS" --version 2>&1); bvrc=$?
+rver=$("$RUST_APS" --version 2>&1); rvrc=$?
+bver=$(printf '%s' "$bver" | tr -d '\r')
+rver=$(printf '%s' "$rver" | tr -d '\r')
+if [[ "$bver" == "$rver" && $bvrc -eq 0 && $rvrc -eq 0 ]]; then
+  echo -e "${GREEN}OK${NC} --version bash = Rust ($rver)"
+else
+  echo -e "${RED}DIVERGE${NC} --version bash vs Rust (rc $bvrc vs $rvrc):"
+  diff <(printf '%s\n' "$bver") <(printf '%s\n' "$rver") | sed 's/^/    /'
+  version_fail=1
+fi
+
+bV=$(env -u APS_CLI_VERSION "$BASH_APS" -V 2>&1); bVrc=$?
+rV=$("$RUST_APS" -V 2>&1); rVrc=$?
+bV=$(printf '%s' "$bV" | tr -d '\r')
+rV=$(printf '%s' "$rV" | tr -d '\r')
+if [[ "$bV" == "$rV" && "$bV" == "$rver" && $bVrc -eq 0 && $rVrc -eq 0 ]]; then
+  echo -e "${GREEN}OK${NC} -V bash = Rust"
+else
+  echo -e "${RED}DIVERGE${NC} -V bash vs Rust (rc $bVrc vs $rVrc):"
+  diff <(printf '%s\n' "$bV") <(printf '%s\n' "$rV") | sed 's/^/    /'
+  version_fail=1
+fi
+
+if $HAVE_PWSH; then
+  pver=$(env -u APS_CLI_VERSION "$PWSH" -NoProfile -Command "& '$PS_APS' --version" 2>&1); pvrc=$?
+  pver=$(printf '%s' "$pver" | tr -d '\r')
+  if [[ "$pver" == "$rver" && $pvrc -eq 0 ]]; then
+    echo -e "${GREEN}OK${NC} --version PowerShell = Rust"
+  else
+    echo -e "${RED}DIVERGE${NC} --version PowerShell vs Rust (rc $pvrc vs $rvrc):"
+    diff <(printf '%s\n' "$pver") <(printf '%s\n' "$rver") | sed 's/^/    /'
+    version_fail=1
+  fi
+  # `pwsh -File` is how CI and non-interactive callers launch the fallback.
+  pfile=$(env -u APS_CLI_VERSION "$PWSH" -NoProfile -File "$PS_APS" --version 2>&1); pfilerc=$?
+  pfile=$(printf '%s' "$pfile" | tr -d '\r')
+  if [[ "$pfile" == "$rver" && $pfilerc -eq 0 ]]; then
+    echo -e "${GREEN}OK${NC} --version PowerShell -File = Rust"
+  else
+    echo -e "${RED}DIVERGE${NC} --version PowerShell -File vs Rust (rc $pfilerc vs $rvrc):"
+    diff <(printf '%s\n' "$pfile") <(printf '%s\n' "$rver") | sed 's/^/    /'
+    version_fail=1
+  fi
+  pV=$(env -u APS_CLI_VERSION "$PWSH" -NoProfile -Command "& '$PS_APS' -V" 2>&1); pVrc=$?
+  pV=$(printf '%s' "$pV" | tr -d '\r')
+  if [[ "$pV" == "$rver" && $pVrc -eq 0 ]]; then
+    echo -e "${GREEN}OK${NC} -V PowerShell = Rust"
+  else
+    echo -e "${RED}DIVERGE${NC} -V PowerShell vs Rust (rc $pVrc vs $rvrc):"
+    diff <(printf '%s\n' "$pV") <(printf '%s\n' "$rver") | sed 's/^/    /'
+    version_fail=1
+  fi
+fi
+
+if [[ ! "$rver" =~ ^aps\ [0-9]+\.[0-9]+\.[0-9]+ ]]; then
+  echo -e "${RED}ERROR${NC} Rust --version is not 'aps <semver>': $rver"
+  version_fail=1
+fi
+(( version_fail != 0 )) && fail=1
 
 echo ""
 if [[ $fail -ne 0 ]]; then

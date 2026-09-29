@@ -7,6 +7,7 @@
     aps.ps1 update [dir]      Update templates, skill, and commands
     aps.ps1 lint [file|dir]   Validate APS documents (default: plans/)
     aps.ps1 lint --json       Output as JSON
+    aps.ps1 --version         Print the CLI version
     aps.ps1 --help            Show this help
 
 .EXAMPLE
@@ -17,13 +18,13 @@
     .\bin\aps.ps1 lint . --json
 #>
 
-param(
-    [Parameter(Position = 0)]
-    [string]$Command,
-
-    [Parameter(Position = 1, ValueFromRemainingArguments)]
-    [string[]]$Arguments
-)
+# Parse argv like a CLI. A `param()` block binds `-V` to -Verbose and, under
+# `pwsh -File`, sends dashed tokens into remaining-arguments so `--version`
+# would print help.
+$Command = ""
+$Arguments = @()
+if ($args.Count -gt 0) { $Command = [string]$args[0] }
+if ($args.Count -gt 1) { $Arguments = @($args[1..($args.Count - 1)]) }
 
 $ErrorActionPreference = "Stop"
 
@@ -53,11 +54,13 @@ Usage:
   aps.ps1 update [dir]      Update templates, skill, and commands
   aps.ps1 lint [file|dir]   Validate APS documents
   aps.ps1 lint --json       Output results as JSON
+  aps.ps1 --version         Print the CLI version
   aps.ps1 --help            Show this help
 
 Options:
-  --json    Output results in JSON format
-  --help    Show help for a command
+  --json        Output results in JSON format
+  -V, --version Print the CLI version
+  --help        Show help for a command
 
 Environment:
   APS_VERSION   Git ref to download from (default: main)
@@ -142,6 +145,12 @@ switch ($Command) {
     }
     "lint" {
         Invoke-LintCommand -LintArgs $Arguments
+    }
+    "--version" {
+        Write-Output "aps $(Get-ApsCliVersion)"
+    }
+    "-V" {
+        Write-Output "aps $(Get-ApsCliVersion)"
     }
     "--help" { Show-Help }
     "-h"     { Show-Help }
