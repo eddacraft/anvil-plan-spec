@@ -62,10 +62,10 @@ get_file_type() {
 
   # Release narratives live in releases/ as `v<version>.md` (REL-003).
   # README.md is the directory guide, and `.`-prefixed templates were already
-  # classified above. Anything else here is a (possibly misnamed) release
+  # classified above. Other non-APS Markdown here is a (possibly misnamed) release
   # file — R001 flags the naming. Checked before the modules/ rule so it
   # matches the Rust classifier's precedence (D-039).
-  if in_releases_dir "$file" && [[ "$basename" == *.md && "$basename" != "README.md" ]]; then
+  if in_releases_dir "$file" && [[ "$basename" == *.md && "$basename" != *.aps.md && "$basename" != "README.md" ]]; then
     echo "release"
     return
   fi
@@ -537,6 +537,16 @@ EOF
       FILE_RESULTS+=("$file|ok|OK||")
     fi
   done
+
+  # Keep each file's cross-tree and local findings together, in discovery order.
+  # Rust renders through report.files; mirror that for both text and JSON.
+  local ordered_results=() result
+  for file in "${files[@]}"; do
+    for result in "${FILE_RESULTS[@]}"; do
+      [[ "$result" == "$file|"* ]] && ordered_results+=("$result")
+    done
+  done
+  FILE_RESULTS=("${ordered_results[@]}")
 
   # Output results
   if [[ "$json_output" == true ]]; then

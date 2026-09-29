@@ -8,12 +8,13 @@
 # in cli/src/lint.rs — same codes, order, severities and messages (D-039).
 #
 
-# True when a basename is `v<digit>...md` — `v0.3.0.md`, `v1.2.0-beta.md`.
-# Mirrors is_release_filename() in cli/src/lint.rs: a literal `v` followed by
-# an ASCII digit, and a `.md` extension. Case-sensitive, like the Rust check.
+# Three numeric components, with optional ASCII prerelease/build identifiers.
+# Version shape only; mirrors is_release_filename() in cli/src/lint.rs.
 is_release_filename() {
   local basename="$1"
-  [[ "$basename" == v[0-9]*.md ]]
+  local LC_ALL=C
+  local pattern='^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?\.md$'
+  [[ "$basename" =~ $pattern ]]
 }
 
 # R001: Release file must be named v<version>.md
@@ -28,12 +29,25 @@ check_r001_naming() {
 }
 
 # R002: Missing release header table with Target and Status fields
-# The header table drives the release — Target (which version) and Status
-# (where it is in the lifecycle). Both rows must appear in the first 20 lines.
+# Require Target and Status in one table body within the first 20 lines.
 check_r002_header_table() {
   local file="$1"
-  if ! ( head -20 "$file" | grep -qE '^\| *Target *\|' && \
-         head -20 "$file" | grep -qE '^\| *Status *\|' ); then
+  if ! awk '
+    NR > 20 { exit }
+    /^(```|~~~)/ { fence = !fence }
+    fence || !/^\|/ { previous = table = target = status = 0; next }
+    {
+      if (previous && /^\| *:?----*:? *(\| *:?----*:? *)+\|? *\r?$/) {
+        table = 1; target = status = 0
+      } else if (table) {
+        if (/^\| *Target *\|/) target = 1
+        if (/^\| *Status *\|/) status = 1
+        if (target && status) { found = 1; exit }
+      }
+      previous = 1
+    }
+    END { exit !found }
+  ' "$file"; then
     add_result "$file" "error" "R002" \
       "Missing release header table with Target and Status fields"
   fi

@@ -10,14 +10,11 @@
 
 # Dependencies (Output, Common) must be imported by the entry point.
 
-# True when a basename is `v<digit>...md` — `v0.3.0.md`, `v1.2.0-beta.md`.
-# Mirrors is_release_filename() in cli/src/lint.rs: a literal lowercase `v`
-# followed by an ASCII digit, and a `.md` extension. `-cmatch` keeps the check
-# case-sensitive like the Rust and bash versions (PowerShell's `-match` is
-# case-insensitive by default, which would wrongly accept `V0.3.0.md`).
+# Three numeric components, with optional ASCII prerelease/build identifiers.
+# Version shape only; mirrors is_release_filename() in cli/src/lint.rs.
 function Test-ApsReleaseFilename {
     param([string]$Basename)
-    return ($Basename -cmatch '^v[0-9].*\.md$')
+    return ($Basename -cmatch '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?\.md$')
 }
 
 # R001: Release file must be named v<version>.md
@@ -31,24 +28,31 @@ function Test-R001ReleaseNaming {
 }
 
 # R002: Missing release header table with Target and Status fields
-# The header table drives the release — Target (which version) and Status
-# (where it is in the lifecycle). Both rows must appear in the first 20 lines.
+# Require Target and Status in one table body within the first 20 lines.
 function Test-R002ReleaseHeaderTable {
     param([string]$File)
     $lines = @(Get-Content -LiteralPath $File -ErrorAction SilentlyContinue)
     $limit = [Math]::Min(20, $lines.Count)
-    $hasTarget = $false
-    $hasStatus = $false
+    $previous = $table = $hasTarget = $hasStatus = $fence = $false
     for ($i = 0; $i -lt $limit; $i++) {
-        # -cmatch: the Rust and bash checks are case-sensitive, so `| target |`
-        # must not satisfy this rule. PowerShell's bare -match would.
-        if ($lines[$i] -cmatch '^\| *Target *\|') { $hasTarget = $true }
-        if ($lines[$i] -cmatch '^\| *Status *\|') { $hasStatus = $true }
+        $line = $lines[$i]
+        if ($line -match '^(```|~~~)') { $fence = -not $fence }
+        if ($fence -or -not $line.StartsWith('|')) {
+            $previous = $table = $hasTarget = $hasStatus = $false
+            continue
+        }
+        if ($previous -and $line -match '^\| *:?-{3,}:? *(\| *:?-{3,}:? *)+\|? *\r?$') {
+            $table = $true
+            $hasTarget = $hasStatus = $false
+        } elseif ($table) {
+            if ($line -cmatch '^\| *Target *\|') { $hasTarget = $true }
+            if ($line -cmatch '^\| *Status *\|') { $hasStatus = $true }
+            if ($hasTarget -and $hasStatus) { return }
+        }
+        $previous = $true
     }
-    if (-not ($hasTarget -and $hasStatus)) {
-        Add-ApsResult -Path $File -Type "error" -Code "R002" `
-            -Message "Missing release header table with Target and Status fields"
-    }
+    Add-ApsResult -Path $File -Type "error" -Code "R002" `
+        -Message "Missing release header table with Target and Status fields"
 }
 
 # R003: Missing ## Release Theme section

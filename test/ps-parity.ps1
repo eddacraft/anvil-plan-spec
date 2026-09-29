@@ -117,8 +117,39 @@ try {
     } else {
         Fail "W021 module collision not detected (got: $out)"
     }
+    $json = (& pwsh -NoProfile -File $ApsPs1 lint $moduleCol --json | Out-String | ConvertFrom-Json)
+    $parentPath = Join-Path $moduleCol 'plans/index.aps.md'
+    if ($json.files.Count -eq 5 -and $json.files[-1].path -eq $parentPath -and
+        $json.files[-1].warnings.code -contains 'W021') {
+        Pass 'collision warnings stay in the parent JSON group after child files'
+    } else {
+        Fail 'collision JSON groups are duplicated or out of discovery order'
+    }
 } finally {
     Remove-Item -Recurse -Force $moduleCol
+}
+
+# CIB-008: release validation and discovery order, also run on native Windows.
+$releaseRoot = Join-Path $FixturesRoot 'release-hardening/plans'
+$out = Invoke-Lint $releaseRoot
+if ($out -match '11 files checked, 11 errors' -and
+    ([regex]::Matches($out, 'R001:')).Count -eq 3 -and
+    ([regex]::Matches($out, 'R002:')).Count -eq 3 -and
+    $out -match 'E003:' -and
+    $out.IndexOf('v1.0.0-Beta.md') -lt $out.IndexOf('v1.0.0-alpha.md')) {
+    Pass 'release hardening: version, shared table, APS classification, ordinal order'
+} else {
+    Fail "release hardening fixture (got: $out)"
+}
+
+$orderRoot = Join-Path $FixturesRoot 'lint-order/plans'
+$orderedJson = (& pwsh -NoProfile -File $ApsPs1 lint $orderRoot --json | Out-String | ConvertFrom-Json)
+if ($orderedJson.files.Count -eq 2 -and
+    $orderedJson.files[0].path -cmatch 'Zebra\.aps\.md$' -and
+    $orderedJson.files[1].path -cmatch 'alpha\.aps\.md$') {
+    Pass 'ordinal order applies to module files and JSON output'
+} else {
+    Fail 'module JSON output does not use ordinal path order'
 }
 
 Write-Host "`nConductor rules (COND-007)...`n"
