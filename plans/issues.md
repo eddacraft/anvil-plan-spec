@@ -347,7 +347,7 @@ command surface behaves identically across the three implementations.
 
 | Field      | Value      |
 | ---------- | ---------- |
-| Status     | Open       |
+| Status     | Closed (2026-09-29) |
 | Severity   | Low        |
 | Discovered | 2026-09-12 |
 | Module     | CIB        |
@@ -372,6 +372,12 @@ which is the documented invocation, and the parity suite is green.
 differences with a note in the parity suite. The PowerShell ordinal-sort fix
 changes ordering for every file type, so it needs its own parity pass.
 
+**Resolution (2026-09-29):** CIB-008 aligns recursive discovery by skipping discovered symlinks, uses
+ordinal PowerShell file sorting, and groups collision warnings with their
+parent file in text and JSON. Full-text parity covers mixed-case
+release/module paths and a federation with symlinked files, directories, and a
+cycle; parsed JSON matches across the three CLIs.
+
 **Tracking:** [CIB-008](./modules/continuous-improvement-backlog.aps.md)
 
 ---
@@ -380,7 +386,7 @@ changes ordering for every file type, so it needs its own parity pass.
 
 | Field      | Value      |
 | ---------- | ---------- |
-| Status     | Open       |
+| Status     | Closed (2026-09-29) |
 | Severity   | Low        |
 | Discovered | 2026-09-12 |
 | Module     | CIB        |
@@ -398,6 +404,12 @@ in the same table, or in a table at all. Separately, Rust classifies
 misfiled module is validated by the wrong rule set with no warning. Not a
 regression — this is the behaviour CIB-006 deliberately mirrored into bash and
 PowerShell rather than diverging from.
+
+**Resolution (2026-09-29):** CIB-008 requires three numeric version components with optional
+prerelease/build identifiers. Target and Status must be body rows of one
+header table within the first 20 lines, outside fences. Files ending in
+`.aps.md` retain module/simple linting under `releases/`. Regression fixtures
+and tests pass across Rust, bash, and PowerShell on Linux.
 
 **Tracking:** [CIB-008](./modules/continuous-improvement-backlog.aps.md)
 

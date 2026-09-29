@@ -4,7 +4,7 @@
 | --- | --------- | ------ | -------- | ----------- |
 | CIB | Conductor | @aneki | medium   | In Progress |
 
-**Last reviewed:** 2026-09-18
+**Last reviewed:** 2026-09-29
 
 ## Purpose
 
@@ -308,7 +308,7 @@ is promoted back to the relevant module.
 
 ### CIB-008: Harden the release-plan rules and close residual lint divergences
 
-- **Status:** Draft
+- **Status:** Complete: 2026-09-29
 - **Intent:** Tighten release-plan validation beyond the structural minimum and
   retire the three-CLI lint divergences surfaced while porting R001–R004.
 - **Expected Outcome:** R001 validates a plausible version rather than
@@ -329,13 +329,30 @@ is promoted back to the relevant module.
   divergence.
 - **Files:** `cli/src/lint.rs`, `cli/src/parser.rs`, `lib/rules/release.sh`,
   `lib/rules/Release.psm1`, `lib/lint.sh`, `lib/Lint.psm1`,
-  `test/cli-parity.sh`, `test/fixtures/**`
+  `lib/Output.psm1`, `test/cli-parity.sh`, `test/ps-parity.ps1`,
+  `test/fixtures/**`, `docs/release-planning.md`, `docs/usage.md`
 - **Confidence:** medium
 - **Dependencies:** CIB-006
 - **Notes:** Any change here lands in all three CLIs in the same work item —
   fixing the Rust rule alone would re-open the gap CIB-006 just closed.
   The PowerShell sort fix (`[StringComparer]::Ordinal`) changes ordering for
   every file type, not just release plans, so it needs its own parity pass.
+- **Results:** All three CLIs now enforce the version shape and single-table
+  header defined in D-006; `.aps.md` files under `releases/` receive normal
+  module/simple validation. Rust skips discovered symlinks, PowerShell sorts
+  file paths ordinally, and bash/PowerShell group W020/W021 with their parent
+  file in text and JSON. No accepted divergence was needed for ISS-014 or
+  ISS-015. New release and module fixtures pin malformed versions, split and
+  fenced headers, missing separators, APS classification, and mixed-case
+  ordering. A temporary federation fixture covers directory/file symlinks,
+  a symlink cycle, and collision groups after child files.
+- **Verification (2026-09-29):** 237 Rust tests passed; `./test/run.sh` and
+  `test/ps-parity.ps1` passed. Full-text and exit-code parity passed across
+  16 fixtures with a fresh Rust build and PowerShell 7.4.6 on Linux. Parsed
+  JSON also matched across all three CLIs for the collision, release-hardening,
+  and module-order fixtures. `./bin/aps lint plans` checked 50 files without
+  warnings or errors; markdownlint, Rust formatting, and clippy passed.
+  Native Windows execution was not performed in this run.
 
 ### CIB-009: Align the local Rust toolchain with CI
 
@@ -516,6 +533,19 @@ is promoted back to the relevant module.
   agents or contributors, but users must be able to install and operate APS
   without them. Windows compatibility requires native behavioural evidence;
   cross-compilation and PowerShell-on-Ubuntu checks are supporting evidence.
+
+- **D-006:** Release validation — _decided 2026-09-29: require three numeric
+  version components, with optional dot-separated ASCII prerelease/build
+  identifiers._ R001 checks shape without enforcing SemVer precedence or
+  leading-zero restrictions. R002 requires Target and Status in one table
+  body within the first 20 lines, after a header and separator, outside fences.
+  `.aps.md` files keep their normal APS classification under `releases/`.
+- **D-007:** Lint discovery and output — _decided 2026-09-29: directory scans
+  skip symbolic links and keep findings grouped in discovery order._ Explicit
+  file targets remain supported. PowerShell uses ordinal file sorting to
+  match Rust/bash for mixed-case paths; collision warnings stay with their
+  parent file in text and JSON. Full-text parity includes valid files and
+  counts so discovery differences cannot hide behind identical warnings.
 
 ## Notes
 

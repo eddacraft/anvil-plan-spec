@@ -1514,7 +1514,8 @@ fn lint_design(report: &mut LintReport, plan: &PlanFile) {
 /// filename, a header table that records the target and status, and the
 /// Release Theme + What Ships sections that carry the narrative.
 fn lint_release(report: &mut LintReport, plan: &PlanFile) {
-    let basename = plan.path.rsplit('/').next().unwrap_or(&plan.path);
+    let normalized = plan.path.replace('\\', "/");
+    let basename = normalized.rsplit('/').next().unwrap_or(&normalized);
     if !is_release_filename(basename) {
         report.add(
             &plan.path,
@@ -1525,12 +1526,7 @@ fn lint_release(report: &mut LintReport, plan: &PlanFile) {
         );
     }
 
-    // Header table: require the rows that drive the release — Target (which
-    // version) and Status (where it is in the lifecycle).
-    let head = plan.lines.iter().take(20);
-    let has_target = head.clone().any(|l| table_row_starts_with(l, "Target"));
-    let has_status = head.clone().any(|l| table_row_starts_with(l, "Status"));
-    if !(has_target && has_status) {
+    if !has_release_header(plan) {
         report.add(
             &plan.path,
             Severity::Error,
@@ -1560,13 +1556,88 @@ fn lint_release(report: &mut LintReport, plan: &PlanFile) {
     }
 }
 
-/// A release filename is `v<digit>…​.md` — `v0.3.0.md`, `v1.2.0-beta.md`.
+/// Three numeric components with optional dot-separated ASCII prerelease/build
+/// identifiers. This checks a plausible version shape, not SemVer precedence.
 fn is_release_filename(basename: &str) -> bool {
-    let Some(stem) = basename.strip_suffix(".md") else {
+    let Some(version) = basename
+        .strip_prefix('v')
+        .and_then(|s| s.strip_suffix(".md"))
+    else {
         return false;
     };
-    let mut chars = stem.chars();
-    chars.next() == Some('v') && chars.next().is_some_and(|c| c.is_ascii_digit())
+    let identifiers = |s: &str| {
+        s.split('.').all(|part| {
+            !part.is_empty() && part.bytes().all(|c| c.is_ascii_alphanumeric() || c == b'-')
+        })
+    };
+    let core = if let Some((core, build)) = version.split_once('+') {
+        if !identifiers(build) {
+            return false;
+        }
+        core
+    } else {
+        version
+    };
+    let core = if let Some((core, pre)) = core.split_once('-') {
+        if !identifiers(pre) {
+            return false;
+        }
+        core
+    } else {
+        core
+    };
+    let parts: Vec<_> = core.split('.').collect();
+    parts.len() == 3
+        && parts
+            .iter()
+            .all(|part| !part.is_empty() && part.bytes().all(|c| c.is_ascii_digit()))
+}
+
+/// Target and Status must be body rows of one table in the first 20 lines.
+/// Require a header row followed by a Markdown separator; ignore fenced examples.
+fn has_release_header(plan: &PlanFile) -> bool {
+    let mut previous_row = false;
+    let mut table = false;
+    let mut target = false;
+    let mut status = false;
+    let mut fence = false;
+    for line in plan.lines.iter().take(20) {
+        if line.starts_with("```") || line.starts_with("~~~") {
+            fence = !fence;
+        }
+        if fence || !line.starts_with('|') {
+            previous_row = false;
+            table = false;
+            target = false;
+            status = false;
+            continue;
+        }
+        let row = line
+            .trim_end_matches([' ', '\r'])
+            .strip_prefix('|')
+            .unwrap();
+        let cells: Vec<_> = row.strip_suffix('|').unwrap_or(row).split('|').collect();
+        let separator = cells.len() >= 2
+            && cells.iter().all(|cell| {
+                let cell = cell.trim_matches(' ');
+                let cell = cell.strip_prefix(':').unwrap_or(cell);
+                let cell = cell.strip_suffix(':').unwrap_or(cell);
+                cell.len() >= 3 && cell.bytes().all(|c| c == b'-')
+            });
+        if previous_row && separator {
+            table = true;
+            target = false;
+            status = false;
+        } else if table {
+            target |= table_row_starts_with(line, "Target");
+            status |= table_row_starts_with(line, "Status");
+            if target && status {
+                return true;
+            }
+        }
+        previous_row = true;
+    }
+    false
 }
 
 fn table_row_starts_with(line: &str, cell: &str) -> bool {
@@ -2034,10 +2105,23 @@ mod tests {
 
     #[test]
     fn release_filename_validation() {
-        for ok in ["v0.3.0.md", "v1.2.0-beta.md", "v10.0.0.md"] {
+        for ok in [
+            "v0.3.0.md",
+            "v1.2.0-beta.md",
+            "v10.0.0.md",
+            "v1.2.3-rc.1+build.5.md",
+            "v1.2.3+build.5.md",
+        ] {
             assert!(is_release_filename(ok), "{ok} should be valid");
         }
         for bad in [
+            "v0garbage.md",
+            "v9.aps.md",
+            "v1.2.md",
+            "v1.2.3.4.md",
+            "v1.2.3-beta..1.md",
+            "v1.2.3+.md",
+            "v1.2.3+build+5.md",
             "vfoo.md",
             "v.md",
             "version-1.md",
@@ -2047,6 +2131,35 @@ mod tests {
         ] {
             assert!(!is_release_filename(bad), "{bad} should be invalid");
         }
+    }
+
+    #[test]
+    fn release_header_requires_one_real_table() {
+        for header in [
+            "| Field | Value |\n| --- | --- |\n| Target | v1.0.0 |\n\n| Field | Value |\n| --- | --- |\n| Status | Planning |",
+            "| Target | v1.0.0 |\n| Status | Planning |",
+            "```markdown\n| Field | Value |\n| --- | --- |\n| Target | v1.0.0 |\n| Status | Planning |\n```",
+        ] {
+            let body = format!("# Release\n\n{header}\n\n## Release Theme\n\n## What Ships\n");
+            assert_eq!(
+                codes(&lint_text("plans/releases/v1.0.0.md", &body)),
+                vec!["R002"]
+            );
+        }
+        let aligned = VALID_RELEASE.replace("| ------ | ------- |", "| :------ | -------: |");
+        assert!(codes(&lint_text("plans/releases/v1.0.0.md", &aligned)).is_empty());
+        let late = format!("{}{}", "\n".repeat(20), VALID_RELEASE);
+        assert_eq!(
+            codes(&lint_text("plans/releases/v1.0.0.md", &late)),
+            vec!["R002"]
+        );
+    }
+
+    #[test]
+    fn aps_files_in_releases_keep_module_validation() {
+        let report = lint_text("plans/releases/v9.aps.md", "# Misfiled Module\n");
+        assert!(codes(&report).contains(&"E001"));
+        assert!(!codes(&report).iter().any(|code| code.starts_with('R')));
     }
 
     #[test]

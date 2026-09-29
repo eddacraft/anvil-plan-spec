@@ -81,6 +81,18 @@ function Test-ApsFileHasResults {
     return $false
 }
 
+# Keep cross-tree warnings with their file, matching Rust's report.files order.
+function Set-ApsResultOrder {
+    param([string[]]$Files)
+    $ordered = [System.Collections.ArrayList]::new()
+    foreach ($file in $Files) {
+        foreach ($result in $script:FileResults) {
+            if ($result.Path -ceq $file) { $null = $ordered.Add($result) }
+        }
+    }
+    $script:FileResults = $ordered
+}
+
 # --- Text output ---
 
 function Write-ApsTextResults {
@@ -231,6 +243,7 @@ Export-ModuleMember -Function @(
     'Reset-ApsResults'
     'Add-ApsResult'
     'Set-ApsFileType'
+    'Set-ApsResultOrder'
     'Add-ApsFileCount'
     'Get-ApsTotalErrors'
     'Test-ApsFileHasResults'

@@ -40,9 +40,16 @@ a plan, copy the template:
 cp plans/releases/.release.template.md plans/releases/v0.4.0.md
 ```
 
-The filename **must** match `v<version>.md` (e.g. `v0.3.0.md`,
-`v1.2.0-beta.md`) — `aps lint` flags anything else under `releases/` with
-`R001`. `README.md` and the dotfile template are not linted.
+The filename **must** match `v<major>.<minor>.<patch>.md`, with three numeric
+components and optional prerelease (`-beta.1`) and build (`+build.5`) suffixes.
+Suffix identifiers contain ASCII letters, digits, or hyphens, separated by
+single dots; empty identifiers are invalid. Examples: `v0.3.0.md`,
+`v1.2.0-beta.md`, and `v1.2.0-rc.1+build.5.md`. This validates the version's
+shape; it does not enforce SemVer precedence or leading-zero restrictions.
+
+`aps lint` flags malformed release names with `R001`. `README.md` and the
+dotfile template are not linted. Files ending in `.aps.md` retain their
+normal APS rules, even under `releases/`.
 
 ## When to start a release plan
 
@@ -78,7 +85,10 @@ canonical shape. The required spine — enforced by `aps lint` — is:
 
 The header table also carries `Cut from`, `Previous release`, and `Date`
 rows — useful context, but not lint-enforced (only `Target` and `Status`
-are). The template likewise carries **Success Criteria**, **Risks**, **Out
+are). Both must be body rows in the same table within the first 20 lines,
+following a header row and Markdown separator row. Separate tables, bare
+rows without a separator, and fenced examples do not satisfy `R002`.
+The template likewise carries **Success Criteria**, **Risks**, **Out
 of Scope**, **Rollout**, **Related**, and a **Retrospective** (filled in
 after ship). None of these are lint-enforced, but a useful release plan has
 them.

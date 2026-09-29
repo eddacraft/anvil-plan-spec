@@ -12,7 +12,7 @@
 function Test-ApsInReleasesDir {
     param([string]$FilePath)
     $p = $FilePath -replace '\\', '/'
-    return ($p -match '/releases/' -or $p -match '^releases/')
+    return ($p -cmatch '/releases/' -or $p -cmatch '^releases/')
 }
 
 function Get-ApsFileType {
@@ -40,14 +40,14 @@ function Get-ApsFileType {
 
     # Release narratives live in releases/ as `v<version>.md` (REL-003).
     # README.md is the directory guide, and `.`-prefixed templates were already
-    # classified above. Anything else here is a (possibly misnamed) release
+    # classified above. Other non-APS Markdown here is a (possibly misnamed) release
     # file — R001 flags the naming. Checked before the modules/ rule so it
     # matches the Rust classifier's precedence (D-039).
     # -cmatch/-cne: Rust and bash both compare the extension and README.md
     # case-sensitively, so `README.MD` is NOT a release narrative (it is not
     # `*.md`) while `readme.md` IS one. PowerShell's default -match/-ne would
     # fold both and diverge.
-    if ((Test-ApsInReleasesDir -FilePath $FilePath) -and $name -cmatch '\.md$' -and $name -cne 'README.md') { return "release" }
+    if ((Test-ApsInReleasesDir -FilePath $FilePath) -and $name -cmatch '\.md$' -and $name -cnotmatch '\.aps\.md$' -and $name -cne 'README.md') { return "release" }
 
     # Module files
     if ($dir -match '[/\\]modules($|[/\\])') { return "module" }
@@ -60,8 +60,9 @@ function Get-ApsFileType {
 
 function Find-ApsFiles {
     param([string]$Directory)
-    Get-ChildItem -Path $Directory -Recurse -File -ErrorAction SilentlyContinue |
+    [string[]]$paths = @(Get-ChildItem -LiteralPath $Directory -Recurse -File -Force -ErrorAction SilentlyContinue |
         Where-Object {
+            -not ($_.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -and
             -not $_.Name.StartsWith('.') -and
             (
                 $_.Name -match '\.aps\.md$' -or $_.Name -match '\.actions\.md$' -or
@@ -75,8 +76,9 @@ function Find-ApsFiles {
                 )
             )
         } |
-        Sort-Object FullName |
-        ForEach-Object { $_.FullName }
+        ForEach-Object { $_.FullName })
+    [Array]::Sort($paths, [StringComparer]::Ordinal)
+    $paths
 }
 
 # Cross-file ID index: work item and decision IDs from the whole plan tree.
@@ -399,6 +401,8 @@ function Invoke-ApsLint {
             Add-ApsResult -Path $file -Type "ok" -Code "OK" -Message "" -Line ""
         }
     }
+
+    Set-ApsResultOrder -Files $files
 
     # Output results
     if ($JsonOutput) {

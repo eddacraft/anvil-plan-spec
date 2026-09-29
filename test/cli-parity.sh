@@ -3,7 +3,7 @@
 # Cross-CLI lint parity harness (CIP-002).
 #
 # The `aps` linter ships three implementations that must stay in lockstep
-# (D-038/D-039): the canonical Rust binary, the feature-frozen bash CLI, and the
+# (D-038/D-039): the canonical Rust binary, the maintained bash CLI, and the
 # PowerShell fallback. test/run.sh guards the ports by string-matching (a rule
 # *exists*); test/ps-parity.ps1 checks PowerShell *behaviour* on curated
 # scenarios. This harness closes the loop structurally: it runs all three CLIs
@@ -90,22 +90,21 @@ FIXTURES=(
   "pkgtags-nomarker/plans"
   "release/plans"
   "release-invalid/plans"
+  "release-hardening/plans"
+  "lint-order/plans"
   "routing/plans"
 )
 
-# Order-preserving finding lines: `CODE: message (line N)`. Strips the file-path
-# group headers and summary lines, leaving the sequence of findings each CLI
-# emits — which must match byte-for-byte, order included.
-# Code prefixes: E (error), W (warning), R (release-plan rule, REL-003). A new
-# prefix must be added here or its findings are invisible to this harness —
-# which is how R001-R004 stayed bash/PowerShell-less without CI noticing.
-findings() { grep -oE '(E|W|R)[0-9]{3}:.*' || true; }
+# Compare full text, including file groups, valid files, and counts. Comparing
+# finding lines alone misses discovery differences when extra files lint clean.
+# PowerShell may use CRLF on Windows; line endings are presentation-only.
+findings() { tr -d '\r'; }
 
-# Run one CLI lint invocation, validate its exit status, and store its findings
+# Run one CLI lint invocation, validate its exit status, and store its output
 # in the named variable. `aps lint` exits 0 (clean/warnings) or 1 (errors); any
 # other code means the CLI failed to run (bad path, missing binary, panic) —
-# which the findings filter would otherwise reduce to an empty string that could
-# spuriously "match" another CLI. On an abnormal exit this prints the raw output
+# which could otherwise spuriously match another CLI. On an abnormal exit
+# this prints the raw output
 # and returns non-zero so the caller fails the fixture rather than comparing junk.
 run_lint() {
   local __outvar="$1" __label="$2"; shift 2
@@ -116,7 +115,7 @@ run_lint() {
     printf '%s\n' "$__out" | sed 's/^/    /'
     return 1
   fi
-  printf -v "$__outvar" '%s' "$(printf '%s\n' "$__out" | findings)"
+  printf -v "$__outvar" '%s\nexit: %s' "$(printf '%s\n' "$__out" | findings)" "$__rc"
   return 0
 }
 
@@ -125,8 +124,21 @@ echo "  rust: $RUST_APS"
 [[ $HAVE_PWSH == true ]] && echo "  pwsh: $PWSH"
 echo ""
 
+# CIB-008: exercise collision grouping when child paths sort before the parent,
+# plus links to a directory, a file, and a cycle. Build links at runtime so Git
+# symlink settings cannot turn the regression into ordinary fixture files.
+LINT_TMP="$(mktemp -d)"
+trap 'rm -rf "$LINT_TMP" "${MARKER_TMP:-}"' EXIT
+cp -R "$SCRIPT_DIR/fixtures/monorepo/." "$LINT_TMP/"
+cp "$LINT_TMP/packages/core/plans/modules/auth.aps.md" "$LINT_TMP/packages/api/plans/modules/auth.aps.md"
+ln -s "$SCRIPT_DIR/fixtures/invalid" "$LINT_TMP/linked-plans" || exit 1
+ln -s . "$LINT_TMP/cycle" || exit 1
+ln -s "$LINT_TMP/packages/core/plans/modules/auth.aps.md" "$LINT_TMP/linked.aps.md" || exit 1
+FIXTURES+=("$LINT_TMP")
+
 for fx in "${FIXTURES[@]}"; do
   target="$SCRIPT_DIR/fixtures/$fx"
+  [[ "$fx" == "$LINT_TMP" ]] && target="$LINT_TMP"
   if [[ ! -e "$target" ]]; then
     echo -e "${RED}MISSING${NC} fixture: $fx"; fail=1; continue
   fi
@@ -155,7 +167,7 @@ for fx in "${FIXTURES[@]}"; do
   fi
 
   if $ok; then
-    n=$(printf '%s\n' "$b" | grep -c . )
+    n=$(printf '%s\n' "$b" | grep -cE '(E|W|R)[0-9]{3}:' )
     echo -e "${GREEN}OK${NC} $fx ($n findings)"
   fi
 done
@@ -188,7 +200,7 @@ echo ""
 # --tools`; PowerShell serialises the payload directly. A version bump or
 # payload change that reaches only one CLI diverges here.
 MARKER_TMP="$(mktemp -d)"
-trap 'rm -rf "$MARKER_TMP"' EXIT
+trap 'rm -rf "$LINT_TMP" "$MARKER_TMP"' EXIT
 
 # The leg below cd's away from the repo root, so a relative APS_RUST_BIN
 # must be pinned to an absolute path first.

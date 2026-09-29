@@ -73,10 +73,14 @@ pub fn file_type(path: &str) -> FileType {
         FileType::Design
     } else if path.contains("/execution/") && basename.ends_with(".actions.md") {
         FileType::Actions
-    } else if in_releases_dir(path) && basename.ends_with(".md") && basename != "README.md" {
+    } else if in_releases_dir(path)
+        && basename.ends_with(".md")
+        && !basename.ends_with(".aps.md")
+        && basename != "README.md"
+    {
         // Release narratives live in releases/ as `v<version>.md`. README.md
         // is the directory guide, and `.`-prefixed templates were already
-        // classified above. Anything else here is a (possibly misnamed)
+        // classified above. Other non-APS Markdown here is a (possibly misnamed)
         // release file — R001 flags the naming.
         FileType::Release
     } else if dirname.ends_with("/modules") || dirname.contains("/modules/") {
@@ -100,8 +104,19 @@ pub fn find_aps_files(dir: &Path) -> Vec<String> {
         };
         for entry in entries.flatten() {
             let path = entry.path();
-            if path.is_dir() {
+            // Do not traverse directory links (including cycles), or discover file links.
+            // Explicit file targets remain supported, matching the shell CLIs.
+            let Ok(kind) = entry.file_type() else {
+                continue;
+            };
+            if kind.is_symlink() {
+                continue;
+            }
+            if kind.is_dir() {
                 stack.push(path);
+                continue;
+            }
+            if !kind.is_file() {
                 continue;
             }
             let name = entry.file_name();
@@ -794,6 +809,11 @@ mod tests {
         // R001 can flag them).
         assert_eq!(file_type("plans/releases/v0.3.0.md"), FileType::Release);
         assert_eq!(file_type("plans/releases/draft.md"), FileType::Release);
+        assert_eq!(file_type("plans/releases/v9.aps.md"), FileType::Simple);
+        assert_eq!(
+            file_type("plans/releases/modules/v9.aps.md"),
+            FileType::Module
+        );
         // The directory guide and dotfile template are not release files.
         assert_eq!(file_type("plans/releases/README.md"), FileType::Unknown);
         assert_eq!(
