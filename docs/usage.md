@@ -553,8 +553,9 @@ use cases:
 .\bin\aps.ps1 lint plans\ --json
 ```
 
-Ordinary planning and audit --no-run require neither WSL nor Git Bash.
-Executable audit validation has the bash dependency noted above; run validation
+No user command requires WSL or Git Bash. Those shells remain optional for
+agent and contributor automation. Executable `audit` validation still has the
+bash dependency noted above; use `aps audit --no-run` and run validation
 directly in PowerShell when bash is absent. See
 [installation.md](installation.md#windows-details) for the recommended
 PowerShell and Scoop install paths.
