@@ -1,0 +1,5 @@
+# Force patched js-yaml into markdownlint-cli's tree. markdownlint-cli@0.49.1
+# pins js-yaml ~5.2.1, which cannot reach 5.4.1. See Dependabot alert #57
+# (GHSA-r3ph-w7gj-g6xm).
+overrides:
+  js-yaml: ^5.4.1
