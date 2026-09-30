@@ -39,7 +39,7 @@ macOS / Linux:
 curl -fsSL https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install | bash
 ```
 
-Windows PowerShell:
+Windows PowerShell 5.1 or PowerShell 7 (native, no WSL/Git Bash):
 
 ```powershell
 & ([scriptblock]::Create((irm https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install.ps1)))
@@ -71,6 +71,11 @@ Want to inspect the installer first, pin a version, or run non-interactively?
 See [docs/installation.md](docs/installation.md).
 
 ## The 5-minute tour
+
+The snippets below explain the format; they are not a runnable application.
+For a copy/paste CLI exercise with real files, use the
+[disposable walkthrough](docs/getting-started.md#try-the-cli-without-changing-your-project).
+You can also use APS as plain Markdown without installing any tooling.
 
 ### 1. Define the intent
 
@@ -117,17 +122,25 @@ implementation.
 
 ### 3. Execute through the CLI
 
+The native commands below run in PowerShell as well as bash. For Windows path
+quoting, exit checks, and a real disposable plan, use the
+[PowerShell walkthrough](docs/getting-started.md#windows-powershell-51-or-powershell-7).
+
 ```bash
 aps lint plans/                       # validate every spec
 aps next                              # find the next ready work item
-aps start AUTH-003                    # claim it and build focused context
+aps start AUTH-003                    # record progress and build focused context
 aps complete AUTH-003 --learning "Revocation needed cache invalidation"
 aps graph auth                        # inspect dependencies
 ```
 
 `aps start` verifies that dependencies are Complete, marks the item In
 Progress, and writes a focused context package to `.aps/context/AUTH-003.md`.
-It includes module scope, decisions, upstream learnings, and related files.
+It is not an atomic claim or multi-user lock, and `complete` records your
+reported result rather than running the validation command. Run the work item's
+checks before recording completion.
+The context package includes module scope, decisions, upstream learnings,
+and related files.
 
 `aps complete` records the completion date and captures a learning that can be
 surfaced to downstream work. The implementation can change; the intent,
@@ -260,7 +273,7 @@ need one.
 | **Claude / ChatGPT** | Paste or attach the relevant specification and work item |
 | **Cursor / Copilot** | Keep plans in the repository and reference the work item |
 | **Claude Code / aider** | Point the agent at the plan and context package |
-| **Codex / OpenCode** | Use the agent definitions shipped in `agents/` |
+| **Codex / OpenCode** | Install generated roles with `aps setup codex` or `aps setup opencode` |
 | **Grok Build** | Let it discover `AGENTS.md` and `.agents/skills/` |
 | **Antigravity** | Let it discover `AGENTS.md` and `.agents/skills/` |
 | **Amp / Gemini CLI / Windsurf / Roo Code / OpenClaw** | Let them discover `AGENTS.md` and `.agents/skills/` |
@@ -297,8 +310,9 @@ an honest first-run:
 - **Windows first-run:** the PowerShell installer finds the published x64 zip
   on WOW64 and ARM64, replaces a loaded `aps.exe`, and keeps an existing
   native binary instead of claiming none exists. README Install is the first
-  section. Setup no longer double-steps on Windows key-release, and Left/Right
-  navigate steps.
+  section. Setup filters key-release events and adds Left/Right step
+  navigation; native Windows/Warp manual verification remains outstanding
+  in CIB-010.
 
 The v0.8 line:
 
@@ -338,6 +352,8 @@ Full notes: [CHANGELOG.md](CHANGELOG.md) ·
 
 ## Worked examples
 
+These are [planning examples](examples/README.md), not application source.
+
 - [User Authentication](examples/user-auth/): adding authentication to an
   existing application
 - [OpenCode Companion App](examples/opencode-companion/): building a companion
@@ -375,8 +391,19 @@ your-project/
 | **macOS** | Native `aps` binary through the install script or Cargo | Homebrew Bash is used for the optional fallback |
 | **Windows** | Native `aps.exe` through PowerShell or Scoop | WSL and Git Bash are not required |
 
-The native binary supports the complete user command surface on all listed
-platforms.
+The native binary provides the user command surface on all listed platforms.
+Windows CI runs the released-shape x64 GNU zip under PowerShell 7 and Windows
+PowerShell 5.1. The script fallback is not a replacement for the native TUI.
+Known exception: audit command execution currently invokes bash; use
+`aps audit --no-run` and run validation directly in PowerShell on Windows.
+This is implementation debt, not a reason to require WSL.
+See [Windows installation/PATH help](docs/installation.md#windows-details)
+and [native contributor checks](CONTRIBUTING.md#windows-native-powershell).
+
+For the implementation map and current limitations, see
+[Architecture](docs/architecture.md). `main` includes changes after v0.9.0;
+check the [unreleased archive](plans/completed.aps.md#unreleased) before
+assuming a source feature is present in a downloaded release.
 
 ## AI agent guidance
 
@@ -432,6 +459,10 @@ See [docs/workflow.md](docs/workflow.md) for the full lifecycle.
 - [Terminology](docs/TERMINOLOGY.md)
 - [Roadmap](ROADMAP.md)
 - [Contributing](CONTRIBUTING.md)
+- [Repository context](CONTEXT.md)
+- [Architecture and decisions](docs/architecture.md)
+- [Security reporting](SECURITY.md)
+- [Code of conduct](CODE_OF_CONDUCT.md)
 
 ## License
 

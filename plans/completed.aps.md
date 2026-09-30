@@ -7,7 +7,7 @@
 | ------- | ---------- |
 | Scope   | ALL        |
 | Status  | Active     |
-| Updated | 2026-09-23 |
+| Updated | 2026-09-30 |
 
 ## Purpose
 
@@ -25,8 +25,16 @@ section below.
 
 ## Unreleased
 
-_Queued for a later cut. REL-005 (`aps release`) remains In Progress
-(Rust-only until D-039 lockstep)._
+The following fixes are merged on `main` after the `v0.9.0` tag; they are
+not yet part of a published release.
+
+| Task | Module | Description | Status |
+| ---- | ------ | ----------- | ------ |
+| CIB-007 | continuous-improvement | Fallback CLI version surface (PR #157) | Complete: 2026-09-29 |
+| CIB-008 | continuous-improvement | Release-rule hardening and lint parity (PR #156) | Complete: 2026-09-29 |
+
+REL-005 remains In Progress: its Rust phase is already in `v0.9.0`, while
+shared closeout fixtures and bash/PowerShell ports remain outstanding.
 
 ---
 

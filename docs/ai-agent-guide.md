@@ -4,7 +4,8 @@
 > For human-readable docs, see the [README](../README.md).
 >
 > If you're an AI assistant being asked to work with APS, read this carefully.
-> These instructions guide autonomous implementation without human intervention.
+> Apply these instructions within the user's authorisation and host tool policy.
+> They do not grant authority to approve plans, publish, or change unrelated work.
 
 ## Quick Decision Tree
 
@@ -21,7 +22,9 @@ Is there a plans/ directory?
 
 ## Core Principles for AI
 
-1. **NEVER implement without a work item** — If no work item exists, create one first or ask
+1. **Do not self-authorise implementation** — If no authorised work item exists,
+   propose a Draft item and ask for approval; creating it does not make it Ready.
+   An explicit bounded user instruction may separately authorise work.
 2. **ALWAYS read before you write** — Check existing specs and code patterns
 3. **Work items are permission** — Status must be "Ready" before execution
 4. **Checkpoints over instructions** — Write what should exist, not how to create it

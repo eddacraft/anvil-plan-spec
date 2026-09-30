@@ -1,7 +1,8 @@
 # Integrations
 
 Low-lock-in ways to expose APS plans to external workflows. Markdown in
-`plans/` stays the source of truth; everything here is read-only over it.
+`plans/` stays the source of truth. Lint/export read it without changing plan
+state; the optional PR comment writes to GitHub and needs separate permission.
 
 ## GitHub Action: APS Lint
 

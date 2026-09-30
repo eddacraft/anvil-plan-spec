@@ -87,7 +87,7 @@ Change status to **Ready** when:
 - [x] The command-redesign map (CLI-001) is drafted and reviewed
       ([design](../designs/2026-07-22-cli-redesign.design.md), approved 2026-07-23)
 - [ ] Profile semantics (solo vs team) are pinned with the TEAM module
-- [ ] Harness-expansion candidates have a go/no-go from the CLI-005 spike
+- [x] Harness-expansion candidates have a go/no-go from the CLI-005 spike
 
 ## Work Items
 

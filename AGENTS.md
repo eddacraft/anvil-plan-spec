@@ -5,12 +5,17 @@ for planning and task authorisation in AI-assisted development.
 
 ## What this repo is
 
-APS is a **specification format**, not executable code. It contains:
+APS is a **specification format with optional executable tooling**. It contains:
 
 - Templates for plans, modules, work items, action plans, and **design documents**
 - Prompts for AI agents
 - Examples and documentation
-- A CLI for validation (linting)
+- A native Rust CLI/TUI plus maintained bash and PowerShell implementations
+- Optional MCP transport, installers, hooks, and generated agent assets
+
+Start with [CONTEXT.md](CONTEXT.md) for the source map and
+[docs/architecture.md](docs/architecture.md) for boundaries and decisions.
+Do not treat historical designs or example work items as new authority.
 
 ## Execution authority
 
@@ -64,6 +69,10 @@ Module status in the metadata table is always hand-edited.
 
 ### What validation to run
 
+Use [native Windows PowerShell checks](CONTRIBUTING.md#windows-native-powershell)
+on Windows; do not require WSL or label a skipped shell suite as full coverage.
+The following block is the macOS/Linux route.
+
 ```bash
 ./bin/aps lint plans                # plan structure (errors fail CI-style)
 ./test/run.sh                       # full CLI test suite
@@ -78,7 +87,7 @@ keep it warning-free where practical — warnings are drift signals.
 
 - **Work items** define outcomes (what to achieve)
 - **Actions** define what to do (not how)
-- Action plans live in `execution/[WORKITEM-ID].actions.md`
+- Action plans live in `plans/execution/[WORKITEM-ID].actions.md`
 - Each action has a checkpoint (observable completion state)
 
 See: [docs/ai/prompting/actions.prompt.md](docs/ai/prompting/actions.prompt.md)

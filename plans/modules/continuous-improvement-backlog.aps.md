@@ -49,7 +49,7 @@ owning module and leave a `Superseded by:` reference here.
 | Module                                    | Role in this concern                          | Status      |
 | ----------------------------------------- | --------------------------------------------- | ----------- |
 | [install](./install.aps.md)               | Public installer and skill distribution       | Complete    |
-| [agents](./agents.aps.md)                 | APS planning and status-response surfaces      | In Progress |
+| [agents](./agents.aps.md)                 | APS planning and status-response surfaces      | Complete    |
 | [tui](./tui.aps.md)                       | Interactive initialization journey             | Complete    |
 | [monorepo](./monorepo.aps.md)             | Monorepo and nested-plan scaffold expectations | Complete    |
 | [ci-parity](./ci-parity.aps.md)           | Native Windows behavioural validation          | Complete    |

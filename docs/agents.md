@@ -64,8 +64,9 @@ APS includes both **agents** (active dispatch) and **skills** (passive
 guidance and diagnostics):
 
 - **Skill** (`aps-planning/SKILL.md`) — teaches the agent APS conventions.
-  Always active. Provides behavioral nudges (plan before building, update
-  specs as you work). Lightweight, no model cost.
+  Discovered and loaded according to the host harness. Provides behavioral
+  guidance (plan before building, update specs as you work); loading and
+  applying it uses the host model's context and tokens.
 - **Skill** (`plan-doctor/SKILL.md`) — checks structural plan health and reports
   malformed or contradictory planning state without changing it.
 - **Agents** (`aps-planner`, `aps-conductor`, `aps-librarian`) — perform
@@ -76,6 +77,18 @@ Use the skills for day-to-day guidance and diagnostics. Use agents when you
 need active help with planning or cleanup.
 
 ## Installation
+
+On Windows use native setup from PowerShell 5.1 or PowerShell 7; these same
+commands also work in Unix shells. Pick only the harness you actually use:
+
+```powershell
+aps setup codex
+if ($LASTEXITCODE -ne 0) { throw 'Codex integration setup failed' }
+# Other supported choices: aps setup claude-code / copilot / opencode
+```
+
+The manual mkdir/cp blocks below are Unix contributor alternatives, not a
+Windows dependency. Native setup generates the correct roles without Git Bash.
 
 ### Claude Code
 
@@ -241,6 +254,9 @@ agents have no model field (n/a in the wizard). You can still hand-edit
 installed agent files after install.
 
 ## Building Agent Variants
+
+The bash generator below is a Unix maintainer/golden-file check, not a Windows
+installation requirement. Native `aps setup` emits roles on Windows directly.
 
 Agent **bodies** live in `scaffold/agents/core/`. The CLI generates tool
 envelopes (frontmatter / TOML + model IDs) at install from those cores and

@@ -5,7 +5,7 @@
 | Status  | Active     |
 | Owner   | @aneki     |
 | Created | 2025-12-31 |
-| Updated | 2026-09-18 |
+| Updated | 2026-09-30 |
 
 ## Problem
 
@@ -30,7 +30,7 @@ APS needs continued development to:
 
 ## Modules
 
-### Current (v0.2 — Usability)
+### Shipped (v0.2 — Usability)
 
 | Module                                    | Purpose                               | Status   |
 | ----------------------------------------- | ------------------------------------- | -------- |
@@ -46,7 +46,7 @@ APS needs continued development to:
 | [install](./modules/install.aps.md) | Global binary install, project config contract, migration | Complete |
 | [agents](./modules/agents.aps.md)   | APS Planner + Librarian agents, multi-harness             | Complete             |
 
-### In Progress (v0.4 — Orchestration & UX)
+### Shipped (v0.4 — Orchestration & UX)
 
 | Module                                      | Purpose                                                 | Status   |
 | ------------------------------------------- | ------------------------------------------------------- | -------- |
