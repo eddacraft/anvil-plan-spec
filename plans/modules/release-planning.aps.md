@@ -69,8 +69,8 @@ The pattern is generic enough to extract.
 **Depends on:**
 
 - VAL (Complete) — extend linter with release file rules
-- ORCH (In Progress) — `aps release notes` reuses dependency/work-item parser
-- INSTALL (In Progress, follow-up) — installer wires up `plans/releases/` and
+- ORCH (Complete) — `aps release notes` reuses dependency/work-item parser
+- INSTALL (Complete) — installer wires up `plans/releases/` and
   template
 
 **Exposes:**

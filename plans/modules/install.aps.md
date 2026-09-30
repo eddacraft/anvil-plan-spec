@@ -970,7 +970,7 @@ Notes on schema:
 - **Files:** cli/src/{doctor,managed,scaffold,update}.rs,
   scaffold/{aps-planning,plan-doctor,agents}/**, lib/{scaffold.sh,Scaffold.psm1},
   scaffold/init.sh, test/run.sh, docs/{agents,installation}.md
-- **Status:** In Progress: 2026-07-24
+- **Status:** Complete: 2026-07-28
 - **Results:** Vended from eddacraft/skills PR #51 (`aps-packaging`), embedded
   both skills in Rust with independent markers and doctor diagnostics, updated
   compatibility installers for the renamed references and companion skill,
@@ -980,6 +980,11 @@ Notes on schema:
   formatting, source-projection, and generated-agent checks pass; live
   PowerShell execution is unavailable because `pwsh` is not installed. Review:
   [anvil-plan-spec#131](https://github.com/eddacraft/anvil-plan-spec/pull/131).
+- **Closeout evidence (2026-09-30):** PR #131 merged 2026-07-27 at
+  `607228f3620231c113daa3000dfa0f242124e281`, included in `v0.8.0`
+  (published 2026-07-28). Its final PowerShell parity, cross-CLI parity,
+  and native Windows user-journey checks passed; the local PowerShell
+  limitation above records the implementation session, not a remaining gate.
 
 ### INSTALL-025: Pin-vs-CLI gate on `aps update`
 
@@ -1057,7 +1062,7 @@ Sequential — each item builds on the previous contract:
 - INSTALL-021: curl updaters to current layout (D-043) (Complete)
 - INSTALL-022: retire `.aps-version` (D-044) (Complete)
 - INSTALL-023: pwsh `Invoke-ApsInit` to v2 minimal layout (Complete)
-- INSTALL-024: canonical APS planning family + agent refresh (In Progress)
+- INSTALL-024: canonical APS planning family + agent refresh (Complete)
 
 ## Notes
 

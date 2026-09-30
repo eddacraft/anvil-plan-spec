@@ -13,7 +13,8 @@ to plan APS.
 | **v0.5–v0.6 Monorepo**    | Federated nested plans, the tagged package tier, full-lifecycle tooling | Done    |
 | **v0.7 Team Foundations** | Managed skill freshness, JSON export, GitHub Action, MCP server         | Done    |
 | **v0.8 Harnesses**        | Twelve supported harnesses from one shared planning asset               | Done    |
-| **Near Term**             | Release tooling (`aps release`), plan-doctor accuracy, lint parity      | Current |
+| **v0.9 Diagnostics**      | Binary self-update, plan-doctor accuracy, release-lint parity            | Done    |
+| **Near Term**             | Three-CLI release tooling parity, Windows setup verification           | Current |
 | **Future**                | Team coordination plane, progress journals, profile-aware CLI           | Planned |
 
 ## Non-Goals

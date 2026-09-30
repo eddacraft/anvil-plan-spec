@@ -5,7 +5,7 @@ during compound engineering — non-obvious approaches, dead ends avoided, and
 patterns worth reusing. They live next to specs so future plans can start with
 known answers rather than rediscovering them.
 
-See [docs/workflow.md](workflow.md) for how the Learn phase feeds this folder.
+See [docs/workflow.md](../workflow.md) for how the Learn phase feeds this folder.
 
 ## Categories
 

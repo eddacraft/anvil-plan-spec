@@ -64,10 +64,10 @@ graph TD
 curl -fsSL https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install | bash
 
 # Pin to a specific version
-curl -fsSL https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install | VERSION=v0.3.0 bash
+curl -fsSL https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install | VERSION=v0.9.0 bash
 
 # Or from a cloned APS repo
-./scaffold/install ./your-project
+./scaffold/install --init ./your-project
 ```
 
 Windows PowerShell uses the native installer and the same `aps` commands:
@@ -77,7 +77,7 @@ Windows PowerShell uses the native installer and the same `aps` commands:
 & ([scriptblock]::Create((irm https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install.ps1)))
 
 # Pin a release when required
-$env:APS_VERSION = "v0.6.0"
+$env:APS_VERSION = "v0.9.0"
 & ([scriptblock]::Create((irm https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install.ps1)))
 ```
 
@@ -85,6 +85,82 @@ The no-argument installer opens `aps init` automatically. If you installed with
 Scoop or `--cli`, run `aps init` yourself. The Ratatui-based wizard walks you
 through agent ports, modules, and project context, then creates `plans/` with
 templates and `aps-rules.md` for AI guidance.
+
+## Try the CLI without changing your project
+
+From a clone of this public repository, build the native CLI and copy a worked
+plan into a temporary directory. This exercises planning state only: the
+example application and its npm tests are not shipped here. Choose your shell.
+Windows source-build prerequisites are in
+[CONTRIBUTING](../CONTRIBUTING.md#windows-native-powershell).
+
+### Windows PowerShell 5.1 or PowerShell 7
+
+```powershell
+$ErrorActionPreference = 'Stop'
+function Invoke-Checked {
+    param([scriptblock]$Command)
+    $global:LASTEXITCODE = 0
+    & $Command
+    if ($LASTEXITCODE -ne 0) { throw "Command failed: exit $LASTEXITCODE" }
+}
+Invoke-Checked { cargo build --manifest-path cli/Cargo.toml --locked }
+$Aps = (Resolve-Path -LiteralPath '.\cli\target\debug\aps.exe').Path
+$Demo = Join-Path ([IO.Path]::GetTempPath()) ('APS demo ' + [guid]::NewGuid())
+New-Item -ItemType Directory -Path $Demo | Out-Null
+Copy-Item -LiteralPath '.\examples\user-auth' -Destination (Join-Path $Demo 'plans') -Recurse
+Push-Location -LiteralPath $Demo
+try {
+    Invoke-Checked { & $Aps lint plans }
+    Invoke-Checked { & $Aps next }
+    Invoke-Checked { & $Aps start AUTH-001 }
+    if (-not (Test-Path -LiteralPath '.\.aps\context\AUTH-001.md')) {
+        throw 'Context package missing'
+    }
+    # Demo only: no authentication application was implemented.
+    Invoke-Checked { & $Aps complete AUTH-001 --learning 'CLI walkthrough only; no app implemented' }
+    Invoke-Checked { & $Aps next }
+} finally { Pop-Location }
+Write-Host "Disposable walkthrough files: $Demo"
+```
+
+### macOS or Linux (bash)
+
+```bash
+cargo build --manifest-path cli/Cargo.toml --locked
+APS_BIN="$PWD/cli/target/debug/aps"
+demo=$(mktemp -d)
+cp -R examples/user-auth "$demo/plans"
+(
+  cd "$demo"
+  "$APS_BIN" lint plans
+  "$APS_BIN" next
+  "$APS_BIN" start AUTH-001
+  test -s .aps/context/AUTH-001.md
+  # Demo only: record a simulated result, not authentication delivery.
+  "$APS_BIN" complete AUTH-001 --learning "CLI walkthrough only; no app implemented"
+  "$APS_BIN" next
+)
+printf 'Disposable walkthrough files: %s\n' "$demo"
+```
+
+Expected: next first selects AUTH-001, start generates its context, and the
+second next selects AUTH-002. The fixture may emit age/missing-review warnings;
+these are planning examples, not active project review dates. Never run the
+simulated completion against your real project. Real completion requires the
+work item's actual validation evidence.
+
+Both walkthroughs keep the temporary directory for inspection. Delete only
+that printed disposable directory when finished. PowerShell uses a quoted
+absolute executable path and a temporary path containing spaces; no WSL,
+Git Bash, administrator shell, or execution-policy change is needed.
+`$ErrorActionPreference` alone does not catch native nonzero exits in
+Windows PowerShell 5.1, so the helper explicitly checks `$LASTEXITCODE`.
+
+The [minimal quickstart template](../templates/quickstart.template.md) is for
+manual planning. Its abbreviated IDs/fields are not a substitute for the
+full module format used by lint and orchestration. Use the worked example or
+[module template](../templates/module.template.md) for the CLI journey.
 
 ## Prerequisites
 

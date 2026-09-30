@@ -70,8 +70,9 @@ Add hooks, agents, or tool skills any time after init with `aps setup`
 from the installed CLI for the Ratatui onboarding wizard.
 
 On Windows, the native `aps.exe` from the PowerShell installer or Scoop carries
-the complete user command surface. PowerShell users do not need WSL or Git
-Bash. Agent and contributor automation may still choose those shells.
+the native user command surface. PowerShell users do not need WSL or Git
+Bash for ordinary planning workflows. Audit execution currently launches bash;
+use `aps audit --no-run` and run validation directly in PowerShell instead. Agent and contributor automation may still choose those shells.
 
 ## Global Install
 
@@ -112,10 +113,22 @@ installed CLI. That fetches the current GitHub-release binary into
 aps update --global
 ```
 
-Pin a release with `APS_VERSION` (or `VERSION`):
+Pin a release for the native global updater with APS_VERSION (or VERSION).
+PowerShell scopes this override and restores the previous setting:
+
+```powershell
+$PreviousVersion = $env:APS_VERSION
+try {
+    $env:APS_VERSION = 'v0.9.0'
+    aps update --global
+    if ($LASTEXITCODE -ne 0) { throw 'Global update failed' }
+} finally { $env:APS_VERSION = $PreviousVersion }
+```
+
+Bash:
 
 ```bash
-APS_VERSION=0.8.1 aps update --global
+APS_VERSION=v0.9.0 aps update --global
 ```
 
 Other channels still work the same way you installed:
@@ -141,7 +154,27 @@ aps update --global
 > files. `aps update --global` upgrades the machine-wide CLI. A native
 > `~/.aps/bin/aps` is never overwritten with the bash/PowerShell runtime.
 
-To uninstall: remove `~/.aps/` and the PATH line from your shell config.
+### Uninstall by installation channel
+
+APS has no uninstall command. Close APS sessions and preserve plans, user
+context, and backups. Do not delete a project's .aps directory to remove the CLI.
+
+- **Scoop (Windows):** use `scoop uninstall aps`; upgrades use
+  `scoop update aps`, not the script install's global updater.
+- **Cargo (either platform):** use `cargo uninstall aps-cli` and update
+  through Cargo.
+- **Script/zip:** locate the actual executable first. Inspect and remove only
+  its dedicated installation directory (default ~/.aps, Windows $HOME\.aps,
+  or your chosen APS_HOME); preserve unrelated contents. On Windows remove
+  only its bin entry using **Edit environment variables for your account →
+  Path**, then reopen the terminal. On Unix remove only APS's PATH addition
+  from the relevant shell startup file. Never replace the entire PATH.
+
+```powershell
+Get-Command aps.exe -All | Select-Object Source
+# After removal and a new terminal, verify that install is no longer found:
+Get-Command aps.exe -ErrorAction SilentlyContinue
+```
 
 ## Release Channels
 
@@ -153,7 +186,7 @@ channel-specific pin.
 
 ```bash
 # 1. Install script (binary-first) — pin an exact release with VERSION:
-VERSION=0.6.0 curl -fsSL .../scaffold/install | bash -s -- --cli
+curl -fsSL https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/v0.9.0/scaffold/install | VERSION=v0.9.0 bash -s -- --cli
 
 # 2. cargo-binstall — fetch the prebuilt binary from GitHub releases (no build):
 cargo binstall aps-cli
@@ -165,7 +198,7 @@ cargo install aps-cli
 On Windows, install via the script (`--cli` pulls `aps.exe`) or **Scoop**:
 
 ```powershell
-$env:APS_VERSION = "v0.6.0"
+$env:APS_VERSION = "v0.9.0"
 & ([scriptblock]::Create((irm https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install.ps1))) --cli
 
 # Or use Scoop
@@ -194,7 +227,7 @@ curl -fsSL https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaf
 & ([scriptblock]::Create((irm https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install.ps1))) --init .\my-project
 
 # Install a specific version
-$env:APS_VERSION = "v0.6.0"
+$env:APS_VERSION = "v0.9.0"
 & ([scriptblock]::Create((irm https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install.ps1))) --cli
 ```
 
@@ -228,6 +261,16 @@ ships a Ratatui picker for the same flows; the bash CLI uses a numbered
 prompt.
 
 ## Update Existing Project
+
+The installed native CLI updates project assets on every platform. PowerShell:
+
+```powershell
+aps update 'C:\Work\My Project'
+if ($LASTEXITCODE -ne 0) { throw 'Project APS update failed' }
+```
+
+Quote paths containing spaces and review local changes first. This command
+updates project assets, not the machine-wide executable.
 
 If you already have APS installed and want to pull the latest templates,
 rules, and skill files:
@@ -350,6 +393,19 @@ manual review and left untouched.
 
 ## Migrating to the Global Binary
 
+Windows users install the binary via PowerShell or Scoop, then run these native
+commands inside the project. Review the preview and backups before applying.
+The direnv instructions further below are Unix-only.
+
+```powershell
+aps doctor
+if ($LASTEXITCODE -ne 0) { Write-Warning 'Inspect diagnostics before continuing' }
+aps migrate
+if ($LASTEXITCODE -ne 0) { throw 'Migration preview failed' }
+# Only after reviewing the preview:
+# aps migrate --apply
+```
+
 Projects that adopted APS before the binary-first model carry a vendored bash
 CLI (root `bin/` + `lib/`, or `.aps/bin` + `.aps/lib`) and often a direnv
 `PATH_add bin` entry. Move them onto the single global `aps` binary like so:
@@ -395,6 +451,32 @@ directly (config discovery finds `plans_dir` — no `--plans` needed). Add
 
 ## Windows Details
 
+Use native aps.exe in Windows PowerShell 5.1 or PowerShell 7. No WSL, Git Bash,
+administrator shell, or execution-policy relaxation is needed for a user-owned
+binary install. The published Windows archive is aps-x86_64-pc-windows-gnu.zip;
+there is no separate ARM64 binary. The installer selects x64 for ARM64/WOW64;
+execution depends on Windows' x64 compatibility support. CI exercises this zip
+on native Windows under both shells, not the outstanding interactive Warp
+verification (CIB-010).
+
+### Verify the executable and PATH
+
+```powershell
+$ApsHome = if ($env:APS_HOME) { $env:APS_HOME } else { Join-Path $HOME '.aps' }
+$Aps = Join-Path $ApsHome 'bin\aps.exe'
+& $Aps --version
+if ($LASTEXITCODE -ne 0) { throw 'APS version check failed' }
+Get-Command aps.exe -All | Select-Object Source
+```
+
+The explicit path works before PATH refresh and with spaces in your home folder.
+Reopen the whole terminal application if new tabs inherit a stale PATH. If
+multiple copies appear, choose the one matching your installation channel.
+The aps.ps1 fallback is not the native TUI/full command surface; see
+[usage](usage.md#windows).
+
+### Install or initialise
+
 Recommended PowerShell install:
 
 ```powershell
@@ -418,7 +500,7 @@ To initialize the current repository directly:
 To install a specific version, set `APS_VERSION` before invoking the script:
 
 ```powershell
-$env:APS_VERSION='v0.6.0'
+$env:APS_VERSION='v0.9.0'
 & ([scriptblock]::Create((irm https://raw.githubusercontent.com/EddaCraft/anvil-plan-spec/main/scaffold/install.ps1))) --cli
 ```
 

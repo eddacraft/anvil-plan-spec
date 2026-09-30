@@ -34,7 +34,7 @@ The `aps` CLI is built around this lifecycle. The day-to-day shape is:
 
 ```bash
 aps next                              # Plan → discover next ready work item
-aps start AUTH-003                    # Execute → claim it, get a context package
+aps start AUTH-003                    # Execute → record progress, get context
 # ...implement, run validation...
 aps complete AUTH-003 --learning "..."  # Validate + Learn → capture insights
 aps next                              # Loop

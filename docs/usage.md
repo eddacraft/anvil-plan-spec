@@ -11,8 +11,12 @@ faster and harder to get wrong than manual status edits.
 
 ## Command Index
 
+Native aps/aps.exe commands work in bash, Windows PowerShell 5.1, and PowerShell
+7. Examples using shell-specific environment assignments or pipelines are
+labelled; use [Windows guidance](#windows) for quoting and exit handling.
+
 ```bash
-aps init [dir]              # Create APS structure in a new project
+aps init                    # Create APS structure in the current project
 aps update [dir]            # Reconcile generated templates + skill (add missing, refresh)
 aps update --global         # Upgrade the machine-wide CLI at ~/.aps (or $APS_HOME)
 aps migrate [dir]           # Move a project onto the global binary (remove vendored bloat)
@@ -28,8 +32,10 @@ aps --help                  # Top-level help
 aps <cmd> --help            # Per-command help
 ```
 
-Every command accepts `--plans <dir>` if your plans aren't at the default
-`plans/` location. The orchestration commands (`next`, `start`, `complete`,
+Orchestration commands accept `--plans <dir>` for a non-default plan root.
+`lint` takes a positional file/directory; `init` uses `--plans-dir`. Check the
+native command's `--help` instead of assuming every flag is global.
+The orchestration commands (`next`, `start`, `complete`,
 `graph`, `audit`) additionally accept `--child <name>` to scope a
 [federated nested plan](#nested-plans-federated-orchestration) to one child.
 
@@ -238,7 +244,7 @@ metadata table as a module-wide default the items inherit. `Reasoning` takes
 free-form identifier. Unset hints show as `None`; the line is omitted when
 neither is set.
 
-### `aps start <ID>` — claim a work item
+### `aps start <ID>` — start a work item
 
 ```bash
 $ aps start AUTH-003
@@ -452,8 +458,12 @@ either a direct command (`"next auth"`) or a natural-language request
 (`"what's the next ready work item in the auth module?"`); the server routes
 it to an allowlisted CLI invocation and returns the result.
 
+For native Windows installation, tests, and process environment use the
+[MCP PowerShell setup](../mcp/README.md#windows-powershell-51-or-powershell-7).
+Unix shell setup:
+
 ```bash
-cd mcp && pnpm install      # one-time setup (Node >= 22.18)
+cd mcp && pnpm install --frozen-lockfile
 ```
 
 Register it with your MCP-capable tool, e.g. for Claude Code:
@@ -470,6 +480,21 @@ Register it with your MCP-capable tool, e.g. for Claude Code:
 }
 ```
 
+On Windows, set APS_BIN explicitly to the absolute aps.exe path; the default
+sibling bin/aps is a bash script. For example, these are harness configuration
+values (substitute your real paths, without extra embedded shell quotes):
+
+```json
+{
+  "command": "C:/Program Files/nodejs/node.exe",
+  "args": ["C:/Work/APS Source/mcp/src/index.ts"],
+  "env": {
+    "APS_BIN": "C:/Users/You/.aps/bin/aps.exe",
+    "APS_PLANS": "C:/Work/My Project/plans"
+  }
+}
+```
+
 Environment variables: `APS_BIN` overrides the `aps` executable (defaults to
 the sibling `bin/aps`, then `$PATH`); `APS_PLANS` sets the plan root passed
 to every command. The server is optional — everything it does is also
@@ -477,8 +502,32 @@ available via the CLI or by editing markdown directly.
 
 ## Windows
 
-On Windows, use the native `aps.exe` from the PowerShell installer or Scoop for
-the complete user command surface:
+Use native aps.exe under Windows PowerShell 5.1 or PowerShell 7. Select it
+explicitly if a script or older install shadows the command. Quoted executable
+paths require PowerShell's call operator, and native failures need exit checks:
+
+```powershell
+$Aps = (Get-Command aps.exe -ErrorAction Stop).Source
+& $Aps lint 'C:\Work\My Project\plans'
+if ($LASTEXITCODE -ne 0) { throw 'APS lint failed' }
+& $Aps next --plans 'C:\Work\My Project\plans'
+if ($LASTEXITCODE -ne 0) { Write-Warning 'Inspect output; the ready queue may be empty' }
+```
+
+Do not use Bash's VAR=value prefix in PowerShell; use $env:VAR and restore its
+previous value after the operation. Do not use && for error handling in Windows
+PowerShell 5.1. ErrorActionPreference alone does not turn native nonzero exit
+codes into exceptions. For initial setup use the
+[PowerShell walkthrough](getting-started.md#windows-powershell-51-or-powershell-7).
+The list below is a command reference, not a script to run against a real plan;
+start/complete require authorised work and actual validation evidence.
+
+On Windows, use native `aps.exe` from PowerShell or Scoop for the user
+commands below. **Known limitation:** executable `audit` validation currently
+launches bash (`cli/src/audit.rs`), even in the native binary. Use
+`aps audit --no-run` on a Windows system without bash and run validation
+commands explicitly in PowerShell; do not install WSL merely for this check.
+Native PowerShell audit execution needs a separate implementation fix.
 
 ```powershell
 aps init
@@ -490,7 +539,7 @@ aps next
 aps start AUTH-003
 aps complete AUTH-003 --learning "validated on Windows"
 aps graph auth
-aps audit
+aps audit --no-run
 aps export --json
 aps doctor
 ```
@@ -504,8 +553,9 @@ use cases:
 .\bin\aps.ps1 lint plans\ --json
 ```
 
-No user command requires WSL or Git Bash. Those shells remain optional for
-agent and contributor automation. See
+Ordinary planning and audit --no-run require neither WSL nor Git Bash.
+Executable audit validation has the bash dependency noted above; run validation
+directly in PowerShell when bash is absent. See
 [installation.md](installation.md#windows-details) for the recommended
 PowerShell and Scoop install paths.
 

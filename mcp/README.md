@@ -11,8 +11,41 @@ authoritative, exactly as with the CLI.
 
 ## Setup
 
+### Windows PowerShell 5.1 or PowerShell 7
+
+Install Node.js 24+ and pnpm, and build or install native aps.exe first. From
+the repository root, explicitly select aps.exe: the server otherwise prefers
+the sibling bash script, which is not a native Windows executable.
+
+```powershell
+$env:APS_BIN = (Resolve-Path -LiteralPath '.\cli\target\debug\aps.exe').Path
+$env:APS_PLANS = (Resolve-Path -LiteralPath '.\examples\user-auth').Path
+pnpm.cmd --dir mcp install --frozen-lockfile
+if ($LASTEXITCODE -ne 0) { throw 'MCP dependency install failed' }
+pnpm.cmd --dir mcp test
+if ($LASTEXITCODE -ne 0) { throw 'MCP tests failed' }
+pnpm.cmd --dir mcp exec tsc -p .
+if ($LASTEXITCODE -ne 0) { throw 'MCP typecheck failed' }
+node .\mcp\src\index.ts
+```
+
+The last command starts a stdio server, not an interactive prompt. Stop with
+Ctrl+C when testing manually. In a harness, set command to the absolute node.exe
+path, args to an array containing the absolute mcp/src/index.ts path, and env
+to APS_BIN/APS_PLANS absolute paths. Do not embed shell quote characters inside
+JSON path values; escape backslashes or use forward slashes. Keep a path with
+spaces as one argument. Use a trusted plan tree; the example above is for
+read-only requests unless you first copy it to a disposable directory.
+
+The environment assignments affect this PowerShell process and its children,
+not persistent user settings. Restore previous values or close this test shell.
+For an installed CLI, replace APS_BIN with (Get-Command aps.exe).Source.
+
+### macOS / Linux
+
 ```bash
-pnpm install   # Node >= 22.18 (runs TypeScript directly, no build step)
+cd mcp  # from the repository root
+pnpm install --frozen-lockfile  # Node >= 22.18; TypeScript runs directly
 ```
 
 ## Run
@@ -28,6 +61,11 @@ Environment:
   surface (see ORCH D-006).
 - `APS_PLANS` — plan root directory passed to every command (default: the
   CLI's own default, `plans/` relative to its working directory).
+
+Use an absolute `APS_PLANS` path when launching from `mcp/` or a harness with
+a different working directory. `start` and `complete` modify that plan tree;
+the server does not provide separate approval or sandboxing. Use only trusted
+plans and grant the host only the filesystem access it needs.
 
 ## Example requests
 
@@ -45,6 +83,6 @@ stays up.
 ## Test
 
 ```bash
-node --test          # routing unit tests + end-to-end MCP client tests
+pnpm test           # routing unit tests + end-to-end MCP client tests
 pnpm exec tsc -p .   # typecheck
 ```
