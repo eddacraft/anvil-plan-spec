@@ -11,12 +11,15 @@
 # ip-address ^10.3.1: GHSA-mwp4-54f8-5fhr, GHSA-4xrf-jv44-h6hh,
 #   GHSA-22jq-vg5j-6vgg (alerts #42, #43, #45).
 # body-parser ^2.3.0: GHSA-v422-hmwv-36x6 (alert #33).
+# qs ^6.16.0: GHSA-4mjr-xmp4-gh2g (CVE-2026-82417), GHSA-x5fp-wj9c-mxmx
+#   (CVE-2026-82562) (alerts #53, #54).
 overrides:
   hono: ^4.12.34
   "@hono/node-server": ^1.19.15
   fast-uri: ^3.1.7
   ip-address: ^10.3.1
   body-parser: ^2.3.0
+  qs: ^6.16.0
 
 # 3.1.7 is newer than pnpm's minimumReleaseAge window; exclude so the
 # host-confusion patch can be installed.
