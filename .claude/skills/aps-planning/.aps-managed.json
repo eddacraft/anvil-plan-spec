@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "kind": "skill",
+  "name": "aps-planning",
+  "cliVersion": "0.9.0",
+  "bundleDigest": "ca416e1994fc35fe81cf5c6aafaf804915743da7deccc7992baaac1899c78abb",
+  "files": {
+    "SKILL.md": "838cbadccfeb9014dfc7797039ddf87a1b39cb9c08691d63a825085ea2c473f8",
+    "references/commit-pr-integration.md": "d5360779ed3d859dd5b20b8071fb984f2adcace63fd0afaf026b469e20295ef3",
+    "references/reconciliation-report.md": "7d880a55ca6f339ee547a6dbebe19176eefbae21bad9ee076e8d2724ab0b4339"
+  }
+}
