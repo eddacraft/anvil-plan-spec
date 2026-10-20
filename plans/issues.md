@@ -522,6 +522,33 @@ and reuse of an existing native binary instead of falling back.
 
 ## Questions
 
+### ISS-019: `anvil` workflow failed every PR because the scaffolded install URL does not exist
+
+| Field      | Value      |
+| ---------- | ---------- |
+| Status     | Closed (2026-10-20) |
+| Severity   | Medium     |
+| Discovered | 2026-10-20 |
+| Module     | CIB        |
+| Work Item  | —          |
+
+**Context:** `.github/workflows/anvil.yml` (added by `chore: anvil init` on
+2026-09-24) installed anvil with
+`curl -fsSL https://raw.githubusercontent.com/eddacraft/anvil/main/install.sh | sh`.
+That URL returns 404, and the pipe into `sh` hid the failure, so both the
+`anvil / validate` and `anvil / gate` checks ended with
+`anvil: command not found` on every pull request, including the Dependabot
+override PRs #159 and #160. The `gate` job also had no `ANVIL_LICENSE` secret,
+so it would have exited 3 (authentication) even with a working install.
+
+**Resolution:** the workflow now downloads the pinned release installer
+(`https://github.com/eddacraft/anvil/releases/download/v${ANVIL_VERSION}/eddacraft-anvil-installer.sh`)
+to a file, runs it, adds `~/.cargo/bin` and `~/.local/bin` to `PATH`, and
+verifies `anvil --version`. The merge gate runs only when `ANVIL_LICENSE` is
+present and otherwise emits a visible notice instead of failing. The dead URL
+comes from anvil's own `anvil init` template; the upstream fix is tracked in
+`eddacraft/anvil-001`.
+
 ### Q-001: Which shared claim transport should team mode use?
 
 | Field      | Value      |
