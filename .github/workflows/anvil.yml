@@ -18,9 +18,9 @@
 # `anvil gate --profile ci`.
 #
 # Until the Marketplace listing publishes, the placeholder install
-# step below downloads the latest released binary. The `curl … | sh`
-# pattern is supply-chain-sensitive; pin to a release asset by SHA-256
-# or install from a vendored binary.
+# step below downloads the release installer pinned by `ANVIL_VERSION`
+# and verifies the installed version. Pinning to a release asset by
+# SHA-256 or installing from a vendored binary is stricter still.
 #
 # Inputs the `workflow_dispatch` block below accepts (mirrored from
 # the `eddacraft/anvil-action` Marketplace listing's input set so the
@@ -64,6 +64,12 @@ permissions:
   contents: read
   pull-requests: read
 
+env:
+  # Pinned anvil release used by both jobs. Upgrade deliberately:
+  # review the release notes and reproduce `anvil hook pre-push`
+  # locally before bumping.
+  ANVIL_VERSION: 0.14.2-beta
+
 jobs:
   validate:
     runs-on: ubuntu-latest
@@ -81,14 +87,22 @@ jobs:
       # The official install path lands with MLP-010's
       # `eddacraft/anvil-action` Marketplace listing — replace this
       # **validate** step with `uses: eddacraft/anvil-action@v1` once
-      # that ships. Until then this is a deliberate **placeholder**:
-      # the `curl … | sh` pattern is supply-chain-sensitive. Adopters
-      # using this template before MLP-010 should pin to a release
-      # asset by SHA-256 or install from a vendored binary.
+      # that ships. Until then this is a deliberate **placeholder**
+      # that installs the pinned release asset. The scaffolded
+      # `raw.githubusercontent.com/eddacraft/anvil/main/install.sh`
+      # URL does not exist (404) and `curl … | sh` hid the failure,
+      # so every PR failed with `anvil: command not found`.
       - name: Install anvil (placeholder — replace with eddacraft/anvil-action@v1)
         run: |
-          curl -fsSL https://raw.githubusercontent.com/eddacraft/anvil/main/install.sh | sh
+          installer="${RUNNER_TEMP}/eddacraft-anvil-installer.sh"
+          curl --proto '=https' --tlsv1.2 -LsSf -o "$installer" \
+            "https://github.com/eddacraft/anvil/releases/download/v${ANVIL_VERSION}/eddacraft-anvil-installer.sh"
+          sh "$installer"
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Verify the pinned version
+        run: anvil --version | grep -F -- "$ANVIL_VERSION"
 
       - name: Run L4 validation
         env:
@@ -114,6 +128,10 @@ jobs:
   gate:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      # Secrets cannot be referenced in a job-level `if`; bind the
+      # licence here so the steps can test `env.ANVIL_LICENSE`.
+      ANVIL_LICENSE: ${{ secrets.ANVIL_LICENSE }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -123,15 +141,28 @@ jobs:
           persist-credentials: false
 
       # Binary install for `anvil gate`. Not the Marketplace L4 action.
-      - name: Install anvil (placeholder — pin a release binary)
+      - name: Install anvil (placeholder — pinned release binary)
+        if: env.ANVIL_LICENSE != ''
         run: |
-          curl -fsSL https://raw.githubusercontent.com/eddacraft/anvil/main/install.sh | sh
+          installer="${RUNNER_TEMP}/eddacraft-anvil-installer.sh"
+          curl --proto '=https' --tlsv1.2 -LsSf -o "$installer" \
+            "https://github.com/eddacraft/anvil/releases/download/v${ANVIL_VERSION}/eddacraft-anvil-installer.sh"
+          sh "$installer"
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       # `anvil gate` is licence-gated. Exit 3 is auth, not a quality
-      # verdict. Fork PRs do not receive repository secrets.
+      # verdict. Fork PRs do not receive repository secrets, and this
+      # public repository has no `ANVIL_LICENSE` secret yet, so the
+      # gate is skipped (with a visible notice) rather than failing
+      # every PR on authentication.
       - name: Run merge gate
+        if: env.ANVIL_LICENSE != ''
         env:
-          ANVIL_LICENSE: ${{ secrets.ANVIL_LICENSE }}
           ANVIL_FAIL_ON_WARNINGS: ${{ github.event.inputs.fail-on-warning || 'false' }}
         run: anvil gate --profile ci
+
+      - name: Merge gate skipped (no ANVIL_LICENSE secret)
+        if: env.ANVIL_LICENSE == ''
+        run: |
+          echo "::notice title=anvil gate skipped::ANVIL_LICENSE is not configured for this event, so 'anvil gate --profile ci' did not run. Add the secret to enable the merge gate."
