@@ -520,8 +520,6 @@ and reuse of an existing native binary instead of falling back.
 
 ---
 
-## Questions
-
 ### ISS-019: `anvil` workflow failed every PR because the scaffolded install URL does not exist
 
 | Field      | Value      |
@@ -548,6 +546,8 @@ verifies `anvil --version`. The merge gate runs only when `ANVIL_LICENSE` is
 present and otherwise emits a visible notice instead of failing. The dead URL
 comes from anvil's own `anvil init` template; the upstream fix is tracked in
 `eddacraft/anvil-001`.
+
+## Questions
 
 ### Q-001: Which shared claim transport should team mode use?
 
