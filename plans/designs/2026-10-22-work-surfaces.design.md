@@ -272,7 +272,6 @@ scope is **Jira Cloud**; Jira Data Center is not implicitly certified.
 The first recipe must work with ordinary Slack threads and existing agents;
 beta partner-only Slack Code API access is not a prerequisite.
 
-
 ### E. Microsoft Teams: enterprise conversational overlay
 
 1. A user discusses a GitHub/Linear/Jira issue (or APS-only work) in a
