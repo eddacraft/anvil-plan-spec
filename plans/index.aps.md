@@ -5,7 +5,7 @@
 | Status  | Active     |
 | Owner   | @aneki     |
 | Created | 2025-12-31 |
-| Updated | 2026-10-22 |
+| Updated | 2026-10-23 |
 
 ## Problem
 
@@ -87,7 +87,7 @@ release narratives live in [`plans/releases/`](./releases/).
 | [integrations](./modules/integrations.aps.md) | JSON export, GitHub Action, lint/rollup CI surface        | Complete    |
 | [team-coordination](./modules/team-coordination.aps.md) | Multi-human, multi-agent claims, handoffs, and visibility | Draft |
 | [progress-journal](./modules/progress-journal.aps.md) | Standing modules, create-only progress journals, computed counts | Draft |
-| [work-surfaces](./modules/work-surfaces.aps.md) | Optional Linear/Slack collaboration and BYO-agent integration pattern | Draft |
+| [work-surfaces](./modules/work-surfaces.aps.md) | GitHub/Linear/Jira tracker interoperability, Slack/Teams overlays, optional adoption | Draft |
 | [cli-redesign](./modules/cli-redesign.aps.md)         | Solo/team CLI command rethink, binary upgrade, harness expansion | In Progress |
 | [monorepo](./modules/monorepo.aps.md)         | Nested index.aps.md plans, federated lint + orchestration | Complete |
 | [package-views](./modules/package-views.aps.md) | CLI tooling for the tagged monorepo tier (`Packages:` lint, next filter, generated views) | Complete |
@@ -159,4 +159,4 @@ These are explicitly out of scope:
 - **D-044:** Single on-disk version surface — _decided 2026-07-20: `cli_version` in `.aps/config.yml` is the only version stamp APS writes into a project; `plans/.aps-version` is retired and the skill staleness check compares config against the running CLI. See [install.aps.md](./modules/install.aps.md) INSTALL-022_
 - **D-045:** CLI redesign + harness expansion — _decided 2026-07-23 (proposed 2026-07-22): rethink the `aps` command surface so it reads coherently for solo and team users (profile-aware vocabulary over `.aps/config.yml` `profile:`), ship it as a binary upgrade, and widen the harness set beyond the D-040 core (Claude Code, Copilot, Codex, OpenCode, Grok). Additions gated by the native-discovery test (reads the `AGENTS.md` family + `.agents/skills/` natively → zero-asset add like Grok). Candidates for the CLI-005 spike: Antigravity, Hermes, OpenClaw, and others. Accepted with the CLI-001 redesign map on 2026-07-23 (D-CLI-a…d accepted, OQ-1 routed to CLI-003/CLI-006); CLI-005 evaluated the candidates and CLI-006/CLI-007 added seven harnesses in v0.8.0, taking the supported set to twelve. CLI-002 (profile-aware vocabulary) is the remaining item and is gated on TEAM. See [cli-redesign.aps.md](./modules/cli-redesign.aps.md)._
 - **D-047:** `Model:` / `Reasoning:` routing hints — _decided 2026-09-07: optional-but-preferred work-item fields plus inheritable module metadata columns telling a harness which AI model should execute an item and at what reasoning level (`low | medium | high | max`, W023-validated; `Model` free-form). Surfaced by `aps next` and `aps export`, landed three-way per D-039. See [spec.aps.md](./modules/spec.aps.md) SPEC-002_
-- **D-048:** Explore optional work surfaces — _decided 2026-10-22: add a Draft SURF module to evaluate Linear issue/delegation and Slack team conversation/code-channel patterns against a provider-neutral, Git-authoritative APS contract. Public APS must not bundle eddaskills, Anvil, a hosted controller or another execution harness; the pilot precedes any adapter implementation. The design and individual work items are not yet ratified. See [work-surfaces.aps.md](./modules/work-surfaces.aps.md) and [the draft design](./designs/2026-10-22-work-surfaces.design.md)._
+- **D-048:** Explore optional work surfaces — _decided 2026-10-22; expanded 2026-10-23: Draft SURF evaluates GitHub Issues/optional Projects as the technical reference, Linear as the usability benchmark and Jira Cloud as enterprise interoperability, with Slack and Microsoft Teams as independent conversational overlays. Real-user tests and a common safety/UX scorecard determine whether a team should adopt a preferred tracker; no winner, live migration, agent runtime or provider-specific adapter is pre-authorised. Public APS must not bundle eddaskills, Anvil, a hosted controller or a required vendor integration. See [work-surfaces.aps.md](./modules/work-surfaces.aps.md) and [the draft design](./designs/2026-10-22-work-surfaces.design.md)._
