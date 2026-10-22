@@ -1,4 +1,4 @@
-# Portable Work Surfaces: GitHub, Linear, Jira, Slack and BYO Agents
+# Portable Work Surfaces: GitHub, Linear, Jira, Slack, Teams and BYO Agents
 
 | Field   | Value |
 | ------- | ----- |
@@ -25,9 +25,10 @@ Linear-shaped core:
   MCP first and optional native agent capabilities when access permits.
 - **Jira Cloud:** the enterprise interoperability test, using the Atlassian
   Rovo MCP/REST surfaces first and optional Forge remote-agent APIs later.
-- **Slack:** an independent conversational overlay, not a fourth replacement
-  issue tracker. A team can discuss or delegate work in shared threads or
-  supported code channels linked to any tracker, or use Slack without one.
+- **Slack and Microsoft Teams:** interchangeable conversational overlays, not
+  replacements for issue tracking. Teams can collaborate in existing
+  channels/group chats, and Slack in channels/threads. Either can reference
+  approved APS items and any tracker without becoming canonical.
 
 These are *interfaces to work*, not APS runtimes. APS must work with native
 GitHub/Linear/Jira agents, custom coding harnesses, Claude Code, Codex, Cursor,
@@ -43,8 +44,8 @@ support for all viable providers and a no-provider path.
 A person can capture work in the issue tracker they already use, associate
 it with a reviewed APS item or module, delegate to their chosen executor and
 understand the evidence and next decision without duplicating administration.
-The same approved APS identity can be linked to GitHub, Linear, Jira and/or a
-Slack conversation, and survive a move between those providers unchanged.
+The same approved APS identity can be linked to GitHub, Linear, Jira and/or
+Slack or Teams conversations, and survive a change of providers unchanged.
 
 Select an **optional preferred work surface for an adopting team**, based on
 real user experience, integration reliability, permissions, support burden and
@@ -57,8 +58,8 @@ built or a nominally winning score.
 ## Principles and Boundaries
 
 - **Portable first:** Markdown in Git remains the source of planning intent;
-  no GitHub Projects, Linear, Jira, Slack, Anvil, eddaskills, hosted APS
-  account or model provider is
+  no GitHub Projects, Linear, Jira, Slack, Teams, Anvil, eddaskills, hosted
+  APS account or model provider is
   necessary to read, edit, lint or execute against an APS work item.
 - **A plan is not a ticket:** a GitHub, Linear or Jira issue may link to a bounded APS item or
   an APS module; many internal APS items need not produce many external issues.
@@ -67,7 +68,7 @@ built or a nominally winning score.
 - **No agent execution in APS:** APS describes authorised outcomes and context.
   An external agent/harness decides how to implement, verify and publish within
   its own permissions and the project's policies.
-- **No authority by mention:** a Slack @mention, GitHub/Linear/Jira assignment, ticket
+- **No authority by mention:** a Slack/Teams @mention, GitHub/Linear/Jira assignment, ticket
   comment, webhook or model-selection hint cannot grant write, merge, release,
   deployment, financial or scope-expansion authority.
 - **No automatic completion:** chat success messages, closed issues, agent
@@ -91,7 +92,7 @@ built or a nominally winning score.
 | Plane | Owns | Does not own |
 | ----- | ---- | ------------ |
 | GitHub/Linear/Jira work surface | Backlog, priority, issue lifecycle, team assignment and display | APS plan authority, execution locks, proof of success |
-| Slack conversation (optional) | Human discussion, mentions, decisions, task channels/threads | Canonical backlog unless the team has consciously chosen a chat-only flow |
+| Slack/Teams conversation (optional) | Human discussion, mentions, decisions, task channels/threads | Canonical backlog unless the team consciously chooses chat-only intake |
 | APS intent in Git | Modules, work-item contract, dependencies, decisions, approved revision | Chat transcript, remote backlog priority, agent runtime |
 | Execution provider | Native agent session, tool selection, implementation and local run state | Rewriting approved APS scope without review |
 | Git / CI / delivery evidence | Candidate commits, PRs, checks, review, merge, release facts | Backlog ownership |
@@ -113,7 +114,7 @@ GitHub Issues + Projects   Linear issues   Jira work items
                             |
                    read-only projections
                             |
-            issue tracker(s) + optional Slack
+            issue tracker(s) + optional Slack/Teams
 ```
 
 **The provider-neutral surface contract**, initially a documented interface
@@ -142,6 +143,7 @@ stronger plan permission than the existing project contract.
 | Linear | Official Linear MCP, issue/project links and comments | GraphQL/webhooks and Developer Preview assignable agent sessions | Agent/session APIs are preview; avoid treating agent plans as APS approval |
 | Jira Cloud | Atlassian Rovo MCP and existing Jira issue workflows | REST/automation; Forge A2A remote-agent connector | Tenant workflows/custom fields and remote-agent installation increase complexity |
 | Slack overlay | Existing channels, mentions and threads linked to APS work | Optional app and Slack Code integration | Code-channel APIs may be partner/beta-gated; no reliable shared execution lease by mention |
+| Teams overlay | Normal channels and group chat with APS links | Optional Teams agent app, mentions, Adaptive Cards, notifications | Tenant policy and permissions; channel support varies; not Slack Code parity |
 
 Provider APIs and access levels can change. Do not promise all optional
 features in the baseline; record what was available in the tested tenant.
@@ -270,14 +272,44 @@ scope is **Jira Cloud**; Jira Data Center is not implicitly certified.
 The first recipe must work with ordinary Slack threads and existing agents;
 beta partner-only Slack Code API access is not a prerequisite.
 
+
+### E. Microsoft Teams: enterprise conversational overlay
+
+1. A user discusses a GitHub/Linear/Jira issue (or APS-only work) in a
+   Teams standard channel thread or group chat, linking the approved APS item.
+2. The team @mentions a coding agent **already installed and allowed** in
+   that conversation. An @mention is an interaction, not a claim, permission
+   grant or guarantee the agent can implement code.
+3. The chosen existing agent obtains the approved Git revision and executes
+   in its own authorised environment. Post relevant blockers, decisions
+   and independently verifiable Git/CI evidence, not every agent step.
+4. Optional Adaptive Cards and proactive messages make decisions and status
+   clearer, but cannot replace a reviewed plan or Git-based approval.
+5. A second compatible agent can review, within its actual permissions.
+   There is no required Copilot Studio, Channel Agent or APS bot.
+
+**Teams SDK capabilities:** group-chat/channel agents, explicit mentions,
+threaded replies, Adaptive Cards and proactive messages where installed and
+permitted. These do not automatically deliver Slack Code's shared code/diff
+experience. The separate built-in Teams **Channel Agent** currently permits
+only one Channel Agent per channel; this is *not* a limit on every custom
+Teams SDK agent or group-chat integration.
+
+By default, installed Teams agents only see messages directly @mentioning
+them; broader channel/chat access requires resource-specific consent.
+App deployment may require tenant admin permission. Shared/private channel
+support and the ability to post messages or cards vary by feature and tenant.
+A standard-channel/thread link-only recipe must work even with all agent
+apps blocked; advanced APIs are optional and are not prerequisites.
+
 ### E. Provider-free and cross-provider portability
 
 A team can run `aps next`, read Markdown, and give a Ready work item to a
 human or native harness without any issue tracker, Slack or extra service.
 
 The exact **same Git-reviewed APS item** must be linkable to GitHub, Linear
-and Jira simultaneously, or exported and relinked when a team changes its
-chosen tracker. Preserve identity, review history, validation and evidence
+and Jira simultaneously, referenceable in Slack and Teams, or exported and
+relinked when a team changes its chosen tracker. Preserve identity, review history, validation and evidence
 URLs. Do not assert that copying an issue between trackers copies authorisation
 or gives the new provider permission to launch agents.
 
@@ -287,19 +319,20 @@ or gives the new provider permission to launch agents.
 | ----- | ------ | ---- |
 | 0 — Contract | Ratify provider-neutral identity, authority, status, trust and link semantics | SURF-000/001 |
 | 1 — Two complementary baselines | GitHub Issues/Projects as technical reference and Linear as UX benchmark, both via existing MCP/CLI | SURF-010 and SURF-002 |
-| 2 — Portability | Jira Cloud Rovo MCP pilot, Slack threaded collaboration and provider-switch/relink test | SURF-011, SURF-003, SURF-013 |
+| 2 — Portability | Jira Cloud MCP pilot, Slack and Teams threads, provider-switch/relink test | SURF-011, SURF-003, SURF-017, SURF-013 |
 | 3 — Comparative pilot | Same tasks and users across GitHub, Linear, Jira and no-provider control; Slack as optional overlay | SURF-004 |
 | 4 — Selection | Publish measured scores, hard-gate results, switching costs and recommendation; human records winner or no-winner | SURF-012 |
 | 5 — Public pattern | Publish all usable native recipes, preserving provider choice regardless of selected internal tool | SURF-005 |
 | 6 — Opt-in team adoption | Only on explicit owner approval, trial the preferred provider on bounded live work with rollback | SURF-014 |
-| 7 — Optional hardening | Richer APS read and independently approved GitHub/Linear/Jira/Slack adapters, only when evidence justifies | SURF-006/007/015/016/008 |
+| 7 — Optional hardening | Richer APS read and separately approved tracker/chat adapters if justified | SURF-006/007/008/015/016/018 |
 | 8 — Conformance | Security, identity, idempotency, degradation and interop suite for any shipped adapters | SURF-009 |
 
 **No preselected winner.** GitHub is the technical reference because Git/PR/CI
 are colocated. Linear is the user-experience benchmark. Jira is a deliberate
 enterprise stress test. That allocation is a *test design*, not an adoption
-decision. Slack is evaluated for collaboration on top of each, rather than
-scored as a replacement backlog.
+decision. Slack and Teams are compared as conversational overlays on each tracker,
+not scored as replacement backlogs. Tenant familiarity is useful but is not
+proof of APS-specific coding-agent support.
 
 ### Comparable evaluation and a decision rule
 
