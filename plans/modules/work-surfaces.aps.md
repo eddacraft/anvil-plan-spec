@@ -338,6 +338,170 @@ for vendor capability constraints, comparison, security and adoption gates.
 - **Dependencies:** SURF-001, SURF-004
 - **Status:** Draft
 
+
+### SURF-010: Demonstrate GitHub Issues with optional Projects
+
+- **Intent:** Provide the technical reference for APS-backed engineering
+  where issues, Git/PR and CI already coexist.
+- **Expected Outcome:** A reproducible GitHub MCP example links an issue to
+  an approved APS item or module and uses an available native or independent
+  coding agent, Git PR and CI review evidence. Project fields offer richer
+  tracking *when available*, without being mandatory.
+- **Validation:** Run item- and module-level paths with and without Projects;
+  verify access restrictions, setup time, manual re-entry, agent entitlement
+  and PR/evidence links. Closing an issue or merging a PR early never changes
+  APS completion without qualifying evidence. Pure Git+CLI remains usable.
+- **Confidence:** high
+- **Dependencies:** SURF-001
+- **Status:** Draft
+
+### SURF-011: Demonstrate Jira Cloud enterprise portability
+
+- **Intent:** Test APS against issue structures and approval models that
+  differ significantly from both GitHub and Linear.
+- **Expected Outcome:** A Jira Cloud baseline uses Atlassian Rovo MCP or
+  authorised REST access to link a work item to APS, hand off an approved
+  revision, and display objective delivery evidence without requiring
+  Forge, A2A, mandatory custom fields or a particular workflow scheme.
+- **Validation:** Two different Jira project/status configurations exercise
+  transitions, issue types, access limits and absent fields. Missing API
+  privileges degrade to read-only/unknown. Rename or move of a Jira item
+  never changes its linked APS identity, scope or completion criteria.
+  Record setup, licence and administrative friction.
+- **Confidence:** medium
+- **Dependencies:** SURF-001
+- **Status:** Draft
+
+### SURF-012: Recommend a preferred tracker using observed evidence
+
+- **Intent:** Support adoption of the best practical work management
+  experience without hard-coding a provider preference into APS.
+- **Expected Outcome:** The GitHub/Linear/Jira comparison includes
+  per-scenario measurements, weighted scores, availability and cost,
+  independent-agent support, confidence and hard-gate failures. It records
+  an owner-approved decision: adopt, trial longer, retain incumbent, or no
+  winner. Slack and Teams are compared separately as optional overlays.
+- **Validation:** Weights total 100, scores cite actual results using the
+  design's 0-5 anchors; any untested core requirement is marked unknown.
+  A provider failing authority, privacy, portability or completion gates
+  cannot win. A score difference below five points is treated as a
+  practical tie favouring an incumbent that meets all gates. Document
+  switch costs; this work item performs no real migration.
+- **Confidence:** medium
+- **Dependencies:** SURF-004
+- **Status:** Draft
+
+### SURF-013: Verify cross-provider relinking and portability
+
+- **Intent:** Let a team change or combine trackers without rewriting
+  approved APS contracts, losing evidence or reauthorising execution.
+- **Expected Outcome:** One reviewed APS work item is linked to GitHub,
+  Linear and Jira identities and referenced in both Slack and Teams.
+  Links can be deactivated, moved and restored independently of Git truth.
+- **Validation:** Test GitHub → Linear → Jira → original-provider relinking;
+  confirm APS item ID, approval SHA, dependencies, validation, history and
+  evidence URLs remain intact. Ambiguous tenant IDs or private provider
+  objects fail visibly. Neither a relink nor a chat notification launches
+  an agent or creates a second APS item.
+- **Confidence:** medium
+- **Dependencies:** SURF-001, SURF-002, SURF-010, SURF-011
+- **Status:** Draft
+
+### SURF-014: Trial an approved work-surface choice with a real team
+
+- **Intent:** Let an interested team adopt the best evidenced option in
+  a bounded, reversible way without automatically migrating its backlog.
+- **Expected Outcome:** An accountable owner explicitly authorises a small
+  pilot cohort, selected tracker and optional chat overlay. The recorded
+  protocol captures current provider, tenant permissions, issue mapping,
+  existing URLs, agent availability, rollback steps and post-adoption effort.
+  The public APS format and alternate integrations remain available.
+- **Validation:** Approval is recorded *before* external writes. Dry-run
+  migration enumerates duplicate risks and remapping; one real planning to
+  review cycle succeeds; old issues, APS Git revision and PR/CI evidence
+  remain retrievable; a rollback exercise restores the previous working
+  surface without duplicating work. Expansion requires separate sign-off.
+- **Confidence:** medium
+- **Dependencies:** SURF-012
+- **Status:** Draft
+- **Approval Gate:** No live backlog, membership or agent changes without
+  explicit owner, cohort and rollback approval
+
+### SURF-015: Implement an optional GitHub provider adapter if needed
+
+- **Intent:** Remove proven repetitive linking/status chores for Issues
+  and optional Projects, without a mandatory GitHub project schema.
+- **Expected Outcome:** If separately approved, a removable adapter handles
+  issue/APS identity, idempotent mapping, attributable PR/CI evidence,
+  permission-aware views, reconciliation and a dry-run. An Issues-only
+  install remains supported when Projects is absent.
+- **Validation:** Fixtures include Issues-only, optional Projects,
+  cross-repo work, deleted links, differing issue/project statuses,
+  duplicate events, permissions revocation and merged-not-shipped work.
+  Retries do not duplicate remote writes or advance APS completion; the
+  core CLI/Markdown behaves identically when the adapter is uninstalled.
+- **Confidence:** low
+- **Dependencies:** SURF-001, SURF-004
+- **Status:** Draft
+- **Approval Gate:** Recorded evidence of value and explicit separate approval
+
+### SURF-016: Implement an optional Jira Cloud adapter if needed
+
+- **Intent:** Reduce measured enterprise integration friction without
+  importing Jira field/status semantics into the APS specification.
+- **Expected Outcome:** If separately approved, a removable adapter supports
+  tenant-scoped issue links, schema/field discovery, controlled status
+  projections, idempotent retries and reconciliation. A native Forge/A2A
+  remote-agent integration is an independent enhancement, not the baseline.
+- **Validation:** Fixtures cover multiple Jira workflow schemes,
+  inaccessible or missing fields, forbidden transitions, duplicate/out-of-
+  order webhook events, revoked credentials and cross-tenant access.
+  Plan approval and completion remain Git/evidence-governed. A non-Jira
+  project needs no Jira packages or credentials.
+- **Confidence:** low
+- **Dependencies:** SURF-001, SURF-004
+- **Status:** Draft
+- **Approval Gate:** Recorded evidence of value and explicit separate approval
+
+### SURF-017: Demonstrate Teams collaborative APS handoff
+
+- **Intent:** Prove Microsoft's existing team chat can host an APS-backed
+  multi-agent working conversation without a required custom APS app.
+- **Expected Outcome:** A repeatable normal Teams channel/thread or group
+  chat journey references an approved APS item and any GitHub/Linear/Jira
+  issue. Participants can select existing *actually installed* agents,
+  request a separate review where permitted and share relevant scope,
+  blocker and Git/CI evidence links. It works as a link-only workflow in
+  tenants blocking custom agents.
+- **Validation:** Test one task with agent apps enabled and one with apps
+  blocked or unavailable, documenting setup/tenant admin steps, group-chat
+  versus channel behaviour and unsupported private/shared channel features.
+  Verify that an @mention grants neither scope nor an exclusive claim,
+  a changed requirement needs Git review, and no unconsented chat content
+  or inaccessible private thread is imported into an agent context.
+- **Confidence:** medium
+- **Dependencies:** SURF-001
+- **Status:** Draft
+
+### SURF-018: Add an optional Microsoft Teams app if needed
+
+- **Intent:** Provide richer conversation links, status and decisions only
+  when the measured value outweighs tenant and deployment complexity.
+- **Expected Outcome:** If separately approved, a removable Teams app
+  built on supported Microsoft Teams/Agents SDK features can resolve APS
+  references, respond to explicit mentions, optionally publish attributed
+  progress or Adaptive Cards and link evidence. It must not require
+  Copilot Studio, Teams Channel Agent or broader conversation access.
+- **Validation:** Fixtures test bot installation/revocation, tenant isolation,
+  explicit @mention routing, RSC denial, repeated activities, cross-channel
+  leakage, inaccessible private/shared channels and unknown agent state.
+  A standard-channel link-only journey and pure APS usage still work
+  without the app. No message alone authorises execution or plan changes.
+- **Confidence:** low
+- **Dependencies:** SURF-001, SURF-004, SURF-017
+- **Status:** Draft
+- **Approval Gate:** Requires evidence-based separate implementation approval
+
 ## Execution and Adoption Strategy
 
 **Phase A — prove value with what's already available**
