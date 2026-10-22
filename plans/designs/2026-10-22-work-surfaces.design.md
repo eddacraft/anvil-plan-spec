@@ -1,4 +1,4 @@
-# Portable Work Surfaces: Linear, Slack and Bring-Your-Own Agents
+# Portable Work Surfaces: GitHub, Linear, Jira, Slack and BYO Agents
 
 | Field   | Value |
 | ------- | ----- |
@@ -9,55 +9,75 @@
 
 ## Problem
 
-APS provides portable, Git-reviewed intent and bounded work items, but most
-teams organise work in an issue tracker or discuss it in a team conversation.
-Asking people to maintain an issue, an APS module, a coding-agent task and a PR
-by hand adds administration. Conversely, replacing APS with an issue description
-or chat history loses durable intent, dependency, authority and validation
-boundaries.
+APS provides portable, Git-reviewed intent and bounded work items, but teams
+already organise work in issue trackers and discuss delivery in chat. Forcing
+separate APS, ticket, agent and PR administration harms adoption; treating a
+ticket or chat transcript as the only specification loses durable scope,
+authorisation, dependencies and acceptance evidence.
 
-Two useful entry points deserve a public, vendor-optional pattern:
+**Structured work surfaces are interchangeable candidates**, not a
+Linear-shaped core:
 
-1. **Linear** as a structured backlog, prioritisation and delegation surface.
-2. **Slack** as a collaborative team room: people can mention different coding
-   agents, discuss one work item in a thread or task-specific code channel, and
-   make decisions together.
+- **GitHub Issues + Projects:** the technical reference implementation,
+  colocated with APS Git files, PRs and Actions. GitHub Projects is optional;
+  plain Issues must work without a Project.
+- **Linear:** the usability and agent-delegation benchmark, using its official
+  MCP first and optional native agent capabilities when access permits.
+- **Jira Cloud:** the enterprise interoperability test, using the Atlassian
+  Rovo MCP/REST surfaces first and optional Forge remote-agent APIs later.
+- **Slack:** an independent conversational overlay, not a fourth replacement
+  issue tracker. A team can discuss or delegate work in shared threads or
+  supported code channels linked to any tracker, or use Slack without one.
 
-These are *interfaces to work*, not new APS runtimes. APS should work with
-Linear-native agents, Slack-connected coding agents, Claude Code, Codex,
-Cursor, another team's custom harness, manual development, or no external
-provider at all. eddaskills is an optional internal eddacraft consumer, **never
-a bundled runtime, dependency or preferred execution path**.
+These are *interfaces to work*, not APS runtimes. APS must work with native
+GitHub/Linear/Jira agents, custom coding harnesses, Claude Code, Codex, Cursor,
+human delivery, and no provider. eddaskills remains an optional internal
+eddacraft implementation, **never bundled or required by public APS**.
+
+A technical reference is not a preselected winner. The team may opt to adopt
+the best work surface after realistic, measured trials, while public APS keeps
+support for all viable providers and a no-provider path.
 
 ## Desired Outcome
 
-A person can create or discuss work in the tool they already use, link it to
-an existing APS item or propose a new bounded contract, authorise that contract
-through the project's normal review process, and give it to their chosen
-executor. They can see meaningful progress and evidence without manually
-re-keying status in several places. A different executor or issue tracker can
-take over without loss of durable plan intent.
+A person can capture work in the issue tracker they already use, associate
+it with a reviewed APS item or module, delegate to their chosen executor and
+understand the evidence and next decision without duplicating administration.
+The same approved APS identity can be linked to GitHub, Linear, Jira and/or a
+Slack conversation, and survive a move between those providers unchanged.
 
-Success is *less work for the team*, not the number of integrations built.
+Select an **optional preferred work surface for an adopting team**, based on
+real user experience, integration reliability, permissions, support burden and
+switching cost. The decision must not make that provider canonical for APS or
+require a migration by other users.
+
+Success is lower total team friction and trustworthy outcomes, not integrations
+built or a nominally winning score.
 
 ## Principles and Boundaries
 
 - **Portable first:** Markdown in Git remains the source of planning intent;
-  no Linear, Slack, Anvil, eddaskills, hosted APS account or model provider is
+  no GitHub Projects, Linear, Jira, Slack, Anvil, eddaskills, hosted APS
+  account or model provider is
   necessary to read, edit, lint or execute against an APS work item.
-- **A plan is not a ticket:** a Linear issue may link to a bounded APS item or
+- **A plan is not a ticket:** a GitHub, Linear or Jira issue may link to a bounded APS item or
   an APS module; many internal APS items need not produce many external issues.
 - **Human-friendly first:** use the provider's normal workflows; do not require
   a dedicated APS bot, command vocabulary, issue template or another UI.
 - **No agent execution in APS:** APS describes authorised outcomes and context.
   An external agent/harness decides how to implement, verify and publish within
   its own permissions and the project's policies.
-- **No authority by mention:** a Slack @mention, Linear assignment, ticket
+- **No authority by mention:** a Slack @mention, GitHub/Linear/Jira assignment, ticket
   comment, webhook or model-selection hint cannot grant write, merge, release,
   deployment, financial or scope-expansion authority.
 - **No automatic completion:** chat success messages, closed issues, agent
   session completion and merged PRs are not interchangeable with verified APS
   completion or release/ship evidence.
+- **Provider parity, not UI sameness:** implement only capabilities each
+  provider actually supports; preserve portable semantics and clearly mark
+  any optional preview or organisation-dependent agent features.
+- **Adopt the proven fit:** compare options under consistent tests and costs;
+  explicitly approve a reversible pilot before changing a real team's backlog.
 - **Optional, incremental adoption:** manual links plus existing MCP/CLI first;
   deterministic sync and vendor apps only if measured user friction warrants.
 - **Do not duplicate TEAM or PROG:** transient claims/leases belong to
@@ -70,35 +90,61 @@ Success is *less work for the team*, not the number of integrations built.
 
 | Plane | Owns | Does not own |
 | ----- | ---- | ------------ |
-| Work surfaces (Linear, Slack, other) | Human intake, discussion, assignment, priorities, display | APS scope/approval, execution safety, proof of delivery |
+| GitHub/Linear/Jira work surface | Backlog, priority, issue lifecycle, team assignment and display | APS plan authority, execution locks, proof of success |
+| Slack conversation (optional) | Human discussion, mentions, decisions, task channels/threads | Canonical backlog unless the team has consciously chosen a chat-only flow |
 | APS intent in Git | Modules, work-item contract, dependencies, decisions, approved revision | Chat transcript, remote backlog priority, agent runtime |
-| Execution provider | Agent session, tool selection, implementation and local run state | Rewriting approved APS scope without review |
-| Git / CI / provider evidence | Candidate commits, PRs, test runs, review, merge and release facts | Business backlog intent |
-| Optional TEAM / PROG | Claims, handoffs, effective progress when ratified | Vendor-specific ticket state |
+| Execution provider | Native agent session, tool selection, implementation and local run state | Rewriting approved APS scope without review |
+| Git / CI / delivery evidence | Candidate commits, PRs, checks, review, merge, release facts | Backlog ownership |
+| Optional TEAM / PROG | Claims, handoffs, effective progress when ratified | Vendor-specific status transitions |
 
 Conceptually:
 
 ```text
-Linear issues/projects          Slack team channel/thread
-        |                               |
-        +---------- optional links -----+
-                        |
-                  APS work reference
-                        |
-            Git-reviewed APS contract
-                        |
-           any native agent or harness
-                        |
-                Git / CI / evidence
-                        |
-                read-only projections
-                        |
-                 Linear and/or Slack
+GitHub Issues + Projects   Linear issues   Jira work items
+          \                  |               /
+           \---- work-surface references -----/
+                            |
+                      APS identity
+                  (Git-reviewed intent)
+                            |
+                any native agent / harness
+                            |
+                    Git / CI / evidence
+                            |
+                   read-only projections
+                            |
+            issue tracker(s) + optional Slack
 ```
 
-Communication is not execution. An agent may be invoked directly within Linear
-or Slack, or externally with an APS reference. This integration does not create
-a second agent supervisor, model router or mandatory service.
+**The provider-neutral surface contract**, initially a documented interface
+rather than implemented methods, comprises:
+
+| Operation | Contract | Availability |
+| --------- | -------- | ------------ |
+| Resolve | Map workspace + external object to APS module/item/revision | Required |
+| Link | Associate external issue/conversation with APS identity idempotently | Required for optional adapters |
+| Read | Show existing APS intent and source URLs, preserving permissions | Required |
+| Propose | Create a *reviewable* plan change, never mutate approved scope silently | Optional |
+| Project | Render attributed execution/evidence status, with unknown states | Optional |
+| Delegate | Pass an authorised APS reference to a chosen existing executor | Provider-dependent; no APS runtime |
+| Reconcile | Compare Git/CI truth with provider display and repair safe drift | Required before durable sync |
+
+A manual/MCP recipe can fulfil Resolve, Link and Read without code in APS
+core. Native delegation is not required to call an integration successful.
+Communication is not execution. No provider-specific action can grant a
+stronger plan permission than the existing project contract.
+
+### Provider capability profiles (verify during pilot)
+
+| Provider | First usable path | Optional deeper path | Specific limitation to test |
+| -------- | ----------------- | -------------------- | --------------------------- |
+| GitHub | Issues/Projects with official MCP and Git/PR/Actions links | Project GraphQL/API automation, native coding agents, agentic workflows | Projects and third-party agents may have separate permissions and preview eligibility |
+| Linear | Official Linear MCP, issue/project links and comments | GraphQL/webhooks and Developer Preview assignable agent sessions | Agent/session APIs are preview; avoid treating agent plans as APS approval |
+| Jira Cloud | Atlassian Rovo MCP and existing Jira issue workflows | REST/automation; Forge A2A remote-agent connector | Tenant workflows/custom fields and remote-agent installation increase complexity |
+| Slack overlay | Existing channels, mentions and threads linked to APS work | Optional app and Slack Code integration | Code-channel APIs may be partner/beta-gated; no reliable shared execution lease by mention |
+
+Provider APIs and access levels can change. Do not promise all optional
+features in the baseline; record what was available in the tested tenant.
 
 ### Portable references and handoff (proposal; not yet a schema)
 
@@ -119,7 +165,7 @@ The initial read path is the existing `aps export --json` (`aps-export/v1`),
 together with the canonical Markdown and its Git revision. That export currently
 provides IDs, status and dependencies but not a full executable handoff with
 every intent, expected-outcome and validation field. First test whether the
-existing CLI/MCP and Markdown are sufficient. Only if the pilot demonstrates
+existing CLI/MCP and Markdown are sufficient. Only if the cross-provider pilot demonstrates
 friction should SURF-006 define an additive, versioned item-level read or
 outcome projection. Do not commit to a new `aps describe` command or schema
 before the pilot.
@@ -149,134 +195,227 @@ This is an *information contract*, not a request to start or complete execution.
 | PR opens / CI runs | Project real evidence and review-readiness, not `Complete` |
 | PR merges | Display integrated/merged evidence; do not equate with shipped or completed |
 | Release/ship criteria pass | Only then may authorised reconciliation mark APS Complete where that project's policy requires it |
-| Linear status changes | Backlog state remains Linear-owned, but cannot change APS scope/approval without a reviewed plan revision |
+| GitHub/Linear/Jira issue changes | Backlog state stays provider-owned; APS scope/approval requires a reviewed Git revision |
 | Slack messages alter requirements | Treat as requested change; reconcile through APS; do not silently broaden execution |
 
 APS's canonical work-item states stay Draft, Ready, In Progress, Complete and
 Blocked. More descriptive statuses such as `claimed`, `in review`, `merged`,
 `awaiting release`, `stale` and `needs decision` are **derived views**, not
 new core state tokens. The mappings must be workspace-configurable and fail
-closed when evidence is missing. Existing GitHub/Linear auto-close rules must
+closed when evidence is missing. Existing GitHub/Linear/Jira auto-close rules must
 not mark an APS-controlled deliverable finished at PR creation or merge.
 
 ## Human Journeys
 
-### A. Linear: issue to approved APS work
+### A. GitHub Issues + Projects: technical reference
 
-1. A product manager creates or selects a Linear issue as usual.
-2. An agent or developer finds a relevant APS module/item and links it, or
-   proposes new APS work through a reviewable plan PR.
-3. The responsible human reviews the *APS intent* in Git; priority and business
-   conversation stay in Linear.
-4. Once the item is genuinely Ready, the human delegates it to a Linear-native
-   coding agent, a native CLI agent, or another executor.
-5. The executor reads the same approved APS revision, works in its own native
-   environment and links code/CI/review evidence.
-6. Linear presents concise progress, the next required decision and links to
-   evidence; status is not falsely advanced by optimistic agent prose.
+1. A developer or product manager creates a GitHub issue; it may be in a
+   GitHub Project, but a Project is not required.
+2. They link the issue to an existing APS item/module or propose a plan PR.
+3. A human reviews APS scope in Git and authorises the exact revision.
+4. The user assigns the issue to an eligible native coding agent or passes the
+   approved item to an independent harness. No special agent required.
+5. PRs, CI and review evidence remain in GitHub. The issue/project shows
+   appropriate links, blockers and an **evidence-backed** state.
+6. An issue closed on PR merge before actual APS completion is detected,
+   rather than silently marking the contract Complete.
 
-A single issue may represent an APS module, while its internal APS work items
-remain invisible in Linear unless the team asks to track them individually.
+Use the official GitHub MCP server, issues, project fields (where present)
+and normal Git operations for the first published recipe. GitHub Agentic
+Workflows and third-party agent assignment are optional preview capabilities.
 
-**Manual first:** Linear's official MCP can find/create/update issues. No
-dedicated APS agent installation or webhook service is required for the first
-published recipe.
+### B. Linear: usability and delegation benchmark
 
-### B. Slack: collaborate in one team room
+1. A product manager creates/selects an issue using the normal Linear UI.
+2. A native agent or developer links it to an approved APS work item, or
+   proposes a Git-reviewed plan change.
+3. A human approves scope and the executor uses the same APS revision.
+4. A Linear-native coding agent or another tool implements and reports
+   attributed work; PR/CI evidence remains independently checkable.
+5. Linear exposes relevant progress and decisions without creating a parallel
+   acceptance-criteria database or false Completed status.
 
-1. A person asks in `#engineering` about an APS-backed change.
-2. They reference an APS work item or ask their chosen agent to locate/propose
-   one using the normal repository instructions. An optional `@APS` helper is
-   *not* a prerequisite.
-3. The team selects an executor by its existing agent mention (for example
-   `@Codex`) and can ask a different agent to review or advise. The specific
-   model is a provider capability, not a new APS model router. Existing
-   optional `Model:` and `Reasoning:` APS hints remain hints.
-4. Short discussions remain in a Slack thread. Longer collaborative work
-   can use one dedicated **Slack Code channel per task** where available, or
-   a normal channel/thread fallback. The parent team channel stays navigable.
-5. Keep plan/PR/evidence URLs visible and post only meaningful decisions,
-   blocked questions and milestones. On completion, summarise in the source
-   thread; archive a task channel where supported.
-6. Requirements altered in chat trigger a proposed APS plan change, not a
-   direct silent rewrite. Two mentioned agents must not treat the same work
-   as exclusively theirs without an actual coordination claim.
+One Linear issue may represent a module; internal APS items need not become
+individual tickets. Linear's official MCP suffices for the baseline. Its
+assignable agent/session APIs are Developer Preview, not a requirement.
 
-**Compatibility:** Slack's normal `app_mention` events and threaded messages
-can underpin optional apps. Slack Code's richer code-channel management APIs
-are beta/partner-gated as of this design date; their availability must be
-rechecked during SURF-008. The published baseline must work without them.
+### C. Jira Cloud: enterprise interoperability
 
-### C. Bring your own / no work surface
+1. An enterprise user finds or creates a Jira work item through normal Jira
+   workflows or Atlassian Rovo MCP.
+2. The work item links to an APS module or item without relying on a specific
+   issue key syntax, mandatory custom field, status scheme or Forge app.
+3. The approved APS revision reaches a compatible existing coding executor;
+   Jira's work item stays the human priority/assignment interface.
+4. Evidence URLs, blockers and status discrepancies are displayed with
+   permissions honoured, not translated into unconditional Jira transitions.
+5. If justified later, a separate Forge remote-agent adapter may use its A2A
+   connector for assign/mention/progress; do not host APS solely for this.
 
-A team can run `aps next`, inspect Markdown, and hand an approved work-item
-reference to its native harness, custom executor or human. It can record
-outcomes through normal Git review. No Slack, Linear, hosted service, eddaskills
-or Anvil account is needed.
+Test differing project schemes, access levels and issue types. The initial
+scope is **Jira Cloud**; Jira Data Center is not implicitly certified.
 
-### D. Linear plus Slack
+### D. Slack: collaborative overlay for any tracker
 
-A Linear issue links to the same APS identity as a Slack thread or code
-channel. Linear is the durable backlog; Slack is the discussion space. Neither
-copies or overwrites APS intent. A linked PR/release evidence record may appear
-in both without duplicating the work itself.
+1. A person asks in a shared `#engineering` channel about an APS-backed task.
+2. They link a GitHub, Linear or Jira issue (or no issue) and the same APS item.
+3. The team selects existing agents by mention; optional Model/Reasoning hints
+   do not constitute an APS model router or grant a claim.
+4. Use a thread for short work or a task-specific Slack Code channel where
+   actually supported. Post important decisions, blockers and Git/CI links
+   only, not every implementation step.
+5. Changed requirements result in a proposed plan revision; another
+   mentioned agent does not acquire an exclusive execution lease.
+
+The first recipe must work with ordinary Slack threads and existing agents;
+beta partner-only Slack Code API access is not a prerequisite.
+
+### E. Provider-free and cross-provider portability
+
+A team can run `aps next`, read Markdown, and give a Ready work item to a
+human or native harness without any issue tracker, Slack or extra service.
+
+The exact **same Git-reviewed APS item** must be linkable to GitHub, Linear
+and Jira simultaneously, or exported and relinked when a team changes its
+chosen tracker. Preserve identity, review history, validation and evidence
+URLs. Do not assert that copying an issue between trackers copies authorisation
+or gives the new provider permission to launch agents.
 
 ## Integration Strategy and Release Gates
 
 | Stage | Result | Gate |
 | ----- | ------ | ---- |
-| 0 — Contract | Ratified authority, link, status and permission rules | SURF-000 |
-| 1 — No custom adapter | Linear MCP and Slack/native-agent worked recipes; Git/APS authoritative | SURF-001 through SURF-003 |
-| 2 — Experience pilot | Measure administration saved, ambiguity, reliability, tool independence and no-provider fallback | SURF-004 |
-| 3 — Public pattern | Publish useful, runnable examples without creating a hosted dependency | SURF-005 |
-| 4 — Optional hardening | Add richer APS read/projection only for proven gaps | SURF-006, separately approved |
-| 5 — Optional provider adapters | Deterministic Linear sync or Slack app/Code experience only if justified | SURF-007/008, each separately approved |
-| 6 — Conformance | Adversarial sync/permission/failure matrix for any production adapter | SURF-009 |
+| 0 — Contract | Ratify provider-neutral identity, authority, status, trust and link semantics | SURF-000/001 |
+| 1 — Two complementary baselines | GitHub Issues/Projects as technical reference and Linear as UX benchmark, both via existing MCP/CLI | SURF-010 and SURF-002 |
+| 2 — Portability | Jira Cloud Rovo MCP pilot, Slack threaded collaboration and provider-switch/relink test | SURF-011, SURF-003, SURF-013 |
+| 3 — Comparative pilot | Same tasks and users across GitHub, Linear, Jira and no-provider control; Slack as optional overlay | SURF-004 |
+| 4 — Selection | Publish measured scores, hard-gate results, switching costs and recommendation; human records winner or no-winner | SURF-012 |
+| 5 — Public pattern | Publish all usable native recipes, preserving provider choice regardless of selected internal tool | SURF-005 |
+| 6 — Opt-in team adoption | Only on explicit owner approval, trial the preferred provider on bounded live work with rollback | SURF-014 |
+| 7 — Optional hardening | Richer APS read and independently approved GitHub/Linear/Jira/Slack adapters, only when evidence justifies | SURF-006/007/015/016/008 |
+| 8 — Conformance | Security, identity, idempotency, degradation and interop suite for any shipped adapters | SURF-009 |
 
-Linear Agent APIs and plans are Developer Preview / technology-preview
-surfaces. Pilot with stable MCP first; a native assignable agent is optional
-and must be gated on API stability and demonstrated value. For unattended
-sync, prefer GraphQL plus webhooks and idempotent reconciliation over an
-interactive MCP session masquerading as a durable controller.
+**No preselected winner.** GitHub is the technical reference because Git/PR/CI
+are colocated. Linear is the user-experience benchmark. Jira is a deliberate
+enterprise stress test. That allocation is a *test design*, not an adoption
+decision. Slack is evaluated for collaboration on top of each, rather than
+scored as a replacement backlog.
 
-The Slack Code APIs are beta and available only to select partners.
-The normal-channel/thread recipe is independently shippable. A custom Slack
-app is optional, not part of the APS public core.
+### Comparable evaluation and a decision rule
 
-If Stage 2 shows little additional value from automated synchronisation,
-**stop at the documented integration pattern**. That is a successful outcome.
+Evaluate all three structured providers on the same three work scenarios:
+(a) small bug, (b) multi-item feature linked to one issue, and (c) merged but
+not yet released change. Include one user in each role: product/lead,
+implementer and reviewer; retain a pure Git+APS no-provider control. Repeat
+a handoff to a different agent and a provider outage/revocation.
+
+**Score only observed results** using an anchored 0-5 rating and weighted
+categories (total 100). Record raw timings, counts, provider configuration,
+permissions and version/access tier alongside each score.
+
+| Criterion | Weight | Evidence |
+| --------- | -----: | -------- |
+| Daily usability and clarity | 25 | Task completion, findability, decision visibility, participant rating |
+| Setup and ongoing administration | 15 | Setup minutes, re-entry count, required issue/status edits |
+| Agent integration and BYO freedom | 15 | Native delegation availability; independent-agent handoff |
+| APS fidelity and portability | 15 | Correct approval/revision mapping, module mapping and relink |
+| Reliability and support burden | 15 | Duplicate events, recovery, sync discrepancy and maintenance |
+| Permissions and enterprise fit | 10 | Tenant separation, custom workflows, permission limitations |
+| Total cost and switching friction | 5 | Licence/seat/tool costs, developer upkeep, migration effort |
+| **Total** | **100** | **Observed, not assumed** |
+
+Scoring anchors: 0 = cannot complete the scenario; 1 = substantial manual
+workarounds; 2 = repeatable but high friction; 3 = works with tolerable
+administration; 4 = smooth with small limitations; 5 = native and minimal
+extra work. Unsupported preview features do not score as delivered.
+Separate measured data from evaluator judgement. Report untested criteria as
+unknown, not zero or five; do not declare a winner while core tests are missing.
+
+**Non-compensable gates:** no silent APS scope rewrite; no unauthorised
+execution or cross-tenant disclosure; no false APS Complete; no duplicate
+external actions from retries; no dependence on eddaskills, Anvil, vendor
+agent choice or a hosted APS account; no provider required for basic APS use.
+A provider that fails an essential gate cannot win regardless of points.
+
+Recommendation rules:
+
+1. Publish evidence, weighted scores, known access restrictions, confidence
+   and which features depended on optional preview availability.
+2. Choose the highest eligible provider *only* if it materially reduces work
+   compared with the incumbent, accounting for migration and ongoing costs.
+3. If scores differ by fewer than five points out of 100, treat the outcome
+   as a practical tie. Prefer the team's current tracker if it meets all
+   gates; no forced move for cosmetic improvements.
+4. The accountable team owner records an explicit **adopt / pilot longer /
+   keep incumbent / no winner** decision. APS itself remains vendor-neutral.
+5. Do not automatically create, close, move or delete live work as a result
+   of a scorecard. A migration is a separate approved operation.
+
+### Opt-in adoption protocol
+
+If the team wants to use the winner, migrate **only a bounded pilot cohort**
+of active work items. Preserve original issue URLs, discussion/history links,
+APS Git identity/revisions and evidence. Preview field/priority/status
+mappings, check access for humans and agents, avoid duplicate notifications,
+and provide reversible rollback to the incumbent. Do not treat a new issue
+ID as a new APS work item. Run at least one real planning-to-review cycle,
+then measure coordination cost and delivery clarity again. Promotion to the
+team's default tracker requires human sign-off; publishing APS adapters does
+not require that team adoption.
+
+### Provider maturity boundaries
+
+- GitHub: official MCP, Issues/Projects, PRs and Actions are a useful baseline.
+  Copilot issue assignment exists; third-party agents and GitHub Agentic
+  Workflows have preview/eligibility constraints and must be separately tested.
+- Linear: official MCP is sufficient for basic issue operations; native agent
+  session/plan APIs are Developer Preview / technology preview. Durable sync
+  would use GraphQL and webhook-driven reconciliation, not a live MCP chat
+  masquerading as a controller.
+- Jira Cloud: Atlassian Rovo MCP works for external clients with appropriate
+  access. A native remote-agent integration needs a Forge app and A2A-based
+  service, and is **not** the baseline proof.
+- Slack: ordinary channels/threads are baseline. Advanced Slack Code APIs
+  may require partner/beta access; check availability when the optional app
+  is considered.
+
+If the measured manual integration is already good enough, **stop at the
+documented recipes**. That remains a successful outcome.
 
 ## Ease of Use and Value Criteria
 
-Measure real users and tasks; do not claim time savings without evidence.
+Measure real users and tasks; do not assert time savings or score a preferred
+provider before completing the pilots.
 
-- A new user already using APS and a selected surface can follow the published
-  manual integration journey in **15 minutes or less** without creating an APS
-  account or installing a second agent/harness (target to test, not a claim).
-- At most **one** authoritative APS work item/contract is maintained; links
-  and projections do not require copy/pasting an independent set of acceptance
-  criteria into the provider. Track extra manual updates per work item.
-- A non-specialist can find the goal, current decision owner, blockers and
-  PR/verification links in the familiar surface without opening agent logs.
-- A team can use one issue to track a module and can work without issue
-  explosion when many internal APS items exist.
-- Switching from one agent to another leaves the accepted APS intent intact.
-- A no-Linear/no-Slack Git+CLI journey remains valid with the adapter absent.
-- **Zero** silent plan rewrites, false Complete claims, duplicate execution
-  starts from retried events, or leaked secrets in tested failure cases.
+- A user with existing APS/provider access can follow each native recipe
+  within **15 minutes** without an APS account, eddaskills or new agent
+  runtime (proposed target, to measure).
+- At most one Git-reviewed APS contract is authoritative; link projections
+  instead of maintaining duplicated acceptance criteria.
+- A non-specialist can see the task, decision owner, blocker, proof and next
+  action in their chosen issue tracker without parsing agent logs.
+- GitHub Projects is optional; no issue explosion for a multi-item module.
+  Jira schemes/custom fields and Linear issue structures retain their normal
+  semantics instead of mirroring APS action checkpoints.
+- A change of agent and a change of tracker both leave APS identity/review
+  history intact; reconnecting links is tested explicitly.
+- Pure Git/CLI and no-provider operations remain fully functional.
+- Tested failure cases contain **zero** silent plan rewrites, false Complete,
+  unintended duplicate external actions or cross-workspace data leaks.
+- Compare actual provider costs, availability and administrator requirements
+  for the adopting team rather than assuming every preview/API is enabled.
+- Track setup time, repeated updates per issue, participant clarity, handling
+  of blockers, permissions and recovery across the same three scenarios.
 
-Pilot matrix: one small bug, one multi-item feature and one merged-but-not-
-released change; exercise (a) Linear, (b) Slack threads, (c) both linked to
-the same APS item and (d) a provider-free control. Include a planner/product
-participant, a developer and a reviewer. Record elapsed setup/work-handoff
-time, manual re-entry count, status mismatch count, interventions and perceived
-clarity. Each stage's promotion should cite this evidence.
+Selection and adoption evidence should be written as a versioned report linked
+from SURF-004 and SURF-012; this plan is not itself a finding of which product
+wins.
 
 ## Failure Modes, Trust and Recovery
 
 | Scenario | Expected behaviour |
 | -------- | ------------------ |
-| Linear issue closed before CI/release | APS not marked Complete; human-visible mismatch |
+| GitHub/Linear/Jira issue closed before CI/release | APS not marked Complete; human-visible mismatch |
 | Edited issue contradicts approved Git plan | Proposed revision, never silent APS overwrite |
 | Slack instruction attempts to expand scope | Escalation/plan review; no extra authority granted |
 | Two agents claim the same item | TEAM claim when available; otherwise surface concurrency uncertainty and avoid implying exclusivity |
@@ -287,7 +426,12 @@ clarity. Each stage's promotion should cite this evidence.
 | Private issue or thread links shared elsewhere | Enforce workspace/project visibility; never cross-post hidden content |
 | Prompt injection or malicious ticket/comment | Treat external content as untrusted input, never a tool instruction or permission |
 | Model or agent switching | Contract remains portable; model hint never grants tools/permissions |
-| Release/merge automation conflicts with Linear rules | Disable/configure contradictory auto-close mappings; fail safe |
+| Release/merge automation conflicts with tracker rules | Disable/configure contradictory auto-close mappings; fail safe |
+| Project board field disagrees with issue status | Explain which field is provider-owned; never infer APS completion |
+| Jira issue transitions/custom field not present | Read-only fallback, explicit unsupported/unknown rather than data loss |
+| Team switches trackers or re-links an issue | Preserve APS identity/evidence; detect duplicate links and verify authorised access |
+| Selection rubric has gaps or biased preview assumptions | Publish unknowns; no winner until comparative baseline is reliable |
+| Pilot migration fails or duplicates work | Reconcile with incumbent, undo writes where safe, preserve history URLs |
 | Offline local-only APS project | Existing CLI/Markdown works with all integrations disabled |
 
 A production adapter additionally needs authenticated tenant isolation,
@@ -301,53 +445,68 @@ source-code context by default.
 
 | Alternative | Assessment |
 | ----------- | ---------- |
-| Move APS source of truth into Linear | Reject: vendor lock-in, breaks Git review and offline/manual use |
+| Move APS source of truth into any tracker | Reject: vendor lock-in, breaks Git review and offline/manual use |
 | Build a required APS chat bot and orchestration service | Reject: unnecessary second runtime and account requirement |
 | Bundle eddaskills or Anvil with public integration | Reject: internal/product-specific capability; independent opt-in consumers |
 | Full bidirectional issue/plan sync from day one | Reject: conflicting ownership and high failure/maintenance cost |
 | Mirror every APS action as a ticket or chat message | Reject: noisy for humans, duplicates the backlog |
+| Treat GitHub technical reference as automatic team winner | Reject: implementation convenience is not measured user value |
 | Start with Slack Code APIs | Defer: partner-gated beta; normal channels and threads are sufficient for proof |
 | Use only docs and never build adapters | Valid if the usability pilot does not justify additional infrastructure |
 
 ## Proposed Decisions (require SURF-000 ratification)
 
-- **D-001:** Work surfaces are optional interfaces, not APS planning authority.
-- **D-002:** The public contract is provider- and executor-neutral; no bundled
-  eddaskills, Anvil, agent engine, credentials or hosted service.
-- **D-003:** Link external work to stable APS identity and reviewed Git
-  revision; keep acceptance criteria and execution authorisation in Git.
-- **D-004:** Try Linear MCP and native agents before developing an API-backed
-  adapter or Linear agent installation.
-- **D-005:** Try Slack mentions/threads and native coding agents before
-  developing a Slack app or relying on beta Slack Code APIs.
-- **D-006:** External statuses are attributed, evidence-backed projections;
-  they cannot silently expand scope or mark APS Complete.
-- **D-007:** TEAM owns atomic claims and PROG owns progress storage; this
-  module must neither reimplement nor block on unshipped TEAM/PROG features
-  for read-only/manual examples.
-- **D-008:** Adapter development follows measured ease-of-use evidence,
-  not an assumed need for full bidirectional sync.
+- **D-001:** Work surfaces are optional; APS/Git owns approved intent.
+- **D-002:** Public contract is provider- and executor-neutral; eddaskills,
+  Anvil, a hosted runtime and vendor plugins remain opt-in only.
+- **D-003:** Bind external references to stable APS identity and reviewed
+  Git revision; issue and chat content cannot silently change scope.
+- **D-004:** GitHub Issues/Projects is the *technical reference*, Linear
+  the *usability benchmark*, Jira Cloud the *enterprise portability test*.
+  No adoption winner is decided in advance.
+- **D-005:** Slack is a conversational overlay, independently usable with
+  GitHub, Linear, Jira or no tracker. Mentions do not confer authority.
+- **D-006:** External states are attributed, evidence-backed projections,
+  never independent APS completion or permission grants.
+- **D-007:** TEAM owns claims, PROG owns progress storage; SURF only consumes
+  ratified projections. Baseline examples cannot depend on unfinished work.
+- **D-008:** Pilot existing MCP/native capabilities before building optional
+  GraphQL/REST/webhook/Forge/Slack Code adapters.
+- **D-009:** Evaluate providers against common scenarios, hard safety gates
+  and a predeclared scorecard. A team may adopt the winner only by explicit
+  approval and a reversible pilot.
+- **D-010:** Publishing multi-provider APS patterns and an internal team's
+  preferred tracker are separate decisions.
 
 ## Open Questions
 
-1. What stable external reference format and storage location give usable
-   links across clones, nested plan trees and multiple provider workspaces,
-   without polluting minimal APS work-item fields?
-2. How should a reviewed plan revision be bound to human approval when the
-   initial command comes from Linear/Slack?
-3. Is the existing APS Markdown plus `aps export --json` adequate for the
-   first pilots, or is an item-level structured read/projection needed?
-4. How should a team configure Linear/Slack status labels without changing the
-   core APS state vocabulary or conflicting with GitHub auto-close?
-5. Which execution/claim warning must be shown while TEAM is Draft?
-6. Which SDK/API features are actually available to non-partners when the
-   optional advanced providers are implemented?
-7. Does the pilot demonstrate enough value to warrant maintaining an
-   optional API-backed adapter at all?
+1. Which portable external-reference shape and storage location work across
+   nested plan trees, multiple providers/workspaces and a changing tracker?
+2. How is reviewed-plan approval proved for actions initiated by each native
+   agent or external issue/comment?
+3. Does the existing APS export plus Markdown supply the context each provider
+   needs, or does the pilot justify an additive item-level read projection?
+4. What provider-specific status mapping avoids GitHub Projects vs issue
+   status disagreements, Jira workflow differences and Linear auto-close?
+5. Which claim/concurrency warning is necessary while TEAM remains Draft?
+6. Which native agent/MCP/preview capabilities are accessible in the actual
+   test accounts, and what is the operational cost?
+7. Does measured reduced administration justify any production adapter?
+8. What is the adopting team's incumbent work tracker, current issue volume,
+   licence/access constraints and acceptable pilot cohort? Capture during
+   SURF-012 rather than guessing now.
+9. Can a linked APS item be relinked from GitHub to Linear to Jira and
+   restored to its original provider without losing identity, evidence or
+   review authority?
 
 ## References and Existing Ownership
 
 - [APS integration export](../../docs/integrations.md)
+- [GitHub official MCP](https://github.com/github/github-mcp-server)
+- [GitHub Issues agent assignment](https://docs.github.com/en/copilot/how-tos/copilot-on-github/use-copilot-agents/overview)
+- [GitHub agentic workflows](https://docs.github.com/en/copilot/concepts/agent-capabilities/agent-powered-workflows-and-operations/about-github-agentic-workflows) — public preview
+- [Atlassian Rovo MCP](https://developer.atlassian.com/cloud/rovo-mcp/guides/getting-started/)
+- [Jira remote agents](https://developer.atlassian.com/platform/forge/remote-agents-in-jira/) — requires Forge and A2A
 - [APS team coordination](../modules/team-coordination.aps.md)
 - [APS progress journal](../modules/progress-journal.aps.md)
 - [APS orchestration](../modules/orchestrate.aps.md)
@@ -361,6 +520,7 @@ source-code context by default.
 - [Slack Code developer availability](https://slack.dev/slack-code-a-dedicated-place-for-agent-work/)
 - [Slack agent design guidance](https://docs.slack.dev/concepts/agent-design/)
 
-This is a planning proposal. It does not claim that any Linear/Slack adapter,
-APS Slack bot, distributed claim service or unattended native-agent bridge
-already exists.
+This is a planning proposal. It does not claim that any GitHub/Linear/Jira/
+Slack adapter, APS Slack bot, distributed claim service, provider-wide native
+agent integration or unattended agent bridge already exists. No comparison
+scores or internal adoption decision have been recorded yet.
