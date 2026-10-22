@@ -146,37 +146,37 @@ for vendor capability constraints, comparison, security and adoption gates.
 
 ## Work Items
 
-### SURF-000: Ratify the work-surface contract
+### SURF-000: Ratify the work-surface and selection contract
 
-- **Intent:** Approve the smallest portable integration boundary that adds
-  user value without granting work surfaces or agents planning authority.
-- **Expected Outcome:** The linked design is accepted or explicitly amended;
-  the ownership matrix, external reference rules, approved-revision binding,
-  provider status mapping, failure semantics and adoption gates are unambiguous.
-  Open questions have written v1 defaults. No bundled harness or hosted
-  dependency is introduced.
-- **Validation:** Design review resolves each open question and checks the
-  failure matrix; `aps lint plans` has no errors; an agent without Linear,
-  Slack or eddaskills can identify an existing Ready item using APS alone.
+- **Intent:** Fix the smallest portable APS/tracker/chat boundary before
+  building provider-specific code or selecting a team's work surface.
+- **Expected Outcome:** Review and ratify authority, approved Git revision,
+  external link identity, ownership of ticket fields, evidence projections,
+  cross-provider semantics, failure handling, scorecard and adoption gates.
+  Explicitly confirm GitHub reference / Linear UX / Jira portability and
+  Slack+Teams overlays are testing roles, not preselected winners.
+- **Validation:** Design questions have documented v1 decisions; every
+  scenario in its failure matrix yields a definite safe result; no provider,
+  agent runtime, new APS hosting or vendor field becomes a mandatory core
+  dependency; `aps lint plans` remains clean.
 - **Confidence:** high
 - **Dependencies:** None
 - **Status:** Draft
 
-### SURF-001: Specify portable external work references and handoffs
+### SURF-001: Specify portable references and execution handoffs
 
-- **Intent:** Make an external ticket, conversation or executor refer to the
-  correct APS work and reviewed revision without duplicating its authority.
-- **Expected Outcome:** A small versioned reference/profile contract handles
-  repository, plan root, federated child, item/module ID, reviewed Git
-  revision, provider/workspace/object identity and relationship cardinality.
-  Optional link storage, ownership of each field, conflict/relink behaviour,
-  and unavailable-source treatment are documented. Minimal APS templates
-  remain unchanged.
-- **Validation:** Fixtures cover two Linear issues linked to one module,
-  one Linear issue plus one Slack thread linked to one item, renamed external
-  objects, duplicate external IDs in different workspaces, missing providers,
-  and an unapproved revision. All links resolve or return an explicit
-  ambiguity/error; neither rewrites APS intent nor needs provider secrets.
+- **Intent:** Let any tracker, chat or executor refer to the correct APS
+  item and reviewed Git revision without owning that plan's approval.
+- **Expected Outcome:** An optional versioned contract covers repo, plan
+  root, federated child, item/module ID, reviewed Git revision and external
+  provider/workspace/object identity. It permits many-to-many links
+  (GitHub, Linear, Jira, Slack, Teams) without storing provider credentials
+  or making new fields mandatory in APS Markdown.
+- **Validation:** Fixtures link one APS module to GitHub/Linear/Jira issues,
+  and a single APS work item to all three issues plus Slack and Teams
+  conversations; rename/relink, duplicate tenant IDs, missing permissions,
+  cross-repo/nested plans and stale approval revisions yield unambiguous
+  results. The canonical APS scope is never rewritten by relinking.
 - **Confidence:** medium
 - **Dependencies:** SURF-000
 - **Status:** Draft
@@ -219,43 +219,44 @@ for vendor capability constraints, comparison, security and adoption gates.
 - **Dependencies:** SURF-001
 - **Status:** Draft
 
-### SURF-004: Measure real usability and cross-surface reliability
+### SURF-004: Compare real usability across tracker and chat options
 
-- **Intent:** Decide from evidence whether the public pattern genuinely
-  improves adoption and reduces work instead of increasing administration.
-- **Expected Outcome:** A documented pilot tests a small bug, multi-item
-  feature and merged-but-not-shipped change across Linear, Slack, a combined
-  linked journey and provider-free Git/CLI control. It includes product,
-  engineering and reviewer perspectives, an executor switch, recovery from
-  missing provider context and a duplicate-execution risk disclosure.
-  Results compare manual entry, setup/handoff time, interventions, status
-  mismatch and ability to find evidence.
-- **Validation:** Pilot records the actual measurements against the design's
-  targets; no-proprietary-harness and no-provider paths both succeed; zero
-  silent scope rewrites and zero false Complete claims in the exercised
-  cases. A written go/no-go identifies whether any optional adapter or
-  enhanced APS export is justified, including a valid decision to stop.
+- **Intent:** Determine whether the pattern reduces administration and
+  which *structured* work tracker a real team could productively adopt.
+- **Expected Outcome:** A reproducible pilot runs the same small bug,
+  multi-item feature and merged-not-shipped item using GitHub Issues/Projects,
+  Linear and Jira Cloud, with a Git+CLI-only control. A separate paired
+  comparison tests Slack and Teams as conversational overlays. Capture a
+  product/lead, developer and reviewer; agent switching, provider outage,
+  explicit claim uncertainty, setup time, manual re-entry, evidence
+  findability, permissions, actual cost and participant clarity.
+- **Validation:** Publish raw measurements plus a confidence-labelled,
+  predeclared weighted 100-point tracker scorecard with hard safety gates.
+  Both chat overlays work with any linked tracker and APS-only references,
+  or limitations are explicitly reported. No false Complete, silent scope
+  rewrite or unauthorised execution occurs. Findings identify whether
+  extra APS export support or any provider adapter is worthwhile.
 - **Confidence:** medium
-- **Dependencies:** SURF-002, SURF-003
+- **Dependencies:** SURF-002, SURF-003, SURF-010, SURF-011, SURF-013, SURF-017
 - **Status:** Draft
 
-### SURF-005: Publish a tool-neutral adoption pattern
+### SURF-005: Publish multi-provider, tool-neutral adoption recipes
 
-- **Intent:** Make APS plus existing team tools approachable without requiring
-  readers to learn a new agent orchestration process.
-- **Expected Outcome:** Public docs give concise setup, authority and
-  troubleshooting guidance for Linear MCP, Slack threads, agent-selection
-  hints, a Git/CLI-only workflow and linked Linear+Slack use. Each example
-  separates supported behaviour from proposed adapter capabilities and
-  labels Slack Code beta/Linear agent preview limits.
-- **Validation:** A person unfamiliar with this repository can run the
-  three baseline journeys from the docs, link the relevant APS contract,
-  understand who owns each decision, and complete setup in no more than
-  15 minutes after normal provider access exists (measured target). All
-  local links resolve, APS lint passes and no guide instructs readers to
-  install eddaskills, Anvil or a hosted APS service.
+- **Intent:** Let people use APS in familiar tracker/chat tools in minutes
+  without adopting an unrelated agent execution framework.
+- **Expected Outcome:** Public quickstarts cover GitHub Issues and optional
+  Projects, Linear official MCP, Jira Cloud Rovo MCP, Slack channels/threads,
+  Teams standard-channel threads/group chat, and pure Git+CLI. They cover
+  issue-to-module, issue-to-item, changed scope, agent selection, reporting
+  evidence and reversible tracker relinking. Preview/tenant access caveats
+  are visibly documented.
+- **Validation:** A newcomer with existing provider access can follow each
+  baseline recipe in 15 minutes or less (test target). No recipe asks them
+  to install eddaskills, Anvil, an APS hosted controller or a mandatory bot.
+  All links resolve; APS and Markdown linters pass; advanced restricted
+  features are never presented as baseline requirements.
 - **Confidence:** high
-- **Dependencies:** SURF-004
+- **Dependencies:** SURF-004, SURF-012
 - **Status:** Draft
 
 ### SURF-006: Add a richer APS handoff projection only if needed
@@ -317,22 +318,22 @@ for vendor capability constraints, comparison, security and adoption gates.
 - **Status:** Draft
 - **Approval Gate:** Only promote after a recorded SURF-004 go decision
 
-### SURF-009: Conformance-test any approved provider adapter
+### SURF-009: Conformance-test approved provider adapters
 
-- **Intent:** Make optional integrations safe, predictable and replaceable
-  without making APS responsible for executing agents.
-- **Expected Outcome:** A reusable contract test matrix checks every approved
-  provider adapter against authority, identity, visibility, idempotency,
-  failure recovery, security, no-provider fallback and vendor portability.
-  It explicitly distinguishes observed CI/PR facts from self-reported agent
-  activity and from authorised APS completion.
-- **Validation:** For each shipped adapter, adversarial fixtures prove
-  repeated/stale events cannot start duplicate work or overwrite approved
-  scope; secrets stay out of logs; cross-workspace access is denied; degraded
-  source status is `unknown` rather than fabricated; unauthorised users
-  cannot approve a different revision. All existing APS CLI/MCP workflows
-  remain green without the provider. If no adapter is approved, this item
-  remains Draft rather than manufacturing infrastructure.
+- **Intent:** Keep optional GitHub, Linear, Jira, Slack and Teams adapters
+  interchangeable, safe and truthful about actual execution.
+- **Expected Outcome:** A reusable provider-adapter contract matrix covers
+  stable identity, reviewed Git revision, tenant and agent permissions,
+  event idempotency, status/evidence provenance, provider outages,
+  relinking, privacy and provider-free fallback. Unsupported advanced
+  app/agent capabilities degrade visibly rather than silently.
+- **Validation:** For every adapter *actually approved and shipped*,
+  adversarial tests verify duplicate/out-of-order events never create
+  duplicate items/runs, a different tenant cannot access hidden data,
+  forged chat instructions cannot expand scope, an issue/project state
+  cannot silently mark APS Complete, and provider shutdown leaves Git/CLI
+  viable. If no adapter is approved, record why and leave implementation
+  unstarted.
 - **Confidence:** medium
 - **Dependencies:** SURF-001, SURF-004
 - **Status:** Draft
