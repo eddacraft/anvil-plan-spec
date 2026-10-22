@@ -504,65 +504,106 @@ for vendor capability constraints, comparison, security and adoption gates.
 
 ## Execution and Adoption Strategy
 
-**Phase A — prove value with what's already available**
+**Phase A — contract and working native examples**
 
-1. Ratify the design and authority model (SURF-000).
-2. Define a minimal work reference that can be documented without code
-   (SURF-001).
-3. Run Linear MCP and Slack conversation pilots in parallel (SURF-002/003).
-4. Compare with provider-free operation and record measurable friction
-   (SURF-004).
-5. Publish the useful worked patterns (SURF-005). This can be the final
-   release outcome.
+1. Ratify the provider-neutral authority/link contract (SURF-000/001).
+2. Build **GitHub Issues/Projects** and **Linear** manual/MCP journeys in
+   parallel (SURF-010/002), measuring technical reliability and usability.
+3. Prove Jira Cloud against the same contract (SURF-011), and run independent
+   **Slack** and **Teams** conversational pilots (SURF-003/017).
+4. Prove changing/adding issue trackers preserves APS identity, approval and
+   evidence (SURF-013).
 
-**Phase B — optional engineering only after proof**
+**Phase B — evidence, selection and portable release**
 
-1. Decide if missing APS item-level export data warrants additive read
-   support (SURF-006).
-2. Approve Linear and/or Slack adapters individually (SURF-007/008), only
-   where removal of manual work clearly outweighs maintenance/permission
-   costs.
-3. Apply provider-neutral failure/security conformance to anything actually
-   shipped (SURF-009).
+1. Compare normal engineering tasks across GitHub, Linear, Jira and a pure
+   Git+CLI control; compare Slack and Teams separately (SURF-004).
+2. Publish a 100-point weighted tracker evaluation with hard safety gates,
+   raw measurements and confidence, and record the team's explicit
+   **adopt / keep incumbent / extended pilot / no winner** decision
+   (SURF-012). GitHub is the technical reference, not the automatic winner.
+3. Publish usable no-custom-adapter recipes for all tested providers and
+   a provider-free path (SURF-005).
+4. An interested team may *separately authorise* a small live adoption
+   cohort with a dry-run, original-link retention and rollback (SURF-014).
+   No live migration is authorised by this planning PR.
 
-If SURF-004 shows the native MCP/agent workflow is already good enough,
-record the result and close the optional branch as not planned. Do not
-reinterpret a Draft adapter item as permission to build it.
+**Phase C — optional engineering only if shown to be worthwhile**
+
+1. Add a richer read-only APS item/evidence projection only for proven
+   gaps (SURF-006).
+2. Independently approve any needed GitHub (SURF-015), Linear (SURF-007),
+   Jira Cloud (SURF-016), Slack (SURF-008) or Teams (SURF-018) adapter.
+3. Apply provider-neutral security, idempotency, authority and recovery
+   conformance to any integration actually shipped (SURF-009).
+
+Each optional adapter has its own approval gate. If the native/MCP journey is
+good enough, record a no-build decision and ship documentation alone. The
+adopting team's preferred tracker and chat app do not constrain the public
+APS specification or require others to migrate.
 
 ## Decisions (proposed; ratify through SURF-000)
 
-- **D-001:** Human work surfaces are optional; APS/Git owns approved intent.
-- **D-002:** Public APS stays executor-neutral; no eddaskills or Anvil bundle,
-  native-agent requirement, hosted controller or mandatory plugin.
-- **D-003:** Start from Linear MCP and normal Slack threads; adapter code
-  comes after measured usability evidence.
-- **D-004:** Support issue-to-module and issue-to-item links; never mirror
-  every APS checkpoint into external tracking.
-- **D-005:** Agent mentions and optional Model/Reasoning fields are routing
-  hints, not claim, authorisation or evidence of completed work.
-- **D-006:** Adopt TEAM/PROG outputs when ratified, not their ownership.
-- **D-007:** Provider-specific preview/beta APIs are optional enhancements;
-  unsupported environments retain a complete baseline flow.
+- **D-001:** Work management and chat are optional APS surfaces; Git/Markdown
+  remains the approved source of planning intent and criteria.
+- **D-002:** Public APS stays executor neutral; never bundle eddaskills,
+  Anvil, a hosted runtime, a new agent supervisor or vendor-only credentials.
+- **D-003:** GitHub Issues/Projects is the **technical reference**, Linear
+  the **usability benchmark**, Jira Cloud the **enterprise interop test**.
+  Those are evaluation roles, not a preselected winner.
+- **D-004:** Slack and Microsoft Teams are **conversational overlays**
+  usable with any tracker or a raw APS item, never required for core APS.
+- **D-005:** Links to APS modules and work items are versioned and portable;
+  no duplication of every APS action/checkpoint into external tickets.
+- **D-006:** An agent mention, task assignment or Model/Reasoning hint is
+  not a claim, approval, validation result or elevated authority.
+- **D-007:** Use real Git/CI evidence and explicit unknown statuses; a
+  closed issue or merged PR cannot silently mark APS Complete.
+- **D-008:** TEAM owns atomic claims; PROG owns progress storage; consume
+  ratified projections rather than implementing substitutes here.
+- **D-009:** Native workflows and existing MCP precede optional provider
+  adapters. Preview/partner-only APIs are never baseline requirements.
+- **D-010:** Select an adopting team's preferred tracker only after common
+  scenarios, weighted scoring, hard gates and human approval, with a
+  reversible small-cohort pilot; the public APS contract stays agnostic.
+- **D-011:** Compare Teams and Slack *separately* for conversation usability,
+  tenant policy and installed agents; do not score them as issue trackers.
 
 ## Open Questions
 
-- How is a portable link mapping stored without forcing provider fields into
-  every APS module and how are link conflicts resolved?
-- Which revision approval proof is sufficient for provider-originated work?
-- Does the pilot justify a richer read-only APS item projection?
-- How should providers display review/integration/release states without
-  changing canonical status tokens?
-- Which, if any, provider adapter is justified by measured manual effort?
-- What warning is required when exclusive coordination is not available?
+- Where should external work references live so nested plans and multiple
+  workspace IDs do not pollute minimal APS templates?
+- How is the approval of an exact reviewed Git revision verified when an
+  external issue or chat message initiates a run?
+- Does the existing Markdown plus `aps export --json` suffice for all
+  tested providers, or is a richer item-level read justified?
+- How should GitHub Projects fields, Linear statuses and Jira transitions
+  map to derived evidence without overriding APS states?
+- Which agent/claim-warning is mandatory while TEAM is Draft?
+- What native agent capabilities are **actually** enabled in test accounts?
+- Does the user evidence warrant any installed integration at all?
+- Which tracker and chat product does the adopting team already use? What
+  are its account, licensing, admin and switching constraints?
+- Can switching GitHub → Linear → Jira → GitHub preserve an APS work item's
+  authorised revision and evidence as Slack/Teams threads reference it?
+- Which Teams channel/group chat app permissions and RSC policies are
+  granted, and what useful fallback remains when agent apps are blocked?
 
 ## Design and References
 
 - [Portable work surfaces design](../designs/2026-10-22-work-surfaces.design.md)
-- [Existing APS integration export](../../docs/integrations.md)
+- [Current APS JSON export](../../docs/integrations.md)
 - [TEAM coordination module](./team-coordination.aps.md)
 - [PROG progress module](./progress-journal.aps.md)
-- [Public Linear MCP docs](https://linear.app/docs/mcp)
-- [Slack Code developer docs](https://docs.slack.dev/ai/slack-code/)
+- [GitHub MCP](https://github.com/github/github-mcp-server)
+- [GitHub agentic workflows](https://docs.github.com/en/copilot/concepts/agent-capabilities/agent-powered-workflows-and-operations/about-github-agentic-workflows)
+- [Linear official MCP](https://linear.app/docs/mcp)
+- [Atlassian Rovo MCP](https://developer.atlassian.com/cloud/rovo-mcp/guides/getting-started/)
+- [Jira Cloud remote agents](https://developer.atlassian.com/platform/forge/remote-agents-in-jira/)
+- [Slack Code](https://docs.slack.dev/ai/slack-code/)
+- [Teams channel/group chat agent messages](https://learn.microsoft.com/en-us/microsoftteams/platform/bots/how-to/conversations/channel-and-group-conversations)
+- [Teams SDK extension](https://learn.microsoft.com/en-us/microsoft-365/agents-sdk/teams/teams-extension)
+- [Teams app/agent consent and administration](https://learn.microsoft.com/en-au/MicrosoftTeams/teams-app-setup-policies)
 
-All work items above remain Draft. This PR requests review of a plan, not
-authorisation to implement provider adapters.
+All SURF work items remain **Draft**. This PR requests review of planning,
+not permission to implement provider adapters or migrate live issues.
