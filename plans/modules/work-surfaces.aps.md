@@ -1,135 +1,148 @@
-# Work Surfaces Module — Linear, Slack and BYO Agents
+# Work Surfaces Module — GitHub, Linear, Jira, Slack, Teams and BYO Agents
 
 | ID   | Owner  | Priority | Status |
 | ---- | ------ | -------- | ------ |
 | SURF | @aneki | medium   | Draft  |
 
-**Last reviewed:** 2026-10-22
+**Last reviewed:** 2026-10-23
 
 ## Purpose
 
-Make APS easy to use from existing issue trackers, team conversations and
-native coding agents without turning APS into a project manager, hosted agent
-runtime or mandatory integration service. Publish a provider-neutral external
-work reference and low-ceremony adoption pattern, prove it with Linear and
-Slack, then consider optional adapters only when they add measurable value.
+Make APS easy to adopt from existing structured work trackers — GitHub Issues
+and optional Projects, Linear and Jira Cloud — and conversational team
+surfaces — Slack and Microsoft Teams — without turning APS into a mandatory
+project manager, agent execution engine or hosted service.
+
+GitHub is the technical reference; Linear is the usability benchmark; Jira
+Cloud tests enterprise interoperability. Slack and Teams are alternative
+chat overlays usable with any tracker or with an APS item alone. Compare
+options empirically and let an adopting team *optionally* select a preferred
+provider through a separately authorised, reversible trial. No winner
+is chosen in advance.
 
 ## Background
 
-APS already has Git-native plans, a multi-harness planning interface, the
-optional APS MCP server and `aps export --json`. That is enough to explore
-work-surface integrations without re-implementing execution.
+APS already supplies Git-native plans, an optional MCP server,
+`aps export --json` and a multi-harness planning interface. Rather
+than recreate issue trackers, chat, coding agents or execution loops, this
+module documents portable references, authority boundaries, usable
+native/MCP workflows and conditional integrations.
 
-The team wants a public pattern where:
+Public APS must support:
 
-- Linear can organise and delegate work while APS keeps the approved intent
-  and validation contract in Git.
-- A Slack team conversation can mention different coding agents to plan,
-  execute or review the *same* APS-backed work, with a thread or task-specific
-  code channel providing collaborative visibility.
-- A team can bring its own agent, custom harness or direct human workflow.
-- eddaskills remains an optional **internal eddacraft** harness, not bundled,
-  installed or required by public APS. Anvil is similarly optional.
-- The result reduces duplicate administration rather than making people
-  maintain parallel backlogs and statuses.
+- GitHub issues and optional Projects, with direct connections to PRs and CI.
+- Linear's ordinary issue workflow and its optionally available agent APIs.
+- Jira Cloud's varied workflow schemes and Atlassian Rovo MCP.
+- Slack or Teams discussions involving existing agents, without requiring
+  a custom APS chat bot.
+- Independent native agents, custom orchestrators, human delivery, or none.
+- eddaskills as an *internal eddacraft option*, **not** a public APS runtime,
+  required dependency or preferred implementation. Anvil also stays optional.
 
-Existing ownership constrains this module:
+Existing module ownership:
 
-- [INTEGRATIONS](./integrations.aps.md) owns the present versioned
-  `aps export --json` and GitHub Action; consume and extend only through
-  its documented interface.
-- [ORCH](./orchestrate.aps.md) owns readiness, dependency-aware item selection
-  and the APS status transition/CLI.
-- [TEAM](./team-coordination.aps.md) (Draft) owns actor/run identity,
-  atomic claims, leases and cross-process handoffs; no new claims here.
-- [PROG](./progress-journal.aps.md) (Draft) owns progress journals and effective
-  progress for standing backlogs; no new progress database here.
-- [AGENT](./agents.aps.md) owns existing APS agent/skill scaffolding;
-  no additional bundled execution agent is required.
+- [INTEGRATIONS](./integrations.aps.md) — current versioned export and Action.
+- [ORCH](./orchestrate.aps.md) — work item readiness, context and transitions.
+- [SPEC](./spec.aps.md) — canonical statuses and model/reasoning hints.
+- [TEAM](./team-coordination.aps.md) (Draft) — actor identity, atomic
+  claims, leases and handoffs.
+- [PROG](./progress-journal.aps.md) (Draft) — journalled progress.
+- [AGENT](./agents.aps.md) — existing APS agent and skill scaffolds.
 
-The proposed approach and concrete failure/UX cases are in
-[the work-surface design](../designs/2026-10-22-work-surfaces.design.md).
+See [the work-surfaces design](../designs/2026-10-22-work-surfaces.design.md)
+for vendor capability constraints, comparison, security and adoption gates.
 
 ## Desired Outcomes
 
-- Existing Linear users can find/link authorised APS work from their normal
-  issue flow without copying all acceptance criteria into two systems.
-- Slack users can coordinate distinct coding agents from a shared discussion
-  without treating a mention as an execution permission or exclusive claim.
-- Native Linear/Slack agents and arbitrary third-party harnesses consume APS
-  without installing eddaskills, Anvil or a dedicated APS execution service.
-- Plan scope, authority and outcome validation stay reviewable in Git; chat and
-  backlog statuses are attributed projections with evidence links.
-- A no-provider local-first project continues to behave identically.
-- Evidence from a real usability pilot determines whether an API-based adapter
-  is worth building; documentation-only is a legitimate successful outcome.
+- Any supported tracker issue can link an APS item or module, with
+  Git-approved scope and validation remaining canonical.
+- Normal provider interfaces display meaningful progress, decisions and
+  independently verifiable evidence without duplicating acceptance contracts.
+- Team chat in Slack or Teams can coordinate different agents and reference
+  the same APS item. A mention is not a work claim or permission grant.
+- A task can reference GitHub, Linear and Jira simultaneously, then switch
+  or restore its preferred tracker without changing APS identity or review.
+- The same public APS format works with no external provider, eddaskills,
+  Anvil, account or new execution framework.
+- A comparable real-user pilot identifies a preferred tracker *if one earns
+  that recommendation*, or preserves the incumbent if differences are small.
+- An adopting team may trial the chosen work surface with explicit human
+  permission, bounded cohort, evidence and rollback.
+- API-backed provider adapters are conditional on measured value, not an
+  automatic outcome of opening this plan.
 
 ## In Scope
 
-- An optional, provider-neutral external work reference and handoff boundary
-- Human-first Linear MCP and Slack conversation/code-channel examples
-- A clear mapping of issue/module/item granularity and evidence/status projection
-- Gradual adoption with no required extra account, hosted service or bot
-- A comparative user-experience pilot with explicit adoption/safety criteria
-- Conditional, separately approved richer APS read/projection and provider apps
-- Idempotent, permission-safe provider adapter contract and conformance tests
-- Docs for native-agent, custom-agent and no-agent use
+- Portable work-surface reference, relationship and handoff semantics
+- Manual/MCP-first GitHub, Linear and Jira Cloud reference journeys
+- Slack and Teams conversation/thread examples for existing coding agents
+- Optional provider-native rich experiences, only when access allows
+- Issue-to-module and issue-to-item linkage; no issue explosion
+- Reviewed-revision binding and attributed evidence/status projection
+- Multi-provider association and reversible relinking
+- Matched user journeys and a predeclared weighted 100-point tracker scorecard
+- Separate, lightweight comparison of Slack versus Teams chat ergonomics
+- Safety gates, optional preferred-provider decision and scoped adoption pilot
+- Optional richer APS export and provider-specific adapters where justified
+- Provider-neutral failure/permissions conformance for implemented adapters
 
 ## Out of Scope
 
-- Bundling eddaskills, Anvil or another runtime into public APS
-- Building or choosing coding models, native agents, orchestration loops,
-  independent verification engines or a new multi-agent supervisor
-- Replacing Linear, Slack, GitHub, CI or their native execution workflows
-- Requiring a hosted APS tenant, server, database or subscription
-- Making Slack/Linear fields mandatory in minimal APS templates
-- Treating tickets/chat/agent sessions as plan approval, verified completion
-  or authorisation for extra work
-- Universal two-way sync, automatic mass ticket creation or mirroring each
-  agent checkpoint as a chat message
-- Building TEAM claims, PROG journals or a general-purpose messaging bus
-- Depending on Slack Code beta APIs or Linear agent preview APIs for the
-  initial public integration pattern
+- Bundling eddaskills, Anvil or another agent runtime in public APS
+- Building, selecting or operating coding models, multi-agent supervisors,
+  verification engines or a hosted APS agent execution service
+- Replacing GitHub, Linear, Jira, Slack, Teams, CI or project-board UIs
+- Required hosted APS tenant, service, database, new subscription or secrets
+- Core APS template fields for particular vendor issue IDs or chat threads
+- Assuming any closed issue, @mention, agent reply, PR merge or project
+  field update is APS approval, exclusive claim or verified completion
+- Universal bidirectional plan sync or mirroring every agent action to chat
+- Automatic mass ticket creation or migration of a live production backlog
+- Reimplementing TEAM leases, PROG journals or a messaging bus
+- Depending on provider previews or restricted agent APIs for basic use
+- Treating Jira Data Center as validated by Jira Cloud coverage
 
 ## Interfaces and Constraints
 
 **Depends on:**
 
-- INTEGRATIONS-002 — current JSON export (already Complete)
-- ORCH — work-item status/dependency contract (already Complete)
-- SPEC — core APS vocabulary and optional model/reasoning hints (existing)
-- TEAM and PROG — future optional projections only; neither is a prerequisite
-  for the initial manual/read-only examples
+- INTEGRATIONS-002 — present versioned APS export (Complete)
+- ORCH — core readiness and dependency flow (Complete)
+- SPEC — canonical work-item state vocabulary and routing hints
+- TEAM/PROG — *future* optional projections only; not initial pilot blockers
 
-**Exposes (subject to SURF-000):**
+**Exposes (subject to SURF-000 ratification):**
 
-- Provider-neutral external work references and authority/evidence mapping
-- A Git/APS-only workflow and a manual provider-assisted workflow
-- Linear MCP and Slack collaboration examples
-- Optional future adapter conformance cases rather than core vendor APIs
-- Any additive item-level read/outcome projection justified by pilot evidence
+- Git/Git-revision-bound portable external references and link resolution
+- Provider-owned work metadata vs APS-owned intent/evidence boundaries
+- Git/CLI-only, GitHub, Linear, Jira, Slack and Teams worked patterns
+- Provider-specific capability profiles without forced uniformity
+- Measured pilot, recommendation and human-approved adoption protocol
+- Optional separately installed adapters and reusable conformance tests
 
 **Constraints:**
 
-- Markdown/Git stays canonical and fully usable offline.
-- Default workflows cannot require new network calls or extra software.
-- No new core status token solely to satisfy Linear/Slack.
-- Published examples must work without eddaskills or Anvil.
-- Permission, tenant and plan-revision boundaries must be checked before
-  enabling provider-originated execution or state-changing synchronisation.
-- CLI or linter behaviour changes obey D-039 three-way parity requirements.
-- Draft designs and provider previews cannot be described as shipped APS APIs.
+- Git/Markdown is always readable and authorable without providers.
+- No new mandatory network calls, agent, permission or account in APS core.
+- Native provider workflows and MCP are tested before custom adapter code.
+- No chat mention or ticket assignment upgrades APS authorisation.
+- A status projection must state its source, evidence and unknowns.
+- Teams app installation/RSC, Slack Code, Linear agents, GitHub preview agents
+  and Jira Forge/A2A are *optional* availability-dependent enhancements.
+- APS CLI/lint surface changes require D-039 Rust/bash/PowerShell parity.
+- A team adoption or external write requires separate express approval.
 
 ## Ready Checklist
 
-- [x] Problem, users and incremental adoption path documented
-- [x] INTEGRATIONS, ORCH, TEAM, PROG and AGENT ownership identified
-- [x] Existing provider capabilities and availability caveats documented
-- [x] Testable work items and explicit validation outcomes drafted
-- [ ] SURF-000 authority/link/status decisions reviewed and ratified
-- [ ] Open questions about reference persistence and approved-revision
-      binding resolved, with versioned defaults where necessary
-- [ ] Human owner authorises promotion from Draft before any execution
+- [x] Problem, audiences and staged adoption path documented
+- [x] Existing module ownership and no-harness boundary documented
+- [x] GitHub/Linear/Jira and Slack/Teams capability limitations recorded
+- [x] Comparable rubric, safety gates and opt-in adoption process designed
+- [x] Testable proposed work items and dependencies identified
+- [ ] SURF-000 contract, open questions and v1 defaults ratified
+- [ ] Test accounts, incumbent tracker/chat, permissions and pilot cohort
+      recorded before the real-user trials
+- [ ] Accountable owner promotes selected work items from Draft before build
 
 ## Work Items
 
