@@ -384,6 +384,26 @@ Recommendation rules:
 5. Do not automatically create, close, move or delete live work as a result
    of a scorecard. A migration is a separate approved operation.
 
+### Conversational overlay comparison (separate from tracker ranking)
+
+Compare Slack and Teams as optional overlays with the **same** approved APS
+item, tracker link, changed-requirement scenario and two-agent discussion.
+Do **not** include chat providers in the weighted GitHub/Linear/Jira
+tracker selection.
+
+| Factor | Slack | Microsoft Teams |
+| ------ | ----- | --------------- |
+| Baseline | Existing channel/thread and agent mention | Existing standard channel thread/group chat, APS links and installed agent mention |
+| Agent UX | Native agents, optionally Slack Code | Tenant-enabled agent apps; built-in Channel Agent is not a coding workspace |
+| Rich interaction | Threads, links, optional Slack Code | Threads, links, optional Adaptive Cards and proactive messages |
+| Permission risk | Workspace app permissions, Slack Code beta | Tenant installation, RSC, shared/private channel limitations |
+| Portability | Identical APS ID and evidence links | Identical APS ID and evidence links |
+
+Record setup time, admin interventions, clarity, ability to use different
+agents, privacy limits and preferences of actual participants. If the team's
+incumbent conversational platform meets the bar, keep it rather than force
+migration merely to use APS. A team may use neither.
+
 ### Opt-in adoption protocol
 
 If the team wants to use the winner, migrate **only a bounded pilot cohort**
@@ -411,6 +431,12 @@ not require that team adoption.
 - Slack: ordinary channels/threads are baseline. Advanced Slack Code APIs
   may require partner/beta access; check availability when the optional app
   is considered.
+- Teams: normal standard-channel/group chat and APS links are baseline.
+  Teams SDK apps can add @mentions, cards and proactive messages where
+  installed and permitted; broader conversation reads need resource-specific
+  consent. The separate built-in Channel Agent has a one-per-channel limit.
+  Validate feature support in each actual tenant; no special Teams app is
+  required to follow the Markdown plan.
 
 If the measured manual integration is already good enough, **stop at the
 documented recipes**. That remains a successful outcome.
@@ -437,6 +463,8 @@ provider before completing the pilots.
   unintended duplicate external actions or cross-workspace data leaks.
 - Compare actual provider costs, availability and administrator requirements
   for the adopting team rather than assuming every preview/API is enabled.
+- Compare Slack and Teams on the same work conversations without treating
+  either as a replacement for GitHub, Linear or Jira.
 - Track setup time, repeated updates per issue, participant clarity, handling
   of blockers, permissions and recovery across the same three scenarios.
 
@@ -450,13 +478,16 @@ wins.
 | -------- | ------------------ |
 | GitHub/Linear/Jira issue closed before CI/release | APS not marked Complete; human-visible mismatch |
 | Edited issue contradicts approved Git plan | Proposed revision, never silent APS overwrite |
-| Slack instruction attempts to expand scope | Escalation/plan review; no extra authority granted |
+| Slack/Teams instruction attempts to expand scope | Escalation/plan review; no extra authority granted |
 | Two agents claim the same item | TEAM claim when available; otherwise surface concurrency uncertainty and avoid implying exclusivity |
 | Webhook delivered twice or out of order | Idempotent relation keys/event handling; no duplicate issues, runs or updates |
 | Provider unavailable, rate-limited or revoked | Git truth remains available; queue/retry only safe operations; show `unknown` |
 | PR merged while sync process is down | Reconcile from authoritative Git/CI evidence; no invented events |
 | Repo/branch/plan revision changes after approval | Detect revision drift; require revalidation/re-authorisation when material |
-| Private issue or thread links shared elsewhere | Enforce workspace/project visibility; never cross-post hidden content |
+| Private issue or Slack/Teams thread links shared elsewhere | Enforce workspace/project visibility; never cross-post hidden content |
+| Teams agent lacks @mention or RSC access | Work from only authorised visible context; never imply access to entire thread |
+| Teams private/shared channel API cannot post | Link-only/manual fallback, explicit unsupported outcome |
+| Teams admin blocks agent installation | Ordinary conversation links plus APS still work |
 | Prompt injection or malicious ticket/comment | Treat external content as untrusted input, never a tool instruction or permission |
 | Model or agent switching | Contract remains portable; model hint never grants tools/permissions |
 | Release/merge automation conflicts with tracker rules | Disable/configure contradictory auto-close mappings; fail safe |
@@ -485,6 +516,7 @@ source-code context by default.
 | Mirror every APS action as a ticket or chat message | Reject: noisy for humans, duplicates the backlog |
 | Treat GitHub technical reference as automatic team winner | Reject: implementation convenience is not measured user value |
 | Start with Slack Code APIs | Defer: partner-gated beta; normal channels and threads are sufficient for proof |
+| Require Copilot Studio or Teams Channel Agent | Reject: vendor-specific agent runtime and tenant access, not necessary for APS |
 | Use only docs and never build adapters | Valid if the usability pilot does not justify additional infrastructure |
 
 ## Proposed Decisions (require SURF-000 ratification)
@@ -497,8 +529,10 @@ source-code context by default.
 - **D-004:** GitHub Issues/Projects is the *technical reference*, Linear
   the *usability benchmark*, Jira Cloud the *enterprise portability test*.
   No adoption winner is decided in advance.
-- **D-005:** Slack is a conversational overlay, independently usable with
-  GitHub, Linear, Jira or no tracker. Mentions do not confer authority.
+- **D-005:** Slack and Teams are interchangeable conversational overlays,
+  independently usable with GitHub, Linear, Jira or no tracker. Mentions do
+  not confer authority and native agent/tenant restrictions are not APS
+  contract requirements.
 - **D-006:** External states are attributed, evidence-backed projections,
   never independent APS completion or permission grants.
 - **D-007:** TEAM owns claims, PROG owns progress storage; SURF only consumes
@@ -525,12 +559,15 @@ source-code context by default.
 6. Which native agent/MCP/preview capabilities are accessible in the actual
    test accounts, and what is the operational cost?
 7. Does measured reduced administration justify any production adapter?
-8. What is the adopting team's incumbent work tracker, current issue volume,
-   licence/access constraints and acceptable pilot cohort? Capture during
+8. What is the adopting team's incumbent tracker **and chat platform**,
+   current issue volume, licence/access constraints and pilot cohort? Capture during
    SURF-012 rather than guessing now.
-9. Can a linked APS item be relinked from GitHub to Linear to Jira and
-   restored to its original provider without losing identity, evidence or
-   review authority?
+9. Can an APS item be relinked from GitHub to Linear to Jira, then restored,
+   while Slack and Teams conversations reference its unchanged identity?
+10. Which Teams agent apps can be installed in the actual tenant? Does it
+    permit agent @mentions, proactive messages and richer contextual access?
+11. Is Slack or Teams already the team's preferred chat platform, and does
+    either add sufficient value to justify new installation or permissions?
 
 ## References and Existing Ownership
 
@@ -552,8 +589,14 @@ source-code context by default.
 - [Slack Code guide](https://docs.slack.dev/ai/slack-code/)
 - [Slack Code developer availability](https://slack.dev/slack-code-a-dedicated-place-for-agent-work/)
 - [Slack agent design guidance](https://docs.slack.dev/concepts/agent-design/)
+- [Teams agents in channels and group chats](https://learn.microsoft.com/en-us/microsoftteams/platform/bots/how-to/conversations/channel-and-group-conversations)
+- [Teams agent app administration](https://learn.microsoft.com/en-au/MicrosoftTeams/teams-app-setup-policies)
+- [Teams proactive messages](https://learn.microsoft.com/en-us/microsoftteams/platform/bots/how-to/conversations/send-proactive-messages)
+- [Teams SDK extension](https://learn.microsoft.com/en-us/microsoft-365/agents-sdk/teams/teams-extension)
+- [Teams Channel Agent limitations](https://learn.microsoft.com/microsoftteams/set-up-channel-agent-teams)
+- [Teams full-message RSC consent](https://learn.microsoft.com/en-us/microsoftteams/platform/bots/how-to/conversations/channel-messages-for-bots-and-agents)
 
 This is a planning proposal. It does not claim that any GitHub/Linear/Jira/
-Slack adapter, APS Slack bot, distributed claim service, provider-wide native
+Slack/Teams adapter, APS chat bot, distributed claim service, provider-wide native
 agent integration or unattended agent bridge already exists. No comparison
 scores or internal adoption decision have been recorded yet.
