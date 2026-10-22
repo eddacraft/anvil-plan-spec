@@ -339,12 +339,12 @@ The proposed approach and concrete failure/UX cases are in
 
 **Phase B — optional engineering only after proof**
 
-6. Decide if missing APS item-level export data warrants additive read
+1. Decide if missing APS item-level export data warrants additive read
    support (SURF-006).
-7. Approve Linear and/or Slack adapters individually (SURF-007/008), only
+2. Approve Linear and/or Slack adapters individually (SURF-007/008), only
    where removal of manual work clearly outweighs maintenance/permission
    costs.
-8. Apply provider-neutral failure/security conformance to anything actually
+3. Apply provider-neutral failure/security conformance to anything actually
    shipped (SURF-009).
 
 If SURF-004 shows the native MCP/agent workflow is already good enough,
