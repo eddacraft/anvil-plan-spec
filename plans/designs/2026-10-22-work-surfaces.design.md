@@ -301,7 +301,7 @@ support and the ability to post messages or cards vary by feature and tenant.
 A standard-channel/thread link-only recipe must work even with all agent
 apps blocked; advanced APIs are optional and are not prerequisites.
 
-### E. Provider-free and cross-provider portability
+### F. Provider-free and cross-provider portability
 
 A team can run `aps next`, read Markdown, and give a Ready work item to a
 human or native harness without any issue tracker, Slack or extra service.
