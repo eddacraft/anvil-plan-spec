@@ -338,7 +338,6 @@ for vendor capability constraints, comparison, security and adoption gates.
 - **Dependencies:** SURF-001, SURF-004
 - **Status:** Draft
 
-
 ### SURF-010: Demonstrate GitHub Issues with optional Projects
 
 - **Intent:** Provide the technical reference for APS-backed engineering
